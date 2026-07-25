@@ -1,0 +1,248 @@
+#pragma once
+
+#include <cstdint>
+#include <menagerie/beavers>
+#include <menagerie/serialization>
+#include <stdexcept>
+#include <string>
+#include <string_view>
+#include <tuple>
+#include <utility>
+namespace menagerie::http {
+
+    /**
+     * @brief TLS settings consumed by build_ssl_context, JSON-loadable via
+     *        serialization::ConfigInterface.
+     *
+     * min_version encodes as a string ("tls12" | "tls13"); key_passphrase is
+     * FieldPolicy::Secret - read from JSON, never written by dump. The full
+     * constructor is a no-validation escape hatch (scaffold tests build empty
+     * configs on purpose); Builder::finalize() and deserialize() validate.
+     */
+    class TlsConfig final : public serialization::ConfigInterface<TlsConfig, Json::Value> {
+    public:
+        /// TLS protocol-version floor to negotiate.
+        enum class MinVersion : std::uint8_t { tls12, tls13 };
+
+
+        template <beavers::IsStringLike StringTp1 = std::string,
+                  beavers::IsStringLike StringTp2 = std::string,
+                  beavers::IsStringLike StringTp3 = std::string,
+                  beavers::IsStringLike StringTp4 = std::string,
+                  beavers::IsStringLike StringTp5 = std::string>
+        /// No-validation escape hatch: constructs directly from the given
+        /// fields without calling validate(). Prefer Builder or
+        /// deserialize() outside test scaffolding.
+        constexpr TlsConfig(StringTp1&& cert_file,
+                            StringTp2&& key_file,
+                            StringTp3&& key_passphrase     = "",
+                            StringTp4&& dh_params_file     = "",
+                            StringTp5&& ca_file            = "",
+                            const MinVersion min_version   = MinVersion::tls12,
+                            const bool session_cache       = true,
+                            const bool require_client_cert = false) noexcept
+            : cert_file_{std::forward<StringTp1>(cert_file)},
+              key_file_{std::forward<StringTp2>(key_file)},
+              key_passphrase_{std::forward<StringTp3>(key_passphrase)},
+              dh_params_file_{std::forward<StringTp4>(dh_params_file)},
+              ca_file_{std::forward<StringTp5>(ca_file)},
+              min_version_{min_version},
+              session_cache_{session_cache},
+              require_client_cert_{require_client_cert} {
+        }
+        constexpr void validate() const override {
+            if (cert_file_.empty()) {
+                throw std::invalid_argument("tls.cert_file must be set");
+            }
+            if (key_file_.empty()) {
+                throw std::invalid_argument("tls.key_file must be set");
+            }
+            if (require_client_cert_ && ca_file_.empty()) {
+                throw std::invalid_argument("tls.ca_file must be set when tls.require_client_cert is true");
+            }
+        }
+
+        /// Path to the certificate file.
+        [[nodiscard]] const std::string& cert_file() const noexcept {
+            return cert_file_;
+        }
+        /// Path to the private key file.
+        [[nodiscard]] const std::string& key_file() const noexcept {
+            return key_file_;
+        }
+        /// Passphrase protecting the private key, if any.
+        [[nodiscard]] const std::string& key_passphrase() const noexcept {
+            return key_passphrase_;
+        }
+        /// Path to the DH parameters file, if any.
+        [[nodiscard]] const std::string& dh_params_file() const noexcept {
+            return dh_params_file_;
+        }
+        /// Path to the CA bundle used to verify client certificates.
+        [[nodiscard]] const std::string& ca_file() const noexcept {
+            return ca_file_;
+        }
+        /// The negotiated protocol-version floor.
+        [[nodiscard]] constexpr MinVersion min_version() const noexcept {
+            return min_version_;
+        }
+        /// Whether TLS session caching is enabled.
+        [[nodiscard]] constexpr bool session_cache() const noexcept {
+            return session_cache_;
+        }
+        /// Whether a client certificate is required.
+        [[nodiscard]] constexpr bool require_client_cert() const noexcept {
+            return require_client_cert_;
+        }
+
+        /// Field descriptors consumed by the JSON (de)serialization machinery.
+        static constexpr auto fields() {
+            return std::tuple{
+                serialization::Field<&TlsConfig::cert_file_, "cert_file">{},
+                serialization::Field<&TlsConfig::key_file_, "key_file">{},
+                serialization::
+                    Field<&TlsConfig::key_passphrase_, "key_passphrase", serialization::FieldPolicy::Secret>{},
+                serialization::Field<&TlsConfig::dh_params_file_, "dh_params_file">{},
+                serialization::Field<&TlsConfig::ca_file_, "ca_file">{},
+                serialization::Field<&TlsConfig::min_version_, "min_version">{},
+                serialization::Field<&TlsConfig::session_cache_, "session_cache">{},
+                serialization::Field<&TlsConfig::require_client_cert_, "require_client_cert">{},
+            };
+        }
+
+        class Builder;
+
+    private:
+        friend class ConfigInterface;
+        constexpr TlsConfig() = default;
+
+        std::string cert_file_;
+        std::string key_file_;
+        std::string key_passphrase_;
+        std::string dh_params_file_;
+        std::string ca_file_;
+        MinVersion min_version_   = MinVersion::tls12;
+        bool session_cache_       = true;
+        bool require_client_cert_ = false;
+    };
+
+    // -- MinVersion <-> string codec --
+    // ADL-found by the serialization machinery (a non-template overload beats
+    // the generic int-encoding enum template). String-encoded rather than
+    // relying on the generic int codec, so config files stay readable.
+
+    /// Converts a MinVersion to its wire string ("tls12", "tls13").
+    [[nodiscard]] constexpr std::string_view to_string_view(const TlsConfig::MinVersion v) noexcept {
+        switch (v) {
+            case TlsConfig::MinVersion::tls13:
+                return "tls13";
+            case TlsConfig::MinVersion::tls12:
+                return "tls12";
+        }
+        return "tls12";
+    }
+
+    /// Writes `v`'s wire string into `out[key]`.
+    inline void write_field(Json::Value& out, const serialization::FieldName key, const TlsConfig::MinVersion v) {
+        out[key.str()] = std::string{to_string_view(v)};
+    }
+
+    /// @throw std::invalid_argument on an unknown string - a silent default
+    /// would turn a typo into weaker TLS.
+    inline bool read_field(const Json::Value& in, const serialization::FieldName key, TlsConfig::MinVersion& v) {
+        const std::string k = key.str();
+        if (!in.isMember(k)) {
+            return false;
+        }
+        const std::string raw = in[k].asString();  // Json::LogicError on non-string
+        if (raw == "tls12") {
+            v = TlsConfig::MinVersion::tls12;
+            return true;
+        }
+        if (raw == "tls13") {
+            v = TlsConfig::MinVersion::tls13;
+            return true;
+        }
+        throw std::invalid_argument{"config field '" + k + "': unknown min_version '" + raw +
+                                    R"(' (expected "tls12" or "tls13"))"};
+    }
+
+    /**
+     * @brief Fluent builder for TlsConfig.
+     *
+     * Chainable setters (`this Self&&`) work on both lvalue and rvalue
+     * builders; finalize() validates and returns the built config.
+     */
+    class TlsConfig::Builder {
+    public:
+        Builder() = default;
+
+        /// Sets the certificate file path.
+        template <typename Self>
+        auto&& cert_file(this Self&& self, std::string value) noexcept {
+            self.config_.cert_file_ = std::move(value);
+            return std::forward<Self>(self);
+        }
+
+        /// Sets the private key file path.
+        template <typename Self>
+        auto&& key_file(this Self&& self, std::string value) noexcept {
+            self.config_.key_file_ = std::move(value);
+            return std::forward<Self>(self);
+        }
+
+        /// Sets the private key passphrase.
+        template <typename Self>
+        auto&& key_passphrase(this Self&& self, std::string value) noexcept {
+            self.config_.key_passphrase_ = std::move(value);
+            return std::forward<Self>(self);
+        }
+
+        /// Sets the DH parameters file path.
+        template <typename Self>
+        auto&& dh_params_file(this Self&& self, std::string value) noexcept {
+            self.config_.dh_params_file_ = std::move(value);
+            return std::forward<Self>(self);
+        }
+
+        /// Sets the CA bundle file path used to verify client certificates.
+        template <typename Self>
+        auto&& ca_file(this Self&& self, std::string value) noexcept {
+            self.config_.ca_file_ = std::move(value);
+            return std::forward<Self>(self);
+        }
+
+        /// Sets the negotiated protocol-version floor.
+        template <typename Self>
+        constexpr auto&& min_version(this Self&& self, const MinVersion value) noexcept {
+            self.config_.min_version_ = value;
+            return std::forward<Self>(self);
+        }
+
+        /// Sets whether TLS session caching is enabled.
+        template <typename Self>
+        constexpr auto&& session_cache(this Self&& self, const bool value) noexcept {
+            self.config_.session_cache_ = value;
+            return std::forward<Self>(self);
+        }
+
+        /// Sets whether a client certificate is required.
+        template <typename Self>
+        constexpr auto&& require_client_cert(this Self&& self, const bool value) noexcept {
+            self.config_.require_client_cert_ = value;
+            return std::forward<Self>(self);
+        }
+
+        /// Validates and returns the built TlsConfig.
+        [[nodiscard]] TlsConfig finalize() && {
+            config_.validate();
+            return std::move(config_);
+        }
+
+    private:
+        friend class TlsConfig;
+        friend class ConfigInterface;
+        TlsConfig config_;
+    };
+
+}  // namespace menagerie::http

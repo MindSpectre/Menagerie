@@ -1,0 +1,27 @@
+# Menagerie API documentation. Run from the repository root:
+#   mkdir -p build/docs && doxygen docs/doxygen/Doxyfile
+PROJECT_NAME           = Menagerie
+PROJECT_NUMBER         = 1.0.0
+PROJECT_BRIEF          = "C++23 server components: HTTP, PostgreSQL, concurrency"
+OUTPUT_DIRECTORY       = build/docs
+INPUT                  = README.md \
+                         docs/roadmap.md \
+                         docs/architecture \
+                         docs/guides \
+                         common \
+                         components
+RECURSIVE              = YES
+EXCLUDE                = common/3rdparty
+FILE_PATTERNS          = *.hpp *.md
+USE_MDFILE_AS_MAINPAGE = README.md
+EXTRACT_ALL            = NO
+GENERATE_LATEX         = NO
+QUIET                  = YES
+WARN_IF_UNDOCUMENTED   = YES
+WARN_LOGFILE           = build/docs/doxygen-warnings.log
+GENERATE_TREEVIEW      = YES
+DISABLE_INDEX          = NO
+FULL_SIDEBAR           = NO
+HTML_COLORSTYLE        = LIGHT
+HTML_EXTRA_STYLESHEET  = docs/doxygen/doxygen-awesome/doxygen-awesome.css \
+                         docs/doxygen/doxygen-awesome/doxygen-awesome-sidebar-only.css

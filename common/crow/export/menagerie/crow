@@ -1,0 +1,10 @@
+#pragma once
+
+#include "macros/log_macros.hpp"
+#include "macros/log_macros_adds.hpp"
+#include "logger_provider.hpp"
+#include "file_sink.hpp"
+#include "console_sink.hpp"
+#include "factory/entry_factory.hpp"
+#include "detailed_entry.hpp"
+#include "light_entry.hpp"

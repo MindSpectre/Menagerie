@@ -1,0 +1,64 @@
+#pragma once
+
+#include <concepts>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include <controller.hpp>
+#include <route_registry.hpp>
+
+namespace menagerie::http {
+
+    /**
+     * @brief Prefix-scoped controller mounting.
+     *
+     * This is what Server::in_group(prefix) returns, constructed over the
+     * Server's registry + controller list. add_controller() runs the bake
+     * step: configure_routes() once, prefix concat, middleware composition,
+     * Outcome-to-Response wiring, conflict recording - and records the
+     * controller in the caller-owned sink (the Server keeps them alive for
+     * the routes' lifetime; controllers are RAII).
+     */
+    class GroupBinding {
+    public:
+        /// Binds a group over `registry` and `controller_sink`, both of which
+        /// must outlive this GroupBinding, scoped under `prefix`.
+        template <beavers::IsStringLike StringTp>
+        GroupBinding(RouteRegistry& registry,
+                     std::vector<std::shared_ptr<HttpController>>& controller_sink,
+                     StringTp&& prefix) UNRECOVERABLE_NOEXCEPT : registry_{&registry},
+                                                                 controllers_{&controller_sink},
+                                                                 prefix_{std::forward<StringTp>(prefix)} {
+        }
+
+        /// Bakes + merges the controller's routes under this group's prefix.
+        /// @throw std::logic_error if the controller was already baked.
+        /// @throw std::invalid_argument if `ctrl` is null.
+        template <std::derived_from<HttpController> C>
+        GroupBinding& add_controller(std::shared_ptr<C> ctrl) {
+            std::shared_ptr<HttpController> base = std::move(ctrl);
+            detail::ControllerBaker::bake_into(*registry_, base, prefix_);
+            controllers_->push_back(std::move(base));
+            return *this;
+        }
+
+        /// Nested group via combined prefix.
+        [[nodiscard]] GroupBinding in_group(const std::string_view sub_prefix) const {
+            return GroupBinding{*registry_, *controllers_, join_path(prefix_, sub_prefix)};
+        }
+
+        /// The path prefix this group mounts controllers under.
+        [[nodiscard]] const std::string& prefix() const noexcept {
+            return prefix_;
+        }
+
+    private:
+        // non-null: bound from ctor lvalue refs, never reseated
+        RouteRegistry* registry_;
+        std::vector<std::shared_ptr<HttpController>>* controllers_;
+        std::string prefix_;
+    };
+
+}  // namespace menagerie::http

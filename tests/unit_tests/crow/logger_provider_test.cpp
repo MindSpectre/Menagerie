@@ -1,0 +1,112 @@
+
+#include <menagerie/crow>
+
+#include <gtest/gtest.h>
+
+namespace menagerie::crow {
+    /**
+     * @brief Test logger provider with console output
+     */
+    class TestLoggerProvider : public LoggerProvider {
+    public:
+        constexpr explicit TestLoggerProvider(const std::string_view prefix = {}) {
+            auto logger = std::make_shared<Logger>();
+            logger->add_sink(std::make_shared<ConsoleSink<DetailedEntry>>(ConsoleSinkConfig::Builder{}
+                                                                              .threshold(LogLevel::Debug)
+                                                                              .enable_colors(true)
+                                                                              .flush_each_entry(true)
+                                                                              .finalize()));
+            set_logger(std::move(logger));
+            set_prefix(prefix);
+        }
+    };
+}  // namespace menagerie::crow
+class ServiceX final : menagerie::crow::TestLoggerProvider {
+public:
+    void do_something() {
+        std::size_t i = 1;
+        std::vector<std::string> expected_messages;
+        testing::internal::CaptureStdout();
+        auto mk_message = [](const std::size_t n) { return "TestMessage" + std::to_string(n); };
+
+        LOG_DBG() << mk_message(i);
+        expected_messages.emplace_back(mk_message(i++));
+        LOG_INF() << mk_message(i);
+        expected_messages.emplace_back(mk_message(i++));
+        LOG_WRN() << mk_message(i);
+        expected_messages.emplace_back(mk_message(i++));
+        LOG_ERR() << mk_message(i);
+        expected_messages.emplace_back(mk_message(i++));
+        LOG_FAT() << mk_message(i);
+        expected_messages.emplace_back(mk_message(i++));
+        EXPECT_EQ(i, 6);
+
+        // Shutdown drains all strand work before returning
+        get_logger()->shutdown();
+
+        const std::string output = testing::internal::GetCapturedStdout();
+        for (const auto& msg : expected_messages) {
+            EXPECT_TRUE(output.find(msg) != std::string::npos) << "Message not found: " << msg;
+        }
+        menagerie::beavers::force_non_const(this);
+    }
+    static constexpr std::string_view name = "ServiceX";
+};
+
+TEST(LoggerProviderTest, StreamStyleLogging) {
+    ServiceX service;
+    service.do_something();
+}
+
+TEST(LoggerProviderTest, FormatStyleLogging) {
+    const auto logger = std::make_shared<menagerie::crow::Logger>();
+    logger->add_sink(std::make_unique<menagerie::crow::ConsoleSink<menagerie::crow::LightEntry>>(
+        menagerie::crow::ConsoleSinkConfig::Builder{}
+            .threshold(menagerie::crow::LogLevel::Debug)
+            .enable_colors(false)
+            .flush_each_entry(true)
+            .finalize()));
+
+    testing::internal::CaptureStdout();
+
+    // maybe_unused: with ENABLE_LOGGING off the LOG_* macros expand to
+    // nothing and these become unused (-Werror in such presets).
+    [[maybe_unused]] std::string username = "alice";
+    [[maybe_unused]] int count            = 42;
+
+    LOG_DIRECT_FMT_INF(logger, "", "User {} has {} items", username, count);
+    LOG_DIRECT_FMT_DBG(logger, "", "Debug message with value {}", 123);
+
+    logger->shutdown();
+
+    const std::string output = testing::internal::GetCapturedStdout();
+    EXPECT_TRUE(output.find("alice") != std::string::npos);
+    EXPECT_TRUE(output.find("42") != std::string::npos);
+    EXPECT_TRUE(output.find("123") != std::string::npos);
+}
+
+TEST(LoggerProviderTest, OverloadedMacros) {
+    const auto logger = std::make_shared<menagerie::crow::Logger>();
+    logger->add_sink(std::make_unique<menagerie::crow::ConsoleSink<menagerie::crow::LightEntry>>(
+        menagerie::crow::ConsoleSinkConfig::Builder{}
+            .threshold(menagerie::crow::LogLevel::Debug)
+            .enable_colors(false)
+            .flush_each_entry(true)
+            .finalize()));
+
+
+    testing::internal::CaptureStdout();
+
+    // Test stream style (0 args)
+    LOG_DIRECT_STREAM_INF(logger, "") << "Stream style message";
+
+    // Test format style (1+ args)
+    LOG_DIRECT_FMT_INF(logger, "", "Format style message {}", 123);
+
+    logger->shutdown();
+
+    const std::string output = testing::internal::GetCapturedStdout();
+    EXPECT_TRUE(output.find("Stream style message") != std::string::npos);
+    EXPECT_TRUE(output.find("Format style message") != std::string::npos);
+    EXPECT_TRUE(output.find("123") != std::string::npos);
+}

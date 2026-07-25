@@ -1,0 +1,67 @@
+#pragma once
+
+#include <chrono>
+#include <string_view>
+#include <type_traits>
+
+#include "templates.hpp"
+
+namespace menagerie::beavers {
+    /// `T` exposes a static data member `name` convertible to `std::string_view`.
+    template <typename T>
+    concept HasStaticNameMember = requires {
+        { T::name } -> std::convertible_to<std::string_view>;
+    };
+
+    /// `T` exposes a static `name()` function returning a `std::string_view`-like value.
+    template <typename T>
+    concept HasStaticNameFunction = requires {
+        { T::name() } -> std::convertible_to<std::string_view>;
+    };
+
+    /// `T` exposes a static binary comparator `comp(a, b) -> bool`.
+    template <typename T>
+    concept HasStaticComparator = requires(const T& a, const T& b) {
+        { T::comp(a, b) } -> std::same_as<bool>;
+    };
+
+    /// `T` is an abstract class, usable as an `InterfaceBundle` member.
+    template <typename T>
+    concept IsInterface = std::is_abstract_v<T>;
+
+    /// `T` (cvref-stripped) is a specialization of `std::chrono::duration`.
+    template <typename T>
+    concept IsDuration = beavers::is_specialization_of_v<std::remove_cvref_t<T>, std::chrono::duration>;
+
+    /// `T` matches one of `Args...` exactly (no cvref stripping).
+    template <typename T, typename... Args>
+    concept OneOf = (std::is_same_v<Args, T> || ...);
+
+    /// Like `OneOf`, but compares against the cvref-stripped form of each `Args`.
+    template <typename T, typename... Args>
+    concept OneOfDecayed = (std::is_same_v<std::remove_cvref_t<Args>, T> || ...);
+
+
+    /// `T` (cvref-stripped) can construct an `std::string`.
+    template <typename T>
+    concept IsStringLike = std::constructible_from<std::string, std::remove_cvref_t<T>>;
+
+    /// `IsStringLike<T>` and also convertible to `std::string_view`.
+    template <typename T>
+    concept IsStringViewLike = IsStringLike<T> && std::convertible_to<std::remove_cvref_t<T>, std::string_view>;
+
+    /// Matches types that guarantee null-terminated storage (std::string, pmr::string, const char*, char[])
+    template <typename T>
+    concept IsNullTerminatedString = requires(const std::remove_cvref_t<T>& s) {
+        { s.c_str() } -> std::convertible_to<const char*>;
+    } || std::is_convertible_v<std::remove_cvref_t<T>, const char*>;
+
+
+    // Forward declaration so the detail helpers can refer to Outcome.
+    template <typename T, typename... Errors>
+    class Outcome;
+
+    /// Concept for callables whose return type is some `Outcome<...>`.
+    template <typename T>
+    concept IsOutcome = is_specialization_of_v<std::remove_cvref_t<T>, Outcome>;
+}  // namespace menagerie::beavers

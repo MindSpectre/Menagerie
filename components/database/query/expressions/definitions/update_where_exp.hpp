@@ -1,0 +1,44 @@
+#pragma once
+
+#include "basic.hpp"
+#include "update_exp.hpp"
+
+namespace menagerie::db {
+
+    /// `UPDATE table SET ... WHERE condition`; built by UpdateExpr::where(cond).
+    template <IsTable TableT, IsCondition Condition>
+    class UpdateWhereExpr : public Expression<UpdateWhereExpr<TableT, Condition>> {
+    public:
+        /// Wraps u as the base UPDATE and c as the WHERE condition.
+        template <typename UpdateExprTp, typename ConditionTp>
+            requires std::constructible_from<UpdateExpr<TableT>, UpdateExprTp> &&
+                         std::constructible_from<Condition, ConditionTp>
+        constexpr UpdateWhereExpr(UpdateExprTp&& u, ConditionTp&& c) noexcept
+            : update_{std::forward<UpdateExprTp>(u)},
+              condition_{std::forward<ConditionTp>(c)} {
+        }
+
+        /// The base UPDATE (table and assignments).
+        template <typename Self>
+        [[nodiscard]] constexpr auto&& update(this Self&& self) noexcept {
+            return std::forward_like<Self>(self.update_);
+        }
+
+        /// The WHERE condition.
+        template <typename Self>
+        [[nodiscard]] constexpr auto&& condition(this Self&& self) noexcept {
+            return std::forward_like<Self>(self.condition_);
+        }
+
+        /// Splits *this into {update, condition} for the visitor.
+        template <typename Self>
+        [[nodiscard]] constexpr auto decompose(this Self&& self) noexcept {
+            return std::forward_as_tuple(std::forward_like<Self>(self.update_),
+                                         std::forward_like<Self>(self.condition_));
+        }
+
+    private:
+        UpdateExpr<TableT> update_;
+        Condition condition_;
+    };
+}  // namespace menagerie::db

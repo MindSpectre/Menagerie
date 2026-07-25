@@ -1,0 +1,176 @@
+#include <functional>
+#include <menagerie/chrono>
+#include <random>
+#include <thread>
+
+#include <gtest/gtest.h>
+
+
+using namespace menagerie::chrono;
+using namespace std::literals;
+
+namespace {
+    class StopwatchTest : public ::testing::Test {
+    protected:
+        Stopwatch<> stopwatch;
+
+        void SetUp() override {
+            // Initialize stopwatch before each test
+            stopwatch = Stopwatch(20);
+        }
+
+        void TearDown() override {
+            // Clean up after each test if needed
+        }
+    };
+}  // namespace
+
+// Test basic functionality - start, add flag, stop
+TEST_F(StopwatchTest, BasicFunctionality) {
+    stopwatch.start();
+    sleep_for(10ms);
+    stopwatch.add_flag();
+    sleep_for(10ms);
+    const auto flags = stopwatch.stop();
+
+    // Should have 3 flags: start, add_flag, and stop
+    EXPECT_EQ(flags.size(), 3);
+}
+
+// Test delta_t functionality
+TEST_F(StopwatchTest, DeltaTime) {
+    stopwatch.start();
+    sleep_for(50ms);
+    stopwatch.add_flag();
+
+    auto [fst, snd] = stopwatch.delta_t(1);
+
+    // The delta_since_prev should be approximately 50ms
+    // Use a tolerance for timing variations
+    EXPECT_GE(fst.count(), 40);
+    EXPECT_LE(fst.count(), 60);
+
+    // The delta_since_start should be the same as delta_since_prev here
+    EXPECT_GE(snd.count(), 40);
+    EXPECT_LE(snd.count(), 60);
+}
+
+// Test delta_t with invalid index
+TEST_F(StopwatchTest, DeltaTimeInvalidIndex) {
+    stopwatch.start();
+
+    // Index 0 should return zeros
+    auto delta = stopwatch.delta_t(0);
+    EXPECT_EQ(delta.first.count(), 0);
+    EXPECT_EQ(delta.second.count(), 0);
+
+    // Out of range index should return zeros
+    delta = stopwatch.delta_t(100);
+    EXPECT_EQ(delta.first.count(), 0);
+    EXPECT_EQ(delta.second.count(), 0);
+}
+
+// Test get_flags
+TEST_F(StopwatchTest, GetFlags) {
+    stopwatch.start();
+    stopwatch.add_flag();
+    stopwatch.add_flag();
+
+    const auto& flags = stopwatch.get_flags();
+    EXPECT_EQ(flags.size(), 3);
+}
+
+// Test average_delta
+TEST_F(StopwatchTest, AverageDelta) {
+    stopwatch.add_flag();
+    sleep_for(10ms);
+    stopwatch.add_flag();
+    sleep_for(20ms);
+    stopwatch.add_flag();
+    sleep_for(30ms);
+    stopwatch.add_flag();
+
+    const auto avg = stopwatch.average_delta();
+
+    // Average should be approximately (10+20+30)/3 = 20ms
+    // Using a tolerance for system timing variations
+    EXPECT_GE(avg.count(), 19);
+    EXPECT_LE(avg.count(), 21);
+}
+
+// Test the new measure function
+TEST_F(StopwatchTest, MeasureLambda) {
+    // Measure a lambda that sleeps for 50ms
+    const auto duration = Stopwatch<>::measure([] { sleep_for(50ms); });
+
+    // Check that the duration is approximately 50ms
+    EXPECT_GE(duration.count(), 45);
+    EXPECT_LE(duration.count(), 60);
+}
+
+// Test measure with complex logic
+TEST_F(StopwatchTest, MeasureComplexLogic) {
+    long long result = 0;
+
+    const auto duration = Stopwatch<>::measure([&result] {
+        // Do some computational work
+        std::uniform_int_distribution dist(0, 5);
+        for (std::size_t i = 0; i < 10000; ++i) {
+            std::random_device rd;
+            std::mt19937 gen(rd());
+            result += dist(gen);
+        }
+    });
+
+    // Verify that the work was done
+    EXPECT_GT(result, 0);
+
+    // Duration should be greater than 0
+    EXPECT_GT(duration.count(), 0);
+}
+
+// Test measure with function reference
+TEST_F(StopwatchTest, MeasureFunctionReference) {
+    // Define a function to be measured
+    std::function<void()> testFunc = [] { sleep_for(20ms); };
+
+    const auto duration = Stopwatch<>::measure(testFunc);
+
+    // Check duration
+    EXPECT_GE(duration.count(), 15);
+    EXPECT_LE(duration.count(), 30);
+}
+
+// Test measure with multiple calls
+TEST_F(StopwatchTest, MeasureMultipleCalls) {
+    // Measure multiple different durations
+    const auto d1 = Stopwatch<>::measure([] { sleep_for(10ms); });
+    const auto d2 = Stopwatch<>::measure([] { sleep_for(20ms); });
+    const auto d3 = Stopwatch<>::measure([] { sleep_for(30ms); });
+
+    // Each duration should be approximately its sleep time
+    EXPECT_GE(d1.count(), 5);
+    EXPECT_LE(d1.count(), 20);
+
+    EXPECT_GE(d2.count(), 15);
+    EXPECT_LE(d2.count(), 30);
+
+    EXPECT_GE(d3.count(), 25);
+    EXPECT_LE(d3.count(), 40);
+}
+
+// Test that measure doesn't interfere with stopwatch flags
+TEST_F(StopwatchTest, MeasureDoesntChangeFlags) {
+    stopwatch.start();
+    stopwatch.add_flag();
+
+    const auto flagsBefore = stopwatch.get_flags().size();
+
+    // Measure something
+    Stopwatch<>::measure([] { sleep_for(10ms); });
+
+    const auto flagsAfter = stopwatch.get_flags().size();
+
+    // Flag count should remain the same
+    EXPECT_EQ(flagsBefore, flagsAfter);
+}

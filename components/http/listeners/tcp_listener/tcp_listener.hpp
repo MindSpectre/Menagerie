@@ -1,0 +1,208 @@
+#pragma once
+
+#include <chrono>
+#include <cstddef>
+#include <cstdint>
+#include <memory>
+#include <menagerie/chrono>
+#include <optional>
+#include <string>
+#include <type_traits>
+#include <utility>
+
+#include <boost/asio/awaitable.hpp>
+#include <boost/asio/co_spawn.hpp>
+#include <boost/asio/detached.hpp>
+#include <boost/asio/ip/tcp.hpp>
+#include <boost/asio/redirect_error.hpp>
+#include <boost/asio/steady_timer.hpp>
+#include <boost/asio/this_coro.hpp>
+#include <boost/asio/use_awaitable.hpp>
+#include <boost/beast/core/error.hpp>
+#include <connection_tracker.hpp>
+#include <executor.hpp>
+#include <http_driver_concept.hpp>
+#include <listener_base.hpp>
+#include <router.hpp>
+#include <tcp_connection.hpp>
+
+namespace menagerie::http {
+
+    /**
+     * @brief Plain-TCP listener for one driver.
+     *
+     * Accepts each connection ONTO A FRESH STRAND (beast::tcp_stream caches
+     * its executor at construction, so the socket must already be strand-bound),
+     * heap-allocates the (non-movable) TcpConnection as a shared_ptr, registers
+     * it with the tracker, and co_spawns driver.serve() on that strand.
+     *
+     * LIFETIME CONTRACT: the caller MUST co_await drain_until(...) AND then wait
+     * for in_flight() == 0 before destroying the listener - spawned serve
+     * coroutines hold a tracker Handle that references this listener's tracker,
+     * and call driver.serve() through `this`.
+     * WARN: drain_until only DISPATCHES force-cancels; it does not await the cancelled serve()
+     * coroutines' unwind on ANY executor (cancels + unwinds run in later executor turns). The Server
+     * honors this in graceful_shutdown() phase 2.5 by polling in_flight() == 0 after the drain; direct
+     * users (the integration fixture) must do the same. See ConnectionTracker::drain_until.
+     */
+    template <IsHttpDriver Driver>
+    class TcpListener final : public ListenerBase {
+    public:
+        /// `execs` - one or more executors; connections are placed on them
+        /// round-robin (one io_context per thread is the intended topology).
+        /// front() is the listener's home: acceptor, error backoff, and the
+        /// drain poll live there. Must be non-empty.
+        /// Forwarding ctor (same shape as TlsListener): each argument is
+        /// constructed into its member directly - no by-value relay moves.
+        /// `host` is only IsStringLike-constrained: literals/string_views
+        /// construct host_ in place, no std::string temporary at call sites.
+        template <typename VectorExecutorTp, beavers::IsStringLike StringTp, typename DriverTp>
+            requires std::is_same_v<std::remove_cvref_t<VectorExecutorTp>, std::vector<Executor>> &&
+                         std::is_same_v<std::remove_cvref_t<DriverTp>, Driver>
+        TcpListener(VectorExecutorTp&& execs,
+                    StringTp&& host,
+                    const std::uint16_t port,
+                    DriverTp&& driver,
+                    const std::size_t arena_size = 8192)
+            : execs_{std::forward<VectorExecutorTp>(execs)},
+              host_{std::forward<StringTp>(host)},
+              port_{port},
+              driver_{std::forward<DriverTp>(driver)},
+              arena_size_{arena_size},
+              acceptor_{execs_.front()} {
+        }
+
+        void bind() override {
+            const boost::asio::ip::tcp::endpoint ep{boost::asio::ip::make_address(host_), port_};
+            acceptor_.open(ep.protocol());
+            acceptor_.set_option(boost::asio::socket_base::reuse_address(true));
+            acceptor_.bind(ep);  // throws boost::system::system_error on failure
+            acceptor_.listen(boost::asio::socket_base::max_listen_connections);
+        }
+
+        boost::asio::awaitable<void> run(Router& router) override {
+            namespace asio = boost::asio;
+            // Cancellation is handled as STATE, not exceptions: with the default
+            // throw_if_cancelled, a stop emitted between suspensions would make
+            // the next co_await throw and skip the acceptor close below (and,
+            // where run()'s completion is awaited through a future, rethrow there).
+            // Deadline enforcement: ONE sweep for all of this listener's
+            // connections (per-connection timers stall single-runner workers).
+            // Idempotent across run() restarts.
+            tracker_.start_sweep(execs_.front());
+            co_await asio::this_coro::throw_if_cancelled(false);
+            const auto cancel_state = co_await asio::this_coro::cancellation_state;
+            std::optional<asio::steady_timer> backoff;  // error path only - lazy
+            unsigned consecutive_errors = 0;
+
+            // WARN: multi-worker - an emit landing between the loop-top state
+            // check and async_accept installing its cancel handler would be
+            // edge-lost. The check->install section runs in ONE executor turn,
+            // so the window is closed whenever the emit is serialized with
+            // this coroutine's turns: the Server spawns run() on a dedicated
+            // strand and DISPATCHES the stop emit onto it. Direct users on a
+            // multi-threaded executor must do the same.
+            while (cancel_state.cancelled() == asio::cancellation_type::none) {
+                // Round-robin placement: each connection's strand comes from
+                // the next executor in the set - with io_context-per-thread
+                // callers this spreads connections across worker loops with
+                // no shared scheduler between them. The accept loop is
+                // serialized, so a plain index suffices.
+                Strand strand = execs_[next_exec_];
+                next_exec_    = (next_exec_ + 1) % execs_.size();
+                boost::beast::error_code ec;
+                // Yields a Socket (strand-bound), not a tcp::socket - assigning to
+                // tcp::socket would convert the executor back into any_io_executor
+                // and re-erase the whole hot path.
+                Socket sock = co_await acceptor_.async_accept(strand, asio::redirect_error(asio::use_awaitable, ec));
+                if (ec == asio::error::operation_aborted) [[unlikely]] {
+                    break;  // stop(): the run-coroutine's cancellation slot was emitted
+                }
+                if (ec == asio::error::bad_descriptor || ec == asio::error::operation_not_supported ||
+                    ec == asio::error::invalid_argument) [[unlikely]] {
+                    break;  // acceptor unusable - retrying can only repeat the error
+                }
+                if (ec) [[unlikely]] {  // transient: ECONNABORTED / EMFILE / ENOBUFS / ...
+                    // A couple of retries are free (accept-storm hiccups resolve
+                    // instantly); persistent failure backs off exponentially so a
+                    // dead-resource state (fd exhaustion) doesn't hot-spin the
+                    // worker. Timer syscalls only on this already-failing path.
+                    if (++consecutive_errors > 2) {
+                        if (!backoff) {
+                            backoff.emplace(execs_.front());
+                        }
+                        // 1ms, 2ms, 4ms, ... capped at 1024ms: resource-exhaustion
+                        // errors (EMFILE) resolve on operator timescales, not
+                        // microseconds. attempt is 0-based; consecutive_errors is >2
+                        // here, so consecutive_errors - 3 never underflows.
+                        backoff->expires_after(chrono::exponential_backoff(
+                            consecutive_errors - 3, std::chrono::milliseconds{1}, std::chrono::milliseconds{1024}));
+                        boost::beast::error_code tec;
+                        co_await backoff->async_wait(asio::redirect_error(asio::use_awaitable, tec));
+                        // tec == operation_aborted => cancelled mid-sleep => the
+                        // latched state exits the loop above.
+                    }
+                    continue;
+                }
+                consecutive_errors = 0;
+                // Nagle holds every small segment after the first unacked one.
+                // The driver batches pipelined responses into one write, but a
+                // batch boundary (and every non-pipelined exchange) is still a
+                // small segment that would wait ~40ms on the peer's delayed ACK.
+                // Measured before batching: 30k -> 343k req/s at depth 16.
+                // Failure to set it is ignored - a socket that rejects the
+                // option still serves correctly, just slower.
+                {
+                    boost::beast::error_code nd_ec;
+                    sock.set_option(asio::ip::tcp::no_delay(true), nd_ec);
+                }
+                auto conn   = std::make_shared<TcpConnection>(std::move(sock), arena_size_);
+                auto handle = tracker_.register_connection(conn, strand);
+                asio::co_spawn(
+                    strand,
+                    [this, &router, conn, h = std::move(handle)]() -> asio::awaitable<void, Strand> {
+                        try {
+                            co_await driver_.serve(*conn, router);
+                        } catch (...) {  // serve() is noexcept in practice (driver catch-all)
+                        }
+                    },
+                    asio::detached);
+            }
+            // Reached on EVERY exit path (stop, fatal accept error). Close the
+            // acceptor so new SYNs are REFUSED (ECONNREFUSED), not silently
+            // backlogged + left unserved while we drain.
+            boost::beast::error_code ignore;
+            acceptor_.close(ignore);
+            co_return;
+        }
+
+        boost::asio::awaitable<void> drain_until(const std::chrono::steady_clock::time_point deadline) override {
+            co_await tracker_.drain_until(execs_.front(), deadline);
+        }
+
+        [[nodiscard]] std::size_t in_flight() const noexcept override {
+            return tracker_.in_flight();
+        }
+
+        /// The configured bind address.
+        [[nodiscard]] std::string bind_address() const override {
+            return host_;
+        }
+        /// The actual bound port, read from the acceptor (useful when the
+        /// configured port was :0).
+        [[nodiscard]] std::uint16_t bound_port() const override {
+            return acceptor_.local_endpoint().port();
+        }
+
+    private:
+        std::vector<Executor> execs_;
+        std::size_t next_exec_ = 0;
+        std::string host_;
+        std::uint16_t port_;
+        Driver driver_;
+        std::size_t arena_size_;
+        Acceptor acceptor_;
+        ConnectionTracker tracker_;
+    };
+
+}  // namespace menagerie::http

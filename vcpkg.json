@@ -1,0 +1,49 @@
+{
+  "name": "menagerie-toolchain",
+  "version": "0.1.0",
+  "dependencies": [
+    "boost-program-options",
+    "boost-unordered",
+    "nghttp2",
+    "ngtcp2",
+    "nghttp3",
+    "boost-thread",
+    "boost-beast",
+    "boost-asio",
+    "boost-system",
+    "boost-stacktrace",
+    "openssl",
+    "jsoncpp",
+    "gtest",
+    "libpq"
+  ],
+  "default-features": [
+    "abseil-benchmarks",
+    "pg-benchmarks",
+    "drogon-benchmarks"
+  ],
+  "features": {
+    "abseil-benchmarks": {
+      "description": "Abseil logging benchmarks for comparative profiling",
+      "dependencies": [
+        "abseil"
+      ]
+    },
+    "drogon-benchmarks": {
+      "description": "Drogon reference server for HTTP/1.1 throughput comparison",
+      "dependencies": [
+        {
+          "name": "drogon",
+          "default-features": false
+        }
+      ]
+    },
+    "pg-benchmarks": {
+      "description": "PostgreSQL client overhead benchmarks",
+      "dependencies": [
+        "benchmark",
+        "libpqxx"
+      ]
+    }
+  }
+}
