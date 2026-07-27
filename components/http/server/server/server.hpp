@@ -272,7 +272,7 @@ namespace menagerie::http {
         std::condition_variable shutdown_cv_;
         bool shutdown_complete_ = false;
 
-        SCROLL_COMPONENT_PREFIX("Server");
+        CROW_COMPONENT_PREFIX("Server");
     };
 
 }  // namespace menagerie::http
