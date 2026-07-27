@@ -64,6 +64,16 @@ error handling, and shutdown.
 
 ## Building
 
+On a machine with nothing installed yet, this installs the system dependencies, clones
+the repository, and produces a first build:
+
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/MindSpectre/Menagerie/main/scripts/install-linux.sh)
+```
+
+In an existing checkout, configure and build directly - vcpkg is provisioned on the
+first configure, so there is nothing to set up beforehand:
+
 ```bash
 cmake --preset debug
 cmake --build --preset debug

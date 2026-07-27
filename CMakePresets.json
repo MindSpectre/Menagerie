@@ -17,7 +17,7 @@
         "CMAKE_CXX_FLAGS": "-stdlib=libc++",
         "CMAKE_EXE_LINKER_FLAGS": "-fuse-ld=mold -lc++abi",
         "CMAKE_SHARED_LINKER_FLAGS": "-fuse-ld=mold -lc++abi",
-        "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/vcpkg/scripts/buildsystems/vcpkg.cmake",
+        "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/cmake/vcpkg-bootstrap.cmake",
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
         "CMAKE_COLOR_DIAGNOSTICS": "ON",
         "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/triplets",
@@ -145,7 +145,7 @@
       "generator": "Ninja",
       "cacheVariables": {
         "CMAKE_CXX_FLAGS": "-stdlib=libc++",
-        "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/vcpkg/scripts/buildsystems/vcpkg.cmake",
+        "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/cmake/vcpkg-bootstrap.cmake",
         "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/triplets"
       },
       "condition": {
@@ -205,7 +205,7 @@
       "cacheVariables": {
         "CMAKE_C_COMPILER": "cl",
         "CMAKE_CXX_COMPILER": "cl",
-        "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/vcpkg/scripts/buildsystems/vcpkg.cmake",
+        "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/cmake/vcpkg-bootstrap.cmake",
         "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/triplets",
         "VCPKG_TARGET_TRIPLET": "x64-windows-static"
       },
@@ -242,7 +242,7 @@
       "cacheVariables": {
         "CMAKE_C_COMPILER": "clang-cl",
         "CMAKE_CXX_COMPILER": "clang-cl",
-        "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/vcpkg/scripts/buildsystems/vcpkg.cmake",
+        "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/cmake/vcpkg-bootstrap.cmake",
         "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/triplets",
         "VCPKG_TARGET_TRIPLET": "x64-windows-clangcl"
       },

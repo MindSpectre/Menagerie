@@ -20,50 +20,77 @@ The toolchain observed during this guide's verification build (Fedora 44):
 - OpenSSL development headers (vcpkg still builds its own OpenSSL port for the tree, but the
   system headers are a build-tool dependency of some ports)
 
-`scripts/install-linux.sh` installs the rest of this set for Fedora/RHEL (dnf), Debian/Ubuntu
-(apt), and Arch (pacman); `scripts/install-macos.sh` covers the experimental macOS path via
-Homebrew. Run the one matching your distribution before configuring the project. None of the
-three branches install the libc++/libc++abi development headers that `-stdlib=libc++` needs
-(the toolchain Docker image adds them separately) - install those yourself first:
+`scripts/install-linux.sh` installs this set for Fedora/RHEL (dnf), Debian/Ubuntu (apt),
+and Arch (pacman), including the libc++/libc++abi development headers that `-stdlib=libc++`
+needs; `scripts/install-macos.sh` covers the experimental macOS path via Homebrew. Run the
+one matching your distribution before configuring the project.
 
-- Fedora/RHEL (dnf): `libcxx-devel libcxxabi-devel`
-- Debian/Ubuntu (apt): `libc++-dev libc++abi-dev`
-- Arch (pacman): `libc++ libc++abi`
+## One-command setup
+
+On a machine that has none of the above, the Linux script also works standalone. Piped
+from curl it installs the dependencies, clones the repository into `./Menagerie`, then
+configures and builds the `dev-slim` preset:
+
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/MindSpectre/Menagerie/main/scripts/install-linux.sh)
+```
+
+`--dir <path>` changes where it clones, `--preset <name>` builds something other than
+`dev-slim`, `--no-build` stops after configuring, and `--deps-only` installs the system
+packages and nothing else. Run from inside an existing checkout the script installs the
+dependencies and stops, leaving the configure to you.
 
 ## vcpkg setup
 
 Dependencies (Boost, OpenSSL, jsoncpp, GoogleTest, libpq, nghttp2/ngtcp2/nghttp3, and the
 benchmark-only ports) are declared in `vcpkg.json` and resolved through a vcpkg checkout
 that lives inside the source tree. `vcpkg/` is gitignored - every clone provisions its own
-copy, there is no submodule. `CMakePresets.json` points `CMAKE_TOOLCHAIN_FILE` at
-`vcpkg/scripts/buildsystems/vcpkg.cmake` relative to the source directory, so vcpkg must be
-cloned into the repository root under exactly that name:
+copy, there is no submodule.
+
+Provisioning is automatic. `CMakePresets.json` points `CMAKE_TOOLCHAIN_FILE` at
+`cmake/vcpkg-bootstrap.cmake`, a shim that resolves a vcpkg checkout, clones and bootstraps
+one if there is none, and then chains to vcpkg's real toolchain file. `cmake --preset debug`
+on a fresh clone therefore just works; nothing has to be set up by hand. The shim resolves
+in this order:
+
+1. `vcpkg/` in the repository root - a checkout already in the source tree always wins
+2. `-DVCPKG_ROOT=<path>` passed on the configure line
+3. the `VCPKG_ROOT` environment variable (the toolchain image sets this to `/opt/vcpkg`)
+4. otherwise: `git clone --depth 1` upstream vcpkg into `vcpkg/` and bootstrap it
+
+Which checkout a build resolved to, and how, is printed in the `VCPKG` banner at configure
+time. Two cache variables tune the clone: `VCPKG_BOOTSTRAP_URL` (clone source) and
+`VCPKG_BOOTSTRAP_REF` (a commit, tag, or branch to check out - setting it switches to a
+full clone, since an arbitrary sha is not reachable from a shallow one).
+
+No specific vcpkg commit is pinned by default and the manifest carries no
+`vcpkg-configuration.json` baseline; the CI toolchain image
+(`infrastructure/toolchain/Dockerfile`) clones vcpkg the same way, so tracking upstream's
+default branch matches what the tree is built against there. Provisioning by hand still
+works if you prefer it - clone into `vcpkg/` yourself and the shim will find it at step 1:
 
 ```bash
 git clone https://github.com/microsoft/vcpkg vcpkg
 ./vcpkg/bootstrap-vcpkg.sh
 ```
 
-No specific vcpkg commit is pinned in the manifest (no `vcpkg-configuration.json` baseline);
-the CI toolchain image (`infrastructure/toolchain/Dockerfile`) clones vcpkg the same way, so
-tracking upstream's default branch matches what the tree is built against there. The first
-configure after bootstrapping builds every port from source and is slow (several minutes);
-subsequent configures reuse the installed tree under `build/<preset>/vcpkg_installed/`.
+The first configure builds every port from source and is slow (several minutes); subsequent
+configures reuse the installed tree under `build/<preset>/vcpkg_installed/`.
 
 ## Configure and build
 
-| Preset | Use it for |
-| --- | --- |
-| `debug` | Default day-to-day build: full component set, tests, benchmarks, examples |
-| `release` | Optimized build; what CI runs for unit and integration testing |
-| `dev-slim` | Fast iteration on `common/` only - components and benchmarks disabled |
-| `asan` | Debug build instrumented with AddressSanitizer + UndefinedBehaviorSanitizer |
-| `tsan` | Debug build instrumented with ThreadSanitizer; `common/` only, no benchmarks |
-| `llvm-coverage` | Debug build with clang source-based coverage (`llvm-profdata`/`llvm-cov`) |
-| `gcc-coverage` | Debug build with gcov-style coverage (matches CLion's CTest coverage view) |
-| `release-lto` | Release with link-time optimization |
-| `release-perf` | Release codegen with frame pointers kept, for `perf record -g` profiling |
-| `release-instrprof` | Release build instrumented for LLVM profiling-guided hotspot analysis |
+| Preset              | Use it for                                                                   |
+|---------------------|------------------------------------------------------------------------------|
+| `debug`             | Default day-to-day build: full component set, tests, benchmarks, examples    |
+| `release`           | Optimized build; what CI runs for unit and integration testing               |
+| `dev-slim`          | Fast iteration on `common/` only - components and benchmarks disabled        |
+| `asan`              | Debug build instrumented with AddressSanitizer + UndefinedBehaviorSanitizer  |
+| `tsan`              | Debug build instrumented with ThreadSanitizer; `common/` only, no benchmarks |
+| `llvm-coverage`     | Debug build with clang source-based coverage (`llvm-profdata`/`llvm-cov`)    |
+| `gcc-coverage`      | Debug build with gcov-style coverage (matches CLion's CTest coverage view)   |
+| `release-lto`       | Release with link-time optimization                                          |
+| `release-perf`      | Release codegen with frame pointers kept, for `perf record -g` profiling     |
+| `release-instrprof` | Release build instrumented for LLVM profiling-guided hotspot analysis        |
 
 Each preset has a matching build and test preset of the same name and configures into
 `build/<preset>/`. The canonical sequence for the default `debug` preset:
