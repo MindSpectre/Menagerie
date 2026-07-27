@@ -82,7 +82,7 @@ namespace menagerie::http {
         std::uint16_t port_;
         TlsConfig tls_;
         Driver driver_;
-        SCROLL_COMPONENT_PREFIX("QuicListener");
+        CROW_COMPONENT_PREFIX("QuicListener");
     };
 
 }  // namespace menagerie::http

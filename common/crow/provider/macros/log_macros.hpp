@@ -18,29 +18,29 @@ namespace menagerie::crow {
     };
 }  // namespace menagerie::crow
 
-// -------- SCROLL_COMPONENT_PREFIX --------
+// -------- CROW_COMPONENT_PREFIX --------
 // Declares a class-scope prefix for COMPONENT_LOG_*.
 //
 // Usage inside a class body:
 //     class Server {
 //     private:
-//         SCROLL_COMPONENT_PREFIX("Server");
+//         CROW_COMPONENT_PREFIX("Server");
 //         ...
 //     };
 //
 // The IIFE initializer runs at compile time; oversized names trigger the
 // consteval-throw path in InlineString::assign -> compile error.
-#define SCROLL_COMPONENT_PREFIX(name)                                                                                  \
+#define CROW_COMPONENT_PREFIX(name)                                                                                    \
     static constexpr ::menagerie::crow::PrefixNameStorage _dmp_crow_class_prefix = [] {                                \
         ::menagerie::crow::PrefixNameStorage s;                                                                        \
         s.assign(::std::string_view{name});                                                                            \
         return s;                                                                                                      \
     }()
 
-// -------- SCROLL_SET_LOGGER_PREFIX --------
+// -------- CROW_SET_LOGGER_PREFIX --------
 // Sets the prefix on a LoggerProvider-derived object from inside its
 // constructor body. Runtime call -- overflow silently truncates.
-#define SCROLL_SET_LOGGER_PREFIX(name) this->set_prefix(::std::string_view{name})
+#define CROW_SET_LOGGER_PREFIX(name) this->set_prefix(::std::string_view{name})
 
 #ifdef ENABLE_LOGGING
    // -------- LOG_* (LoggerProvider path) --------
@@ -124,56 +124,56 @@ namespace menagerie::crow {
 
     // -------- ONCE GUARDS --------
     // True only the first time it is evaluated at a given call site (guard is a
-    // function-local static). SCROLL_ONCE_GUARD_ is not thread-safe (plain bool);
-    // SCROLL_ATOMIC_ONCE_GUARD_ is, at the cost of an atomic exchange.
-    #define SCROLL_ONCE_GUARD_                                                                                         \
+    // function-local static). CROW_ONCE_GUARD_ is not thread-safe (plain bool);
+    // CROW_ATOMIC_ONCE_GUARD_ is, at the cost of an atomic exchange.
+    #define CROW_ONCE_GUARD_                                                                                           \
         []() -> bool {                                                                                                 \
             static bool f_ = false;                                                                                    \
             return !std::exchange(f_, true);                                                                           \
         }()
 
-    #define SCROLL_ATOMIC_ONCE_GUARD_                                                                                  \
+    #define CROW_ATOMIC_ONCE_GUARD_                                                                                    \
         []() -> bool {                                                                                                 \
             static std::atomic<bool> f_{false};                                                                        \
             return !f_.exchange(true, std::memory_order_relaxed);                                                      \
         }()
 
     #define LOG_TRC_ONCE(...)                                                                                          \
-        if (SCROLL_ONCE_GUARD_)                                                                                        \
+        if (CROW_ONCE_GUARD_)                                                                                          \
         LOG_TRC(__VA_ARGS__)
     #define LOG_DBG_ONCE(...)                                                                                          \
-        if (SCROLL_ONCE_GUARD_)                                                                                        \
+        if (CROW_ONCE_GUARD_)                                                                                          \
         LOG_DBG(__VA_ARGS__)
     #define LOG_INF_ONCE(...)                                                                                          \
-        if (SCROLL_ONCE_GUARD_)                                                                                        \
+        if (CROW_ONCE_GUARD_)                                                                                          \
         LOG_INF(__VA_ARGS__)
     #define LOG_WRN_ONCE(...)                                                                                          \
-        if (SCROLL_ONCE_GUARD_)                                                                                        \
+        if (CROW_ONCE_GUARD_)                                                                                          \
         LOG_WRN(__VA_ARGS__)
     #define LOG_ERR_ONCE(...)                                                                                          \
-        if (SCROLL_ONCE_GUARD_)                                                                                        \
+        if (CROW_ONCE_GUARD_)                                                                                          \
         LOG_ERR(__VA_ARGS__)
     #define LOG_FAT_ONCE(...)                                                                                          \
-        if (SCROLL_ONCE_GUARD_)                                                                                        \
+        if (CROW_ONCE_GUARD_)                                                                                          \
         LOG_FAT(__VA_ARGS__)
 
     #define LOG_TRC_ATOMIC_ONCE(...)                                                                                   \
-        if (SCROLL_ATOMIC_ONCE_GUARD_)                                                                                 \
+        if (CROW_ATOMIC_ONCE_GUARD_)                                                                                   \
         LOG_TRC(__VA_ARGS__)
     #define LOG_DBG_ATOMIC_ONCE(...)                                                                                   \
-        if (SCROLL_ATOMIC_ONCE_GUARD_)                                                                                 \
+        if (CROW_ATOMIC_ONCE_GUARD_)                                                                                   \
         LOG_DBG(__VA_ARGS__)
     #define LOG_INF_ATOMIC_ONCE(...)                                                                                   \
-        if (SCROLL_ATOMIC_ONCE_GUARD_)                                                                                 \
+        if (CROW_ATOMIC_ONCE_GUARD_)                                                                                   \
         LOG_INF(__VA_ARGS__)
     #define LOG_WRN_ATOMIC_ONCE(...)                                                                                   \
-        if (SCROLL_ATOMIC_ONCE_GUARD_)                                                                                 \
+        if (CROW_ATOMIC_ONCE_GUARD_)                                                                                   \
         LOG_WRN(__VA_ARGS__)
     #define LOG_ERR_ATOMIC_ONCE(...)                                                                                   \
-        if (SCROLL_ATOMIC_ONCE_GUARD_)                                                                                 \
+        if (CROW_ATOMIC_ONCE_GUARD_)                                                                                   \
         LOG_ERR(__VA_ARGS__)
     #define LOG_FAT_ATOMIC_ONCE(...)                                                                                   \
-        if (SCROLL_ATOMIC_ONCE_GUARD_)                                                                                 \
+        if (CROW_ATOMIC_ONCE_GUARD_)                                                                                   \
         LOG_FAT(__VA_ARGS__)
 
 #else
@@ -254,7 +254,7 @@ namespace menagerie::crow {
 
 // -------- COMPONENT_LOG_* --------
 // Prefix sourced from a class-scope `_dmp_crow_class_prefix` declared by
-// SCROLL_COMPONENT_PREFIX. Usable only inside class member functions.
+// CROW_COMPONENT_PREFIX. Usable only inside class member functions.
 #ifdef COMPONENT_LOGGING
     #define COMPONENT_LOG_TRC()                                                                                        \
         LOG_DIRECT_STREAM_TRC(::menagerie::crow::ComponentLoggerManager::get(), _dmp_crow_class_prefix.view())
@@ -273,41 +273,41 @@ namespace menagerie::crow {
     #define COMPONENT_LOG_LEAVE_FUNCTION() COMPONENT_LOG_INF() << "Leaving function " << __func__
 
     #define COMPONENT_LOG_TRC_ONCE()                                                                                   \
-        if (SCROLL_ONCE_GUARD_)                                                                                        \
+        if (CROW_ONCE_GUARD_)                                                                                          \
         COMPONENT_LOG_TRC()
     #define COMPONENT_LOG_DBG_ONCE()                                                                                   \
-        if (SCROLL_ONCE_GUARD_)                                                                                        \
+        if (CROW_ONCE_GUARD_)                                                                                          \
         COMPONENT_LOG_DBG()
     #define COMPONENT_LOG_INF_ONCE()                                                                                   \
-        if (SCROLL_ONCE_GUARD_)                                                                                        \
+        if (CROW_ONCE_GUARD_)                                                                                          \
         COMPONENT_LOG_INF()
     #define COMPONENT_LOG_WRN_ONCE()                                                                                   \
-        if (SCROLL_ONCE_GUARD_)                                                                                        \
+        if (CROW_ONCE_GUARD_)                                                                                          \
         COMPONENT_LOG_WRN()
     #define COMPONENT_LOG_ERR_ONCE()                                                                                   \
-        if (SCROLL_ONCE_GUARD_)                                                                                        \
+        if (CROW_ONCE_GUARD_)                                                                                          \
         COMPONENT_LOG_ERR()
     #define COMPONENT_LOG_FAT_ONCE()                                                                                   \
-        if (SCROLL_ONCE_GUARD_)                                                                                        \
+        if (CROW_ONCE_GUARD_)                                                                                          \
         COMPONENT_LOG_FAT()
 
     #define COMPONENT_LOG_TRC_ATOMIC_ONCE()                                                                            \
-        if (SCROLL_ATOMIC_ONCE_GUARD_)                                                                                 \
+        if (CROW_ATOMIC_ONCE_GUARD_)                                                                                   \
         COMPONENT_LOG_TRC()
     #define COMPONENT_LOG_DBG_ATOMIC_ONCE()                                                                            \
-        if (SCROLL_ATOMIC_ONCE_GUARD_)                                                                                 \
+        if (CROW_ATOMIC_ONCE_GUARD_)                                                                                   \
         COMPONENT_LOG_DBG()
     #define COMPONENT_LOG_INF_ATOMIC_ONCE()                                                                            \
-        if (SCROLL_ATOMIC_ONCE_GUARD_)                                                                                 \
+        if (CROW_ATOMIC_ONCE_GUARD_)                                                                                   \
         COMPONENT_LOG_INF()
     #define COMPONENT_LOG_WRN_ATOMIC_ONCE()                                                                            \
-        if (SCROLL_ATOMIC_ONCE_GUARD_)                                                                                 \
+        if (CROW_ATOMIC_ONCE_GUARD_)                                                                                   \
         COMPONENT_LOG_WRN()
     #define COMPONENT_LOG_ERR_ATOMIC_ONCE()                                                                            \
-        if (SCROLL_ATOMIC_ONCE_GUARD_)                                                                                 \
+        if (CROW_ATOMIC_ONCE_GUARD_)                                                                                   \
         COMPONENT_LOG_ERR()
     #define COMPONENT_LOG_FAT_ATOMIC_ONCE()                                                                            \
-        if (SCROLL_ATOMIC_ONCE_GUARD_)                                                                                 \
+        if (CROW_ATOMIC_ONCE_GUARD_)                                                                                   \
         COMPONENT_LOG_FAT()
 #else
     #define COMPONENT_LOG(level, message) ((void)0)

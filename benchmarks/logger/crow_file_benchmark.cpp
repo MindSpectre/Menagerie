@@ -18,8 +18,8 @@ namespace {
         }
     };
 
-    constexpr std::size_t SCROLL_PREFIX_EST = 104;
-    constexpr std::size_t SCROLL_PAD_SIZE   = bench::TARGET_RECORD_SIZE - SCROLL_PREFIX_EST;
+    constexpr std::size_t CROW_PREFIX_EST = 104;
+    constexpr std::size_t CROW_PAD_SIZE   = bench::TARGET_RECORD_SIZE - CROW_PREFIX_EST;
 
     auto make_logger() {
         return std::make_unique<menagerie::crow::Logger>(
@@ -32,10 +32,10 @@ namespace {
 }  // namespace
 
 int main() {
-    const std::string padding(SCROLL_PAD_SIZE, '0');
+    const std::string padding(CROW_PAD_SIZE, '0');
 
     std::cout << "Scroll File Logger Benchmark\n";
-    std::cout << "Padding size: " << SCROLL_PAD_SIZE << " bytes (target record ~" << bench::TARGET_RECORD_SIZE
+    std::cout << "Padding size: " << CROW_PAD_SIZE << " bytes (target record ~" << bench::TARGET_RECORD_SIZE
               << " bytes)\n";
 
     // Test 1: 8-thread file sink contention
@@ -49,7 +49,7 @@ int main() {
                 .add_time_to_filename(false)
                 .max_file_size(menagerie::beavers::literals::operator""_mb(500))
                 .flush_each_entry(false)
-                .rotation(false)
+                .rotate_file(false)
                 .finalize();
 
         auto file_sink = std::make_shared<menagerie::crow::FileSink<menagerie::crow::DetailedEntry>>(sink_config);
@@ -75,7 +75,7 @@ int main() {
                 .add_time_to_filename(false)
                 .max_file_size(menagerie::beavers::literals::operator""_mb(500))
                 .flush_each_entry(false)
-                .rotation(false)
+                .rotate_file(false)
                 .finalize();
 
         auto file_sink = std::make_shared<menagerie::crow::FileSink<menagerie::crow::DetailedEntry>>(sink_config);
@@ -131,7 +131,7 @@ int main() {
                     .add_time_to_filename(false)
                     .max_file_size(menagerie::beavers::literals::operator""_mb(500))
                     .flush_each_entry(false)
-                    .rotation(false)
+                    .rotate_file(false)
                     .finalize());
         };
 
@@ -158,7 +158,7 @@ int main() {
                 .add_time_to_filename(false)
                 .max_file_size(menagerie::beavers::literals::operator""_mb(500))
                 .flush_each_entry(false)
-                .rotation(false)
+                .rotate_file(false)
                 .finalize());
 
         auto logger = make_logger();
@@ -191,7 +191,7 @@ int main() {
                     .add_time_to_filename(false)
                     .max_file_size(menagerie::beavers::literals::operator""_mb(500))
                     .flush_each_entry(false)
-                    .rotation(false)
+                    .rotate_file(false)
                     .finalize());
         };
 

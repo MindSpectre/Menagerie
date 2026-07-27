@@ -135,7 +135,7 @@ namespace menagerie::db::postgres {
         [[nodiscard]] bool is_shutdown() const noexcept;
 
     private:
-        SCROLL_COMPONENT_PREFIX("LockFreeSession");
+        CROW_COMPONENT_PREFIX("LockFreeSession");
 
         ConnectionPool pool_;
         PoolJanitor janitor_;

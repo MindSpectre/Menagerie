@@ -25,7 +25,7 @@ namespace menagerie::crow {
     /// class names (e.g. "PostgresAsyncExecutor" = 21 chars).
     ///
     /// Overflow behavior (see beavers::InlineString::assign):
-    /// - consteval context (literal via SCROLL_COMPONENT_PREFIX): compile error
+    /// - consteval context (literal via CROW_COMPONENT_PREFIX): compile error
     /// - runtime context (set_prefix / dynamic source): silently truncates
     using PrefixNameStorage = beavers::InlineString<31>;
 
@@ -80,10 +80,10 @@ namespace menagerie::crow {
         /// Per-thread tid/pid captured once and reused by MetaThread/MetaProcess, so
         /// building an entry never repeats the syscalls capture_kernel_tid()/getpid() need.
         struct ThreadLocalCache {
-            uint64_t tid;         ///< OS-level thread id, from capture_kernel_tid().
-            int32_t pid;          ///< Process id, from getpid().
-            char tid_str[16]{};   ///< tid pre-rendered as a decimal C string.
-            char pid_str[16]{};   ///< pid pre-rendered as a decimal C string.
+            uint64_t tid;        ///< OS-level thread id, from capture_kernel_tid().
+            int32_t pid;         ///< Process id, from getpid().
+            char tid_str[16]{};  ///< tid pre-rendered as a decimal C string.
+            char pid_str[16]{};  ///< pid pre-rendered as a decimal C string.
 
             ThreadLocalCache() noexcept {
                 tid = capture_kernel_tid();
@@ -152,8 +152,8 @@ namespace menagerie::crow {
                 return message_;
             }
 
-            virtual ~EntryBase()                             = default;
-            EntryBase()                                      = default;
+            virtual ~EntryBase() = default;
+            EntryBase()          = default;
 
             /// Formats this entry (level, message, and whichever Meta* mixins it carries)
             /// into out, replacing out's previous contents.

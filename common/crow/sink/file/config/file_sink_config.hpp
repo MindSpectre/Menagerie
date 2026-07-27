@@ -174,7 +174,7 @@ namespace menagerie::crow {
 
         /// Sets rotate_file() (the getter is named rotate_file, not rotation).
         template <typename Self>
-        constexpr auto&& rotation(this Self&& self, const bool value) noexcept {
+        constexpr auto&& rotate_file(this Self&& self, const bool value) noexcept {
             self.config_.rotate_file_ = value;
             return std::forward<Self>(self);
         }

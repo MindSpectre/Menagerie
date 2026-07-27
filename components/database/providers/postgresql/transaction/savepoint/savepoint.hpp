@@ -44,7 +44,7 @@ namespace menagerie::db::postgres {
     private:
         friend class Transaction;
 
-        SCROLL_COMPONENT_PREFIX("Savepoint");
+        CROW_COMPONENT_PREFIX("Savepoint");
 
         PGconn* conn_;
         std::string name_;

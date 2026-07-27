@@ -18,7 +18,7 @@ namespace menagerie::crow {
      *
      * Prefix overflow: values longer than `PrefixNameStorage` capacity are
      * silently truncated at runtime (see `PrefixNameStorage` docs). Prefer
-     * `SCROLL_COMPONENT_PREFIX` for literal names -- it catches overflow at
+     * `CROW_COMPONENT_PREFIX` for literal names -- it catches overflow at
      * compile time.
      *
      * Thread safety: @ref set_prefix is NOT thread-safe. Callers must set the

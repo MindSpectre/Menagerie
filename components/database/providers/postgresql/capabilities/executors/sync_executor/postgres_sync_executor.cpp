@@ -53,7 +53,7 @@ namespace menagerie::db::postgres {
     beavers::Outcome<ResultBlock, ErrorContext> SyncExecutor::execute_impl(const char* query,
                                                                            const Params* params) const {
         COMPONENT_LOG_ENTER_FUNCTION();
-        COMPONENT_LOG_TRC() << SCROLL_PARAMS(query, params);
+        COMPONENT_LOG_TRC() << CROW_PARAMS(query, params);
         if (const auto ec = check_connection(conn_); ec) {
             ErrorContext ctx(ec);
             COMPONENT_LOG_ERR() << "Connection failed: " << ctx;
