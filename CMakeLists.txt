@@ -20,9 +20,16 @@ query_tool_version(NINJA_VERSION ninja --version)
 query_tool_version(CCACHE_VERSION ccache --version)
 query_tool_version(MOLD_VERSION mold --version)
 
-# vcpkg lives inside the source tree (toolchain is at vcpkg/scripts/buildsystems/vcpkg.cmake)
-get_filename_component(_vcpkg_root "${CMAKE_TOOLCHAIN_FILE}" DIRECTORY)
-get_filename_component(_vcpkg_root "${_vcpkg_root}/../.." ABSOLUTE)
+# cmake/vcpkg-bootstrap.cmake (the toolchain file every preset points at) resolves
+# the checkout and reports it here. Fall back to back-deriving the root for builds
+# that aim CMAKE_TOOLCHAIN_FILE straight at vcpkg/scripts/buildsystems/vcpkg.cmake.
+if (DEFINED MENAGERIE_VCPKG_ROOT)
+    set(_vcpkg_root "${MENAGERIE_VCPKG_ROOT}")
+else ()
+    get_filename_component(_vcpkg_root "${CMAKE_TOOLCHAIN_FILE}" DIRECTORY)
+    get_filename_component(_vcpkg_root "${_vcpkg_root}/../.." ABSOLUTE)
+    set(MENAGERIE_VCPKG_ORIGIN "CMAKE_TOOLCHAIN_FILE")
+endif ()
 vcpkg_commit_hash(VCPKG_COMMIT "${_vcpkg_root}")
 
 PrintLineSeparator()
@@ -44,6 +51,7 @@ PrintLineSeparator()
 
 message("\tVCPKG")
 message("Toolchain: ${CMAKE_TOOLCHAIN_FILE}")
+message("Root:      ${_vcpkg_root} (via ${MENAGERIE_VCPKG_ORIGIN})")
 message("Triplet:   ${VCPKG_TARGET_TRIPLET}")
 message("Commit:    ${VCPKG_COMMIT}")
 PrintLineSeparator()
