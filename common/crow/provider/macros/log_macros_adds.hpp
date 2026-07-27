@@ -1,11 +1,11 @@
 #pragma once
 
 #include <menagerie/beavers>
-// SCROLL_PARAMS below is the main macro; everything above it is implementation
+// CROW_PARAMS below is the main macro; everything above it is implementation
 // plumbing for stringifying a variadic parameter list as "name=value, name2=value2".
 
 
-#define SCROLL_ENTER_FUNCTION() SLOG_INF() << "Entering function " << __func__
+#define CROW_ENTER_FUNCTION() LOG_INF() << "Entering function " << __func__
 
 // Addons
 #define COUNT_ARGS(...) COUNT_ARGS_IMPL(__VA_ARGS__, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1)
@@ -27,9 +27,9 @@
 #define CALL_FMT(N, ...) DISPATCH_FMT(N)(__VA_ARGS__)
 
 /// Renders up to 8 named arguments as a " p1=<value>, p2=<value>, ..." string, e.g.
-/// `SCROLL_PARAMS(user_id, retries)` with user_id=7, retries=2 yields " user_id=7, retries=2".
+/// `CROW_PARAMS(user_id, retries)` with user_id=7, retries=2 yields " user_id=7, retries=2".
 /// Intended for splicing into a LOG_* stream call to trace a function's parameters.
-#define SCROLL_PARAMS(...)                                                                                             \
+#define CROW_PARAMS(...)                                                                                               \
     ([&]() {                                                                                                           \
         std::ostringstream oss;                                                                                        \
         oss << " " << CALL_FMT(COUNT_ARGS(__VA_ARGS__), __VA_ARGS__);                                                  \

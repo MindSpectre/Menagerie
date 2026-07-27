@@ -49,8 +49,10 @@ namespace menagerie::http {
         /// Specialization for a handler returning AsyncOutcome<Response, Es...>.
         template <typename... Es>
         struct RouteHandlerTraits<boost::asio::awaitable<beavers::Outcome<Response, Es...>, Strand>> {
-            static constexpr bool valid       = (HasToHttpResponse<Es> && ...);  ///< Valid only when every Es has an ADL to_http_response.
-            static constexpr bool has_outcome = true;  ///< Signals callable_route/member_outcome_route to collapse via to_http_response.
+            static constexpr bool valid =
+                (HasToHttpResponse<Es> && ...);  ///< Valid only when every Es has an ADL to_http_response.
+            static constexpr bool has_outcome =
+                true;  ///< Signals callable_route/member_outcome_route to collapse via to_http_response.
         };
 
         /// Collapse Outcome<Response, Es...> to Response via ADL. The exact
@@ -378,7 +380,7 @@ namespace menagerie::http {
         std::vector<LocalRoute> local_routes_;
         std::vector<Middleware> middlewares_;
 
-        SCROLL_COMPONENT_PREFIX("HttpController");
+        CROW_COMPONENT_PREFIX("HttpController");
     };
 
 }  // namespace menagerie::http

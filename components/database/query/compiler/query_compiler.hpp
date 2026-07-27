@@ -63,7 +63,7 @@ namespace menagerie::db {
                 SqlGeneratorVisitor<DialectT, std::pmr::string> visitor{arena.get()};
                 expr.accept(visitor);
                 auto [sql, count] = std::move(visitor).decompose();
-                COMPONENT_LOG_TRC() << SCROLL_PARAMS(sql);
+                COMPONENT_LOG_TRC() << CROW_PARAMS(sql);
                 return {std::move(sql), nullptr, DialectT::type(), std::move(arena)};
             } else if constexpr (Mode == ParamMode::Sink) {
                 auto bind_packet = DialectT::make_param_sink(arena.get());
@@ -71,7 +71,7 @@ namespace menagerie::db {
                                                                                          arena.get()};
                 expr.accept(visitor);
                 auto [sql, count] = std::move(visitor).decompose();
-                COMPONENT_LOG_TRC() << SCROLL_PARAMS(sql);
+                COMPONENT_LOG_TRC() << CROW_PARAMS(sql);
                 return {std::move(sql), std::move(bind_packet.packet), DialectT::type(), std::move(arena)};
             }
             std::unreachable();
@@ -87,7 +87,7 @@ namespace menagerie::db {
                 SqlGeneratorVisitor<DialectT, std::pmr::string> visitor{arena.get()};
                 std::move(expr).accept(visitor);
                 auto [sql, count] = std::move(visitor).decompose();
-                COMPONENT_LOG_TRC() << SCROLL_PARAMS(sql);
+                COMPONENT_LOG_TRC() << CROW_PARAMS(sql);
                 return {std::move(sql), nullptr, DialectT::type(), std::move(arena)};
             } else if constexpr (Mode == ParamMode::Sink) {
                 auto bind_packet = DialectT::make_param_sink(arena.get());
@@ -95,13 +95,13 @@ namespace menagerie::db {
                                                                                          arena.get()};
                 std::move(expr).accept(visitor);
                 auto [sql, count] = std::move(visitor).decompose();
-                COMPONENT_LOG_TRC() << SCROLL_PARAMS(sql);
+                COMPONENT_LOG_TRC() << CROW_PARAMS(sql);
                 return {std::move(sql), std::move(bind_packet.packet), DialectT::type(), std::move(arena)};
             }
             std::unreachable();
         }
 
     private:
-        SCROLL_COMPONENT_PREFIX("QueryCompiler");
+        CROW_COMPONENT_PREFIX("QueryCompiler");
     };
 }  // namespace menagerie::db

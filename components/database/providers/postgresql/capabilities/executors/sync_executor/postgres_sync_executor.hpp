@@ -169,7 +169,7 @@ namespace menagerie::db::postgres {
         }
 
     private:
-        SCROLL_COMPONENT_PREFIX("SyncExecutor");
+        CROW_COMPONENT_PREFIX("SyncExecutor");
 
         PGconn* conn_ = nullptr;
         std::weak_ptr<ConnectionHolder> holder_;

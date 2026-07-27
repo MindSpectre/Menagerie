@@ -37,7 +37,7 @@ namespace menagerie::http {
         }
 
     private:
-        SCROLL_COMPONENT_PREFIX("Http3Driver");
+        CROW_COMPONENT_PREFIX("Http3Driver");
     };
 
 }  // namespace menagerie::http

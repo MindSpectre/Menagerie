@@ -100,7 +100,7 @@ namespace menagerie::db::postgres {
         [[nodiscard]] bool is_shutdown() const noexcept;
 
     private:
-        SCROLL_COMPONENT_PREFIX("BlockingSession");
+        CROW_COMPONENT_PREFIX("BlockingSession");
 
         BlockingPool pool_;
     };

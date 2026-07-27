@@ -683,11 +683,11 @@ private:
 | Prefix       | Use                                                                   |
 |--------------|-----------------------------------------------------------------------|
 | `*`          | Global feature flags consumed across the whole framework              |
-| `<MODULE>_*` | Module-scoped macros — `GEARS_*`, `SCROLL_*`, `NEXUS_*`               |
+| `<MODULE>_*` | Module-scoped macros — `GEARS_*`, `CROW_*`, `NEXUS_*`                 |
 | short name   | Product-API macros where brevity matters — `LOG_*`, `COMPONENT_LOG_*` |
 
 Examples: `ENABLE_LOGGING`, `COMPONENT_LOGGING`, `GEARS_UNREACHABLE`,
-`SCROLL_COMPONENT_PREFIX`, `SPIDER_WEB`.
+`CROW_COMPONENT_PREFIX`, `SPIDER_WEB`.
 
 ### Feature-Flag Disabled Fallbacks
 
@@ -710,4 +710,4 @@ need `#ifdef` guards:
 The `common/crow` module defines three families of logging macros (`LOG_*`,
 `COMPONENT_LOG_*`, `LOG_DIRECT_*`), each with its own precondition on the call site. See
 `common/crow/provider/include/log_macros.hpp` for the full set and the class-scope setup required by
-`SCROLL_COMPONENT_PREFIX`.
+`CROW_COMPONENT_PREFIX`.

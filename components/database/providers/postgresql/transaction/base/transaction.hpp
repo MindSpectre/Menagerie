@@ -34,7 +34,8 @@ namespace menagerie::db::postgres {
 
         /// Transfers ownership of the borrowed connection; other is left with no holder and status FAILED.
         Transaction(Transaction&& other) noexcept;
-        /// Releases this transaction's holder (if any), then takes over other's; other is left with no holder and status FAILED.
+        /// Releases this transaction's holder (if any), then takes over other's; other is left with no holder and
+        /// status FAILED.
         Transaction& operator=(Transaction&& other) noexcept;
 
         // -------- Cleanup --------
@@ -68,7 +69,8 @@ namespace menagerie::db::postgres {
 
         // -------- Capability Provision --------
 
-        /// Borrows a synchronous executor bound to this transaction's connection. Returns ErrorContext{InvalidState} unless ACTIVE.
+        /// Borrows a synchronous executor bound to this transaction's connection. Returns ErrorContext{InvalidState}
+        /// unless ACTIVE.
         [[nodiscard]] beavers::Outcome<SyncExecutor, ErrorContext> with_sync() const;
         /**
          * @brief Borrows an asynchronous executor bound to this transaction's connection.
@@ -112,7 +114,7 @@ namespace menagerie::db::postgres {
         friend class LockFreeSession;
         friend class BlockingSession;
 
-        SCROLL_COMPONENT_PREFIX("Transaction");
+        CROW_COMPONENT_PREFIX("Transaction");
 
         std::weak_ptr<ConnectionHolder> holder_;
         PGconn* conn_ = nullptr;

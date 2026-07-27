@@ -11,7 +11,7 @@ protected:
                                               .threshold(menagerie::crow::DBG)
                                               .file("test.log")
                                               .add_time_to_filename(false)
-                                              .rotation(false)
+                                              .rotate_file(false)
                                               .flush_each_entry(true)
                                               .finalize();
 

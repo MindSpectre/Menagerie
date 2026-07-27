@@ -194,7 +194,7 @@ namespace menagerie::db::postgres {
         }
 
     private:
-        SCROLL_COMPONENT_PREFIX("AsyncExecutor");
+        CROW_COMPONENT_PREFIX("AsyncExecutor");
 
         PGconn* conn_ = nullptr;
         boost::asio::any_io_executor executor_;

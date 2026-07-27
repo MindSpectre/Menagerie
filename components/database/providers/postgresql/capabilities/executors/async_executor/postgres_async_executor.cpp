@@ -135,7 +135,7 @@ namespace menagerie::db::postgres {
     boost::asio::awaitable<beavers::Outcome<ResultBlock, ErrorContext>>
     AsyncExecutor::execute_impl(const char* query, const Params* params) const {
         COMPONENT_LOG_ENTER_FUNCTION();
-        COMPONENT_LOG_TRC() << SCROLL_PARAMS(query, params);
+        COMPONENT_LOG_TRC() << CROW_PARAMS(query, params);
         // 1. Validate executor state
         if (auto err = validate_state()) {
             COMPONENT_LOG_ERR() << "Validation failed: " << *err;

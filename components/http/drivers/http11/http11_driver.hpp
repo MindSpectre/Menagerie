@@ -125,7 +125,7 @@ namespace menagerie::http {
         static void serialize_response(Response& resp, std::string& out) UNRECOVERABLE_NOEXCEPT;
 
         Http11Config cfg_;
-        // No SCROLL_COMPONENT_PREFIX / COMPONENT_LOG_* here: the h1 driver does
+        // No CROW_COMPONENT_PREFIX / COMPONENT_LOG_* here: the h1 driver does
         // not log in v1, so it carries no Scroll dependency in its public header
         // (avoids a PUBLIC Scroll link just to satisfy the macro in consumers).
         // The h2/h3 scaffolds DO log, and link Scroll INTERFACE accordingly.
