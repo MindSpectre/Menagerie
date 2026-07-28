@@ -23,7 +23,7 @@ namespace {
 
     std::string write_temp(const std::string_view stem, const std::string_view contents) {
         const std::filesystem::path path = std::filesystem::temp_directory_path() /
-                                           ("dmp_http_cfg_" + std::to_string(::getpid()) + "_" + std::string{stem});
+                                           ("http_cfg_" + std::to_string(::getpid()) + "_" + std::string{stem});
         std::ofstream out{path, std::ios::binary | std::ios::trunc};
         out.write(contents.data(), static_cast<std::streamsize>(contents.size()));
         return path.string();

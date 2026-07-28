@@ -1,1 +1,1 @@
-docker build -t dmp_toolchain -f ./Dockerfile ../..
+docker build -t mng_toolchain -f ./Dockerfile ../..

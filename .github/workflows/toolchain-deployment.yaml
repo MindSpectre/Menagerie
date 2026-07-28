@@ -36,7 +36,12 @@ jobs:
 
   publish-toolchain:
     needs: check-toolchain-changes
-    if: needs.check-toolchain-changes.outputs.toolchain_changed == 'true'
+    # Manual runs always publish. Without this, workflow_dispatch is a no-op unless
+    # the last commit happened to touch infrastructure/toolchain/ - which makes it
+    # useless for the one case it is most wanted, republishing the image on demand.
+    if: |
+      needs.check-toolchain-changes.outputs.toolchain_changed == 'true' ||
+      github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -69,7 +74,7 @@ jobs:
           file: infrastructure/toolchain/Dockerfile
           push: true
           tags: |
-            ghcr.io/${{ steps.env.outputs.owner }}/dmp_toolchain:stable
-            ghcr.io/${{ steps.env.outputs.owner }}/dmp_toolchain:${{ github.sha }}
-          cache-from: type=registry,ref=ghcr.io/${{ steps.env.outputs.owner }}/dmp_toolchain:cache
-          cache-to: type=registry,ref=ghcr.io/${{ steps.env.outputs.owner }}/dmp_toolchain:cache,mode=max
+            ghcr.io/${{ steps.env.outputs.owner }}/mng_toolchain:stable
+            ghcr.io/${{ steps.env.outputs.owner }}/mng_toolchain:${{ github.sha }}
+          cache-from: type=registry,ref=ghcr.io/${{ steps.env.outputs.owner }}/mng_toolchain:cache
+          cache-to: type=registry,ref=ghcr.io/${{ steps.env.outputs.owner }}/mng_toolchain:cache,mode=max

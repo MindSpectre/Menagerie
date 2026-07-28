@@ -1,0 +1,98 @@
+# Compile-only build of the benchmark and example targets.
+#
+# pr-testing.yaml builds the `ci` preset, which turns off DO_BENCHMARKS and
+# BUILD_EXAMPLES and drops the benchmark-only vcpkg features (drogon, abseil,
+# libpqxx, benchmark and their transitive deps - 12 ports, ~400s of port build
+# time that nothing under test links against). That keeps PRs fast but means
+# nothing in the PR path compiles the benchmark sources any more.
+#
+# This job covers that gap on a weekly cadence with the full `release` preset.
+# It builds but does not run: benchmark numbers from a shared CI runner are not
+# meaningful, so this only answers "does it still compile".
+
+name: Benchmarks build
+
+on:
+  schedule:
+    # Mondays, 04:00 UTC
+    - cron: '0 4 * * 1'
+  workflow_dispatch:
+
+concurrency:
+  group: benchmarks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+
+      - name: Setup environment
+        id: env
+        uses: ./.github/actions/env-setup
+
+      - name: Free up disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          sudo docker system prune -af
+          df -h
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull toolchain image
+        run: |
+          IMAGE="ghcr.io/${{ steps.env.outputs.owner }}/mng_toolchain:stable"
+          docker pull "$IMAGE" || {
+            echo "::warning::$IMAGE unavailable - building it locally"
+            docker build -t "$IMAGE" -f infrastructure/toolchain/Dockerfile .
+          }
+
+      # Deliberately namespaced so neither key is prefix-matched by the restore-keys
+      # in pr-testing.yaml / cache-warm.yaml ("vcpkg-binary-" and "ccache-"). This
+      # build installs the full feature set; letting PRs fall back onto it would
+      # make every PR download ports the PR path never uses.
+      - name: Restore vcpkg binary cache
+        uses: actions/cache@v4
+        with:
+          path: vcpkg-binary-cache
+          key: bench-vcpkg-binary-${{ hashFiles('vcpkg.json') }}-x64-linux-clang
+          restore-keys: |
+            bench-vcpkg-binary-
+
+      - name: Restore ccache
+        uses: actions/cache@v4
+        with:
+          path: ccache-cache
+          key: bench-ccache-${{ github.sha }}
+          restore-keys: |
+            bench-ccache-
+
+      - name: Build benchmarks and examples
+        run: |
+          mkdir -p vcpkg-binary-cache ccache-cache
+          docker run --rm \
+            -v ${{ github.workspace }}:/workspace \
+            -v ${{ github.workspace }}/vcpkg-binary-cache:/root/.cache/vcpkg/archives \
+            -v ${{ github.workspace }}/ccache-cache:/root/.cache/ccache \
+            -e VCPKG_BINARY_SOURCES="clear;files,/root/.cache/vcpkg/archives,readwrite" \
+            -e CCACHE_DIR=/root/.cache/ccache \
+            -e CCACHE_MAXSIZE=500M \
+            -w /workspace \
+            ghcr.io/${{ steps.env.outputs.owner }}/mng_toolchain:stable \
+            bash -c "
+              cmake --preset release &&
+              cmake --build --preset release -- -j\$(nproc)
+            "

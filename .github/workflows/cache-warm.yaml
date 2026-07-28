@@ -1,0 +1,104 @@
+# Populates the vcpkg binary cache and ccache on the default branch.
+#
+# GitHub Actions caches are branch-scoped: a workflow run can read caches from its
+# own ref and from the default branch, and nothing else. pr-testing.yaml only
+# triggers on pull_request, so every cache it saves lands on refs/pull/N/merge
+# where no other PR can ever see it - which left every PR run rebuilding all 89
+# vcpkg ports and all 634 objects from scratch (~24 minutes).
+#
+# This workflow exists to put those caches on refs/heads/main, where every PR can
+# read them. It deliberately does no testing; pr-testing.yaml owns that.
+#
+# It must build the same preset as pr-testing.yaml, or the cache it produces will
+# not match what PRs ask for. Both use `ci`.
+
+name: Cache warm
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+concurrency:
+  group: cache-warm-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  warm:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+
+      - name: Setup environment
+        id: env
+        uses: ./.github/actions/env-setup
+
+      - name: Free up disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          sudo docker system prune -af
+          df -h
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # This workflow and toolchain-deployment.yaml both fire on a push to main, in
+      # parallel. When a commit changes the toolchain, the image this wants may not
+      # be pushed yet - and on the very first run after an image rename it does not
+      # exist at all. Build it locally rather than failing the warm; the next run
+      # pulls normally.
+      - name: Pull toolchain image
+        run: |
+          IMAGE="ghcr.io/${{ steps.env.outputs.owner }}/mng_toolchain:stable"
+          docker pull "$IMAGE" || {
+            echo "::warning::$IMAGE unavailable - building it locally"
+            docker build -t "$IMAGE" -f infrastructure/toolchain/Dockerfile .
+          }
+
+      # Restore first so an unchanged manifest tops up an existing cache instead of
+      # rebuilding every port. Keys must match pr-testing.yaml exactly.
+      - name: Restore vcpkg binary cache
+        uses: actions/cache@v4
+        with:
+          path: vcpkg-binary-cache
+          key: vcpkg-binary-${{ hashFiles('vcpkg.json') }}-x64-linux-clang
+          restore-keys: |
+            vcpkg-binary-
+
+      - name: Restore ccache
+        uses: actions/cache@v4
+        with:
+          path: ccache-cache
+          key: ccache-${{ github.ref }}-${{ github.sha }}
+          restore-keys: |
+            ccache-${{ github.ref }}-
+            ccache-
+
+      - name: Build
+        run: |
+          mkdir -p vcpkg-binary-cache ccache-cache
+          docker run --rm \
+            -v ${{ github.workspace }}:/workspace \
+            -v ${{ github.workspace }}/vcpkg-binary-cache:/root/.cache/vcpkg/archives \
+            -v ${{ github.workspace }}/ccache-cache:/root/.cache/ccache \
+            -e VCPKG_BINARY_SOURCES="clear;files,/root/.cache/vcpkg/archives,readwrite" \
+            -e CCACHE_DIR=/root/.cache/ccache \
+            -e CCACHE_MAXSIZE=500M \
+            -w /workspace \
+            ghcr.io/${{ steps.env.outputs.owner }}/mng_toolchain:stable \
+            bash -c "
+              cmake --preset ci &&
+              cmake --build --preset ci -- -j\$(nproc) &&
+              ccache --show-stats
+            "

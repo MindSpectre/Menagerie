@@ -48,6 +48,18 @@
       "binaryDir": "build/release"
     },
     {
+      "name": "ci",
+      "displayName": "CI (Release, no benchmarks/examples)",
+      "description": "What PR CI builds: release codegen with the unit and integration suites, but no benchmark or example targets and no benchmark-only vcpkg features. Dropping the default features removes 12 ports (drogon, abseil, libpqxx, benchmark and their transitive deps) that nothing under test links against.",
+      "inherits": "release",
+      "cacheVariables": {
+        "DO_BENCHMARKS": "OFF",
+        "BUILD_EXAMPLES": "OFF",
+        "VCPKG_MANIFEST_NO_DEFAULT_FEATURES": "ON"
+      },
+      "binaryDir": "build/ci"
+    },
+    {
       "name": "dev-slim",
       "displayName": "Dev Slim (no components/benchmarks)",
       "description": "Fast iteration build — only common/ libraries, no components or benchmarks",
@@ -285,6 +297,11 @@
       "configuration": "Release"
     },
     {
+      "name": "ci",
+      "configurePreset": "ci",
+      "configuration": "Release"
+    },
+    {
       "name": "dev-slim",
       "configurePreset": "dev-slim",
       "configuration": "Debug"
@@ -377,6 +394,14 @@
     {
       "name": "release",
       "configurePreset": "release",
+      "configuration": "Release",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "ci",
+      "configurePreset": "ci",
       "configuration": "Release",
       "output": {
         "outputOnFailure": true
