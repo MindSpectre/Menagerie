@@ -31,7 +31,7 @@ namespace menagerie::crow {
 // The IIFE initializer runs at compile time; oversized names trigger the
 // consteval-throw path in InlineString::assign -> compile error.
 #define CROW_COMPONENT_PREFIX(name)                                                                                    \
-    static constexpr ::menagerie::crow::PrefixNameStorage _dmp_crow_class_prefix = [] {                                \
+    static constexpr ::menagerie::crow::PrefixNameStorage _crow_class_prefix = [] {                                \
         ::menagerie::crow::PrefixNameStorage s;                                                                        \
         s.assign(::std::string_view{name});                                                                            \
         return s;                                                                                                      \
@@ -253,21 +253,21 @@ namespace menagerie::crow {
 #endif
 
 // -------- COMPONENT_LOG_* --------
-// Prefix sourced from a class-scope `_dmp_crow_class_prefix` declared by
+// Prefix sourced from a class-scope `_crow_class_prefix` declared by
 // CROW_COMPONENT_PREFIX. Usable only inside class member functions.
 #ifdef COMPONENT_LOGGING
     #define COMPONENT_LOG_TRC()                                                                                        \
-        LOG_DIRECT_STREAM_TRC(::menagerie::crow::ComponentLoggerManager::get(), _dmp_crow_class_prefix.view())
+        LOG_DIRECT_STREAM_TRC(::menagerie::crow::ComponentLoggerManager::get(), _crow_class_prefix.view())
     #define COMPONENT_LOG_DBG()                                                                                        \
-        LOG_DIRECT_STREAM_DBG(::menagerie::crow::ComponentLoggerManager::get(), _dmp_crow_class_prefix.view())
+        LOG_DIRECT_STREAM_DBG(::menagerie::crow::ComponentLoggerManager::get(), _crow_class_prefix.view())
     #define COMPONENT_LOG_INF()                                                                                        \
-        LOG_DIRECT_STREAM_INF(::menagerie::crow::ComponentLoggerManager::get(), _dmp_crow_class_prefix.view())
+        LOG_DIRECT_STREAM_INF(::menagerie::crow::ComponentLoggerManager::get(), _crow_class_prefix.view())
     #define COMPONENT_LOG_WRN()                                                                                        \
-        LOG_DIRECT_STREAM_WRN(::menagerie::crow::ComponentLoggerManager::get(), _dmp_crow_class_prefix.view())
+        LOG_DIRECT_STREAM_WRN(::menagerie::crow::ComponentLoggerManager::get(), _crow_class_prefix.view())
     #define COMPONENT_LOG_ERR()                                                                                        \
-        LOG_DIRECT_STREAM_ERR(::menagerie::crow::ComponentLoggerManager::get(), _dmp_crow_class_prefix.view())
+        LOG_DIRECT_STREAM_ERR(::menagerie::crow::ComponentLoggerManager::get(), _crow_class_prefix.view())
     #define COMPONENT_LOG_FAT()                                                                                        \
-        LOG_DIRECT_STREAM_FAT(::menagerie::crow::ComponentLoggerManager::get(), _dmp_crow_class_prefix.view())
+        LOG_DIRECT_STREAM_FAT(::menagerie::crow::ComponentLoggerManager::get(), _crow_class_prefix.view())
 
     #define COMPONENT_LOG_ENTER_FUNCTION() COMPONENT_LOG_INF() << "Entering function " << __func__
     #define COMPONENT_LOG_LEAVE_FUNCTION() COMPONENT_LOG_INF() << "Leaving function " << __func__

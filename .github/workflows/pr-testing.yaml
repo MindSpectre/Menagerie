@@ -4,6 +4,11 @@ on:
   pull_request:
     branches: [ main ]
 
+# A new push to a PR makes the in-flight run redundant.
+concurrency:
+  group: pr-testing-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   check-toolchain-changes:
     runs-on: ubuntu-latest
@@ -85,28 +90,33 @@ jobs:
           file: infrastructure/toolchain/Dockerfile
           push: false
           load: true
-          tags: local/dmp_toolchain:latest
-          cache-from: type=registry,ref=ghcr.io/${{ steps.env.outputs.owner }}/dmp_toolchain:cache
+          tags: local/mng_toolchain:latest
+          cache-from: type=registry,ref=ghcr.io/${{ steps.env.outputs.owner }}/mng_toolchain:cache
 
       - name: Determine container image
         id: container
         run: |
           if [ "${{ needs.check-toolchain-changes.outputs.toolchain_changed }}" == "true" ]; then
-            echo "image=local/dmp_toolchain:latest" >> $GITHUB_OUTPUT
+            echo "image=local/mng_toolchain:latest" >> $GITHUB_OUTPUT
           else
-            echo "image=ghcr.io/${{ steps.env.outputs.owner }}/dmp_toolchain:stable" >> $GITHUB_OUTPUT
+            echo "image=ghcr.io/${{ steps.env.outputs.owner }}/mng_toolchain:stable" >> $GITHUB_OUTPUT
           fi
 
       - name: Pull existing toolchain image (if using existing)
         if: needs.check-toolchain-changes.outputs.toolchain_changed == 'false'
         run: |
-          docker pull ghcr.io/${{ steps.env.outputs.owner }}/dmp_toolchain:stable
+          docker pull ghcr.io/${{ steps.env.outputs.owner }}/mng_toolchain:stable
 
+      # Both caches are populated on main by cache-warm.yaml. Actions caches are
+      # branch-scoped: a PR can read its own ref and the default branch, nothing
+      # else. Without that workflow every PR run is cold no matter what is saved
+      # here, because a cache saved on refs/pull/N/merge is invisible to every
+      # other PR.
       - name: Restore vcpkg binary cache
         uses: actions/cache@v4
         with:
           path: vcpkg-binary-cache
-          key: vcpkg-binary-${{ hashFiles('vcpkg.json') }}-x64-linux
+          key: vcpkg-binary-${{ hashFiles('vcpkg.json') }}-x64-linux-clang
           restore-keys: |
             vcpkg-binary-
 
@@ -132,9 +142,9 @@ jobs:
             -w /workspace \
             ${{ steps.container.outputs.image }} \
             bash -c "
-              ln -sfn /opt/vcpkg vcpkg &&
-              cmake --preset release &&
-              cmake --build --preset release -- -j\$(nproc)
+              cmake --preset ci &&
+              cmake --build --preset ci -- -j\$(nproc) &&
+              ccache --show-stats
             "
 
       - name: Unit testing
@@ -143,7 +153,7 @@ jobs:
             -v ${{ github.workspace }}:/workspace \
             -w /workspace \
             ${{ steps.container.outputs.image }} \
-            bash -c "ctest --preset release -L unit --output-on-failure"
+            bash -c "ctest --preset ci -L unit --output-on-failure"
 
       - name: Integration testing
         run: |
@@ -157,7 +167,7 @@ jobs:
             -e POSTGRES_USER=test_user \
             -e POSTGRES_PASSWORD=test_password \
             ${{ steps.container.outputs.image }} \
-            bash -c "ctest --preset release -L integration --output-on-failure"
+            bash -c "ctest --preset ci -L integration --output-on-failure"
 
   # This allows testing the new toolchain in PRs before merging
   push-pr-toolchain:
@@ -189,5 +199,5 @@ jobs:
           context: .
           file: infrastructure/toolchain/Dockerfile
           push: true
-          tags: ghcr.io/${{steps.env.outputs.owner }}/dmp_toolchain:pr-${{ github.event.number }}
-          cache-from: type=registry,ref=ghcr.io/${{ steps.env.outputs.owner }}/dmp_toolchain:cache
+          tags: ghcr.io/${{steps.env.outputs.owner }}/mng_toolchain:pr-${{ github.event.number }}
+          cache-from: type=registry,ref=ghcr.io/${{ steps.env.outputs.owner }}/mng_toolchain:cache

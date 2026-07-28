@@ -3,7 +3,6 @@
   "build": {
     "dockerfile": "../infrastructure/toolchain/Dockerfile"
   },
-  "postCreateCommand": "ln -sfn /opt/vcpkg vcpkg",
   "mounts": [
     "type=volume,source=menagerie-vcpkg-cache,target=/root/.cache/vcpkg/archives"
   ],

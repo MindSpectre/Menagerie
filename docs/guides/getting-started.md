@@ -82,7 +82,8 @@ configures reuse the installed tree under `build/<preset>/vcpkg_installed/`.
 | Preset              | Use it for                                                                   |
 |---------------------|------------------------------------------------------------------------------|
 | `debug`             | Default day-to-day build: full component set, tests, benchmarks, examples    |
-| `release`           | Optimized build; what CI runs for unit and integration testing               |
+| `release`           | Optimized build with the full feature set, including benchmarks and examples |
+| `ci`                | What PR CI builds: `release` minus benchmark/example targets and their ports |
 | `dev-slim`          | Fast iteration on `common/` only - components and benchmarks disabled        |
 | `asan`              | Debug build instrumented with AddressSanitizer + UndefinedBehaviorSanitizer  |
 | `tsan`              | Debug build instrumented with ThreadSanitizer; `common/` only, no benchmarks |
