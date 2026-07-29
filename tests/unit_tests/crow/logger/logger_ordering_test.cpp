@@ -13,11 +13,11 @@ namespace {
     // Custom sink that captures sequences for verification
     class SequenceCaptureSink final : public menagerie::crow::Sink {
     public:
-        void process(const menagerie::crow::LogEvent& event) override {
+        void process(const menagerie::crow::LogEvent& event) noexcept override {
             sequences_.push_back(extract_sequence(event.message));
         }
 
-        void flush() override {
+        void flush() noexcept override {
         }
 
         [[nodiscard]] bool should_log(menagerie::crow::LogLevel, std::string_view) const noexcept override {

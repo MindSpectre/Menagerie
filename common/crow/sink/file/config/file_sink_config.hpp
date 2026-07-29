@@ -35,9 +35,8 @@ namespace menagerie::crow {
         }
 
         /// @throw std::invalid_argument if rotate_file() is set with max_file_size() == 0,
-        ///        file() is empty, add_time_to_filename() is set with an empty
-        ///        time_format_in_file_name(), or rotate_file() is set without
-        ///        add_time_to_filename() (rotation needs a changing filename).
+        ///        file() is empty, or add_time_to_filename() is set with an empty
+        ///        time_format_in_file_name().
         constexpr void validate() const override {
             if (rotate_file_ && max_file_size_ == 0) {
                 throw std::invalid_argument("max_file_size must be greater than 0");
@@ -47,9 +46,6 @@ namespace menagerie::crow {
             }
             if (add_time_to_filename_ && time_format_in_file_name_.empty()) {
                 throw std::invalid_argument("time format must be specified");
-            }
-            if (rotate_file_ && !add_time_to_filename_) {
-                throw std::invalid_argument("rotation is enabled, but the dynamic filename is disabled");
             }
         }
 

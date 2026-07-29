@@ -20,7 +20,7 @@ namespace {
             : filter_{std::move(filter)} {
         }
 
-        void process(const menagerie::crow::LogEvent& event) override {
+        void process(const menagerie::crow::LogEvent& event) noexcept override {
             if (!should_log(event.level, event.prefix.view())) {
                 return;
             }
@@ -28,7 +28,7 @@ namespace {
             entries_.emplace_back(std::string{event.prefix.view()}, event.message);
         }
 
-        void flush() override {
+        void flush() noexcept override {
         }
 
         [[nodiscard]] bool should_log(menagerie::crow::LogLevel, std::string_view prefix) const noexcept override {

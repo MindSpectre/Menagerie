@@ -31,8 +31,10 @@ target_link_libraries(${CROW}.Entry PUBLIC
 add_library(${CROW}.Sink INTERFACE
         sink/file/file_sink.hpp
         sink/file/config/file_sink_config.hpp
+        sink/file/detail/file_naming.hpp
         sink/detail/prefix_filter.hpp
         sink/detail/log_event.hpp
+        sink/detail/sink_status.hpp
         sink/console/console_sink.hpp
         sink/console/config/console_sink_config.hpp
 )
