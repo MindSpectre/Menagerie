@@ -23,7 +23,7 @@ namespace {
             fs::remove_all(dir);
         }
 
-        void write_file(const fs::path& path, const std::size_t bytes) const {
+        static void write_file(const fs::path& path, const std::size_t bytes) {
             std::ofstream out{path, std::ios::binary | std::ios::trunc};
             out << std::string(bytes, 'x');
         }

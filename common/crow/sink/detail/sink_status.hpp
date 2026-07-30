@@ -1,8 +1,8 @@
 #pragma once
 
-#include <atomic>
 #include <chrono>
 #include <cstdint>
+#include <menagerie/chrono>
 
 // Resolves through the entry/ include directory that ${CROW}.Sink inherits from
 // ${CROW}.Entry — the same form entry_interface.hpp uses.
@@ -41,8 +41,9 @@ namespace menagerie::crow {
         /// Threshold no level clears; the Logger's gate holds it while no sinks are registered.
         inline constexpr std::uint8_t drop_all_threshold = 0x7F;
 
-        inline constexpr std::uint64_t backoff_base_ms = 1000;
-        inline constexpr std::uint64_t backoff_cap_ms  = 60000;
+        /// Recovery retry schedule, fed to menagerie::chrono::exponential_backoff.
+        inline constexpr std::chrono::milliseconds backoff_base{1000};
+        inline constexpr std::chrono::milliseconds backoff_cap{60000};
 
         // Dispatch word layout: [63..16] retry_at_ms | [15..8] SinkStatus | [7..0] LogLevel.
         // One relaxed load gives the consumer everything it needs to decide whether to post.
@@ -53,30 +54,29 @@ namespace menagerie::crow {
         }
 
         [[nodiscard]] constexpr DispatchHint unpack_dispatch(const std::uint64_t word) noexcept {
-            return DispatchHint{
-                static_cast<SinkStatus>(word >> 8 & 0xFF), static_cast<LogLevel>(word & 0xFF), word >> 16};
+            return DispatchHint{.status      = static_cast<SinkStatus>(word >> 8 & 0xFF),
+                                .threshold   = static_cast<LogLevel>(word & 0xFF),
+                                .retry_at_ms = word >> 16};
         }
 
         /// Milliseconds on the steady clock: the time base for retry deadlines.
         [[nodiscard]] inline std::uint64_t steady_now_ms() noexcept {
-            return static_cast<std::uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(
-                                                  std::chrono::steady_clock::now().time_since_epoch())
-                                                  .count());
+            return menagerie::chrono::steady_since_epoch<std::chrono::milliseconds>();
         }
 
         /// Delay before the next recovery attempt: the first retry is immediate, then 1s
         /// doubling per consecutive failure from there (1s, 2s, 4s, ..., 32s), capped at 60s.
+        ///
+        /// The doubling itself is chrono::exponential_backoff, whose attempt parameter is
+        /// 0-based -- hence the -1, which shifts the schedule so that the *second* failure
+        /// is the one that waits a base interval.
         [[nodiscard]] constexpr std::uint64_t backoff_ms(const std::uint32_t consecutive_failures) noexcept {
             if (consecutive_failures == 0) {
                 return 0;  // first retry may happen immediately; backoff starts after it fails
             }
-            // Shift is consecutive_failures - 1, so the cap must trigger one failure later
-            // than the un-shifted schedule did: base << 6 (== 64000) is the first shift that
-            // overflows the 60s cap, which happens once consecutive_failures reaches 7.
-            if (consecutive_failures >= 7) {
-                return backoff_cap_ms;
-            }
-            return backoff_base_ms << (consecutive_failures - 1);
+            return static_cast<std::uint64_t>(
+                menagerie::chrono::exponential_backoff(consecutive_failures - 1, backoff_base, backoff_cap)
+                    .count());
         }
     }  // namespace detail
 

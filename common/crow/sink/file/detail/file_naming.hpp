@@ -64,6 +64,7 @@ namespace menagerie::crow::detail {
      * Indexed mode resumes the highest existing index while it still has room, so a
      * frequently restarted service does not leave one file per restart.
      *
+     * @param config Config based on which path will be created.
      * @param ec Cleared on entry. Left clear if the target directory does not exist yet
      *           (the sink creates it on open, so that is not an error) or if the scan
      *           otherwise succeeds. Set if the directory exists but could not be scanned
@@ -104,8 +105,8 @@ namespace menagerie::crow::detail {
                 // is called from a noexcept context. A stat failure on this candidate (e.g.
                 // a race removing it mid-scan) is treated the same as "not a match" rather
                 // than aborting the whole scan over one entry.
-                std::error_code type_ec;
-                if (it->path().extension() == config.file().extension() && it->is_regular_file(type_ec) && !type_ec) {
+                if (std::error_code type_ec;
+                    it->path().extension() == config.file().extension() && it->is_regular_file(type_ec) && !type_ec) {
                     if (const auto index = index_of(base, it->path()); index && *index > highest) {
                         highest = *index;
                     }
@@ -116,8 +117,8 @@ namespace menagerie::crow::detail {
 
         std::filesystem::path candidate = indexed_path(config.file(), highest);
         std::error_code size_ec;
-        const auto size = std::filesystem::file_size(candidate, size_ec);
-        if (!size_ec && size >= config.max_file_size()) {
+        if (const auto size = std::filesystem::file_size(candidate, size_ec);
+            !size_ec && size >= config.max_file_size()) {
             return indexed_path(config.file(), highest + 1);
         }
         return candidate;

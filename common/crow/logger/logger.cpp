@@ -38,7 +38,10 @@ namespace menagerie::crow {
         std::vector<SinkReport> report;
         report.reserve(sinks->size());
         for (const auto& [sink, strand] : *sinks) {
-            report.push_back(SinkReport{sink, sink->get_status(), sink->undelivered(), sink->last_error()});
+            report.push_back(SinkReport{.sink        = sink,
+                                        .status      = sink->get_status(),
+                                        .undelivered = sink->undelivered(),
+                                        .last_error  = sink->last_error()});
         }
         return report;
     }
@@ -136,7 +139,7 @@ namespace menagerie::crow {
             auto batch = std::make_shared<std::vector<LogEvent>>();
             batch->reserve(static_cast<std::size_t>(available - next_seq + 1));
 
-            LogLevel max_lvl           = LogLevel::Trace;
+            auto max_lvl               = LogLevel::Trace;
             std::int64_t last_consumed = next_seq - 1;
             for (std::int64_t seq = next_seq; seq <= available; ++seq) {
                 auto& event = disruptor_.ring_buffer()[seq];
@@ -219,7 +222,7 @@ namespace menagerie::crow {
                 continue;  // first sight of a healthy sink is not a transition
             }
 
-            transitions.push_back(PendingTransition{sink.get(), from, status, sink->last_error(), sink->undelivered()});
+            transitions.emplace_back(sink.get(), from, status, sink->last_error(), sink->undelivered());
         }
         return transitions;
     }
@@ -262,7 +265,6 @@ namespace menagerie::crow {
         // this, a concurrent remove_sink() plus the caller dropping its own shared_ptr
         // could free the sink between the closing brace and the callback loop, dangling
         // the SinkFailure::sink pointer logger.hpp documents as valid for that duration.
-        std::shared_ptr<const SinkTable> sinks;
         {
             std::lock_guard lock{sweep_mutex_};
 
@@ -270,14 +272,14 @@ namespace menagerie::crow {
             // snapshot taken earlier -- see its doc comment for why that distinction matters.
             republish_gate_from_registry();
 
-            sinks       = snapshot();
-            transitions = report_transitions(*sinks);
-            callback    = error_callback_;
+            std::shared_ptr<const SinkTable> sinks = snapshot();
+            transitions                            = report_transitions(*sinks);
+            callback                               = error_callback_;
 
             const auto now_ms = detail::steady_now_ms();
             for (const auto& [sink, strand] : *sinks) {
-                const auto hint = sink->dispatch_hint();
-                if (hint.status != SinkStatus::Healthy && retry_due(hint, now_ms)) {
+                if (const auto hint = sink->dispatch_hint();
+                    hint.status != SinkStatus::Healthy && retry_due(hint, now_ms)) {
                     boost::asio::post(strand, [sink] { sink->maintain(); });
                 }
             }
@@ -293,9 +295,9 @@ namespace menagerie::crow {
         // add_sink()/remove_sink() would otherwise take registry_mutex_ while
         // sweep_mutex_ was still held. Legal by the established lock order, but there is
         // no reason to make user code rely on that.
-        for (const auto& transition : transitions) {
+        for (const auto& [sink, from, to, reason, undelivered] : transitions) {
             const SinkFailure failure{
-                transition.sink, transition.from, transition.to, transition.reason, transition.undelivered};
+                .sink = sink, .from = from, .to = to, .reason = reason, .undelivered = undelivered};
             try {
                 if (callback) {
                     callback(failure);

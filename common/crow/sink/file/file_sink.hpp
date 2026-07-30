@@ -145,8 +145,8 @@ namespace menagerie::crow {
          * usable stream) or Degraded (rotation failed but the current file still works).
          */
         void open_stream(const std::filesystem::path& path, const SinkStatus on_failure) noexcept {
-            std::error_code ec;
             if (const std::filesystem::path parent = path.parent_path(); !parent.empty()) {
+                std::error_code ec;
                 std::filesystem::create_directories(parent, ec);
                 if (ec) {
                     fail(on_failure, "create " + parent.string() + ": " + ec.message());
@@ -250,7 +250,8 @@ namespace menagerie::crow {
         std::filesystem::path file_path_;
         std::uint64_t bytes_written_ = 0;  // tracked in-process: no tellp(), no file_size() per write
         std::mutex mutex_;
-        std::string format_buffer_;                    // Reused across process() calls (no TL dependency)
-        alignas(64) char stream_buffer_[64 * 1024]{};  // 64KB static buffer, cache-line aligned
+        std::string format_buffer_;  // Reused across process() calls (no TL dependency)
+        alignas(std::hardware_destructive_interference_size) char stream_buffer_[64 * 1024]{};  // 64KB static buffer,
+                                                                                                // cache-line aligned
     };
 }  // namespace menagerie::crow
