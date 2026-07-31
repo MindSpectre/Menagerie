@@ -54,8 +54,10 @@ namespace menagerie::db {
             return value_;
         }
 
-        /// Direct access to the underlying FieldValue variant, moved out.
-        [[nodiscard]] constexpr FieldValue raw_value() && noexcept {
+        /// Direct access to the underlying FieldValue variant, ready to be moved out. Returns a
+        /// reference, not a value, so the caller pays for one move rather than two; like the standard
+        /// library's rvalue-qualified accessors it must not outlive the Field it came from.
+        [[nodiscard]] constexpr FieldValue&& raw_value() && noexcept {
             return std::move(value_);
         }
 
