@@ -20,3 +20,12 @@ add_unit_test(${UNIT_TESTING_TARGET}.Database.Query.QueryCompilation
         Menagerie.Component.Database.Providers.PostgreSQL.Dialect
         Menagerie.Component.Database.Providers.PostgreSQL.TypeMapping
 )
+
+add_unit_test(${UNIT_TESTING_TARGET}.Database.Query.InsertExpression
+        test_insert_expression.cpp
+        LINK_LIBS
+        ${TEST_LIBS}
+
+        Menagerie.Component.Database.Primitives
+        Menagerie.Component.Database.Query.Expressions
+)

@@ -1,10 +1,51 @@
 #pragma once
 
 #include <algorithm>
+#include <format>
+#include <stdexcept>
 
 #include "basic.hpp"
 
 namespace menagerie::db {
+    namespace detail {
+        /**
+         * @brief Cold path behind InsertExpr::values(record)/batch(records): reports an into(...) column the
+         *        record's schema does not define.
+         *
+         * Kept out of line and non-template so the message building is emitted once for the program rather
+         * than once per InsertExpr<TableT>, and never sits in the caller's row loop. There is exactly one
+         * throw on the way out - the lookup that detects the mismatch is Record::get_field, which does not
+         * throw, so nothing is caught and rethrown and no exception type beyond the standard one is involved.
+         */
+        [[noreturn]] inline void
+        throw_missing_insert_column(const std::string_view column, const Record& record, const std::size_t row_index) {
+            std::string defined;
+            std::size_t listed = 0;
+            for (const Field& field : record) {
+                if (constexpr std::size_t max_listed = 32; listed == max_listed) {
+                    defined += std::format(", ... ({} fields total)", record.field_count());
+                    break;
+                }
+                if (listed != 0) {
+                    defined += ", ";
+                }
+                defined += field.name();
+                ++listed;
+            }
+            if (defined.empty()) {
+                defined = "<none>";
+            }
+
+            throw std::out_of_range{
+                std::format(R"(INSERT row {}: into(...) asks for column "{}", but the Record passed carries )"
+                            R"(schema "{}", which defines no such field (defines: {}))",
+                            row_index,
+                            column,
+                            record.schema().table_name(),
+                            defined)};
+        }
+    }  // namespace detail
+
     /// `INSERT INTO table (columns...) VALUES (row1...), (row2...), ...`; built up fluently with
     /// `.into({cols...})` then one or more `.values(...)`/`.batch(...)` calls.
     template <IsTable TableT>
@@ -31,20 +72,34 @@ namespace menagerie::db {
             return std::forward<Self>(self);
         }
 
-        /// Appends one row by reading each into(...) column out of record.
-        /// @warning `record[col]` throws std::out_of_range for a missing field, but this function is
-        ///          noexcept - a missing field TERMINATES the program. Ensure the record's schema matches
-        ///          the insert columns.
+        /**
+         * @brief Appends one row by reading each into(...) column out of record.
+         *
+         * Unlike the initializer_list overload this can fail for a reason the caller can act on - the
+         * record's schema and the into(...) column list disagreeing - so it is not noexcept.
+         *
+         * @throw std::out_of_range if record's schema defines no field for one of the into(...) columns.
+         *        The message names the row index, the column, the record's schema and the fields that
+         *        schema does define. Rows appended by earlier values()/batch() calls are kept, and when
+         *        record is an rvalue the fields read before the missing one have already been moved out
+         *        of it.
+         */
         template <typename Self, typename RecordTp>
             requires std::same_as<std::remove_cvref_t<RecordTp>, Record>
-        auto&& values(this Self&& self, RecordTp&& record) noexcept {
+        auto&& values(this Self&& self, RecordTp&& record) {
             std::vector<FieldValue> row;
             row.reserve(self.columns_.size());
             for (const auto& col : self.columns_) {
+                // get_field, not operator[]: the non-throwing lookup lets the diagnostic be built here,
+                // where the row index and the requesting column are both in hand, instead of inside Record.
+                auto* field = record.get_field(col);
+                if (field == nullptr) [[unlikely]] {
+                    detail::throw_missing_insert_column(col, record, self.rows_.size());
+                }
                 if constexpr (std::is_rvalue_reference_v<RecordTp&&>) {
-                    row.push_back(std::move(record[col]).raw_value());
+                    row.push_back(std::move(*field).raw_value());
                 } else {
-                    row.push_back(record[col].raw_value());
+                    row.push_back(field->raw_value());
                 }
             }
             self.rows_.push_back(std::move(row));
@@ -52,11 +107,11 @@ namespace menagerie::db {
         }
 
         /// Appends one row per record via values(record).
-        /// @warning Same noexcept/std::out_of_range hazard as values(record): a record missing one of the
-        ///          into(...) columns TERMINATES the program rather than throwing out to the caller.
+        /// @throw std::out_of_range under the same conditions as values(record); the rows appended for the
+        ///        records before the failing one are kept.
         template <typename Self, typename RecordsTp>
             requires std::same_as<std::remove_cvref_t<RecordsTp>, std::vector<Record>>
-        auto&& batch(this Self&& self, RecordsTp&& records) noexcept {
+        auto&& batch(this Self&& self, RecordsTp&& records) {
             if constexpr (std::is_rvalue_reference_v<RecordsTp&&>) {
                 for (auto&& record : records) {
                     self.values(std::move(record));
