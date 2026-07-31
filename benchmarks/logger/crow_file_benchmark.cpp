@@ -8,9 +8,9 @@ namespace {
 
     class NullSink final : public menagerie::crow::Sink {
     public:
-        void process(const menagerie::crow::LogEvent& /*event*/) override {
+        void process(const menagerie::crow::LogEvent& /*event*/) noexcept override {
         }
-        void flush() override {
+        void flush() noexcept override {
         }
         [[nodiscard]] bool should_log(menagerie::crow::LogLevel /*lvl*/,
                                       std::string_view /*prefix*/) const noexcept override {

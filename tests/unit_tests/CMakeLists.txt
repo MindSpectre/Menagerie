@@ -75,6 +75,12 @@ add_unit_test(${UNIT_TESTING_TARGET}.Crow
         crow/logger/file_sink_test.cpp
         crow/logger/console_sink_test.cpp
         crow/logger/logger_ordering_test.cpp
+        crow/logger/sink_status_test.cpp
+        crow/logger/sink_health_test.cpp
+        crow/logger/file_naming_test.cpp
+        crow/logger/rotation_test.cpp
+        crow/logger/logger_registry_test.cpp
+        crow/logger/logger_gate_test.cpp
         crow/prefix_filter_test.cpp
         crow/prefix_integration_test.cpp
 )

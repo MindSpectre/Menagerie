@@ -10,6 +10,20 @@
 #include <boost/asio/use_awaitable.hpp>
 
 namespace menagerie::chrono {
+    /**
+     * @brief Time since the steady clock's epoch, as a plain integer count.
+     *
+     * For deadlines and retry schedules, not for display: the steady clock is monotonic
+     * and immune to wall-clock adjustments, whereas SpecClock formats system_clock and
+     * can jump backwards under NTP. Returning a bare count suits callers that pack the
+     * value into an atomic word rather than carrying a duration around.
+     */
+    template <beavers::IsDuration DurationClass = std::chrono::milliseconds>
+    [[nodiscard]] std::uint64_t steady_since_epoch() noexcept {
+        return static_cast<std::uint64_t>(
+            std::chrono::duration_cast<DurationClass>(std::chrono::steady_clock::now().time_since_epoch()).count());
+    }
+
     /// Exponential backoff: base * 2^attempt, clamped to cap. attempt is 0-based
     /// (attempt 0 -> base). The shift is clamped before the multiply so `1u << shift`
     /// can never overflow, regardless of how large a cap the caller passes.

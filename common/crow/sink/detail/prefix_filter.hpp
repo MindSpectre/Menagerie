@@ -1,28 +1,13 @@
 #pragma once
 
 #include <cstdint>
+#include <flat_set>
 #include <functional>
 #include <string>
 #include <string_view>
-#include <unordered_set>
 #include <utility>
 
 namespace menagerie::crow {
-
-    /// Transparent hash so `unordered_set<std::string, PrefixHash, std::equal_to<>>`
-    /// supports `contains(string_view)` without constructing a temporary std::string.
-    struct PrefixHash {
-        using is_transparent = void;  ///< Marker enabling heterogeneous lookup.
-
-        /// Hashes a string_view (avoids constructing a temporary std::string).
-        std::size_t operator()(const std::string_view sv) const noexcept {
-            return std::hash<std::string_view>{}(sv);
-        }
-        /// Hashes a std::string via the same algorithm as the string_view overload.
-        std::size_t operator()(const std::string& s) const noexcept {
-            return std::hash<std::string_view>{}(s);
-        }
-    };
 
     /// Which prefixes PrefixFilter::accepts lets through.
     enum class PrefixFilterMode : std::uint8_t {
@@ -39,7 +24,11 @@ namespace menagerie::crow {
      */
     class PrefixFilter {
     public:
-        using Set = std::unordered_set<std::string, PrefixHash, std::equal_to<>>;  ///< Allowlist/denylist prefix set.
+        /// Allowlist/denylist prefix set. Built once at config time and only read
+        /// afterward, and it stays small, so sorted contiguous storage (binary search,
+        /// no hashing, no node chasing) fits better than a hash set. std::less<> is
+        /// transparent, so contains(string_view) needs no temporary std::string.
+        using Set = std::flat_set<std::string, std::less<>>;
 
         constexpr PrefixFilter() = default;  // AllowAll
 

@@ -1,7 +1,7 @@
 #pragma once
 
+#include <chrono>
 #include <menagerie/serialization>
-#include <thread>
 namespace menagerie::crow {
 
     /// Logger construction options: ring buffer size, internal-pool size, and the
@@ -28,10 +28,12 @@ namespace menagerie::crow {
         /// optional-with-defaults construction.
         constexpr LoggerConfig(const std::size_t ring_buffer_size,
                                const std::size_t pool_size,
-                               const WaitStrategy wait_strategy)
+                               const WaitStrategy wait_strategy,
+                               const std::chrono::milliseconds health_check_interval)
             : ring_buffer_size_{ring_buffer_size},
               pool_size_{pool_size},
-              wait_strategy_{wait_strategy} {
+              wait_strategy_{wait_strategy},
+              health_check_interval_{health_check_interval} {
         }
 
         /// @throw std::invalid_argument if ring_buffer_size() is not a power of two.
@@ -56,12 +58,18 @@ namespace menagerie::crow {
             return pool_size_;
         }
 
+        /// Returns how often the janitor sweeps sinks; zero disables the janitor thread.
+        [[nodiscard]] constexpr std::chrono::milliseconds health_check_interval() const noexcept {
+            return health_check_interval_;
+        }
+
         /// Field list consumed by serialization::ConfigInterface for JSON (de)serialization.
         static constexpr auto fields() {
             return std::tuple{
                 serialization::Field<&LoggerConfig::ring_buffer_size_, "ring_buffer_size">{},
                 serialization::Field<&LoggerConfig::pool_size_, "pool_size">{},
                 serialization::Field<&LoggerConfig::wait_strategy_, "wait_strategy">{},
+                serialization::Field<&LoggerConfig::health_check_interval_, "health_check_interval">{},
             };
         }
 
@@ -72,8 +80,11 @@ namespace menagerie::crow {
         constexpr LoggerConfig() = default;
 
         std::size_t ring_buffer_size_ = BufferCapacity::Medium;
-        std::size_t pool_size_        = std::thread::hardware_concurrency();
+        /// Each sink is serialized on its own strand, so parallelism beyond the sink
+        /// count is unusable; two threads keep a slow sink from stalling the others.
+        std::size_t pool_size_        = 2;
         WaitStrategy wait_strategy_   = WaitStrategy::Yielding;
+        std::chrono::milliseconds health_check_interval_{1000};
     };
 
     /// Fluent builder for LoggerConfig: chained setters, then finalize() validates
@@ -108,6 +119,14 @@ namespace menagerie::crow {
         template <typename Self>
         constexpr auto&& pool_size(this Self&& self, const std::size_t value) noexcept {
             self.config_.pool_size_ = value;
+            return std::forward<Self>(self);
+        }
+
+        /// Sets how often the janitor sweeps sinks. Zero disables it: the gate then only
+        /// refreshes on add_sink()/remove_sink()/sweep(), and nothing recovers on its own.
+        template <typename Self>
+        constexpr auto&& health_check_interval(this Self&& self, const std::chrono::milliseconds value) noexcept {
+            self.config_.health_check_interval_ = value;
             return std::forward<Self>(self);
         }
 
