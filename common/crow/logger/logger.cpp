@@ -211,18 +211,14 @@ namespace menagerie::crow {
     std::vector<Logger::PendingTransition> Logger::report_transitions(const SinkTable& table) {
         std::vector<PendingTransition> transitions;
         for (const auto& [sink, strand] : table) {
-            const auto status            = sink->get_status();
-            const auto [entry, inserted] = reported_.try_emplace(sink.get(), SinkStatus::Healthy);
-            if (!inserted && entry->second == status) {
-                continue;
+            const auto status = sink->get_status();
+            if (sink->reported_status_ == status) {
+                continue;  // covers first sight of a healthy sink: reported_status_ starts Healthy
             }
-            const SinkStatus from = entry->second;
-            entry->second         = status;
-            if (inserted && status == SinkStatus::Healthy) {
-                continue;  // first sight of a healthy sink is not a transition
-            }
+            const SinkStatus from  = sink->reported_status_;
+            sink->reported_status_ = status;
 
-            transitions.emplace_back(sink.get(), from, status, sink->last_error(), sink->undelivered());
+            transitions.emplace_back(sink, from, status, sink->last_error(), sink->undelivered());
         }
         return transitions;
     }
@@ -231,7 +227,7 @@ namespace menagerie::crow {
         // Not const: the covered branch below hands this to publish_event(), which
         // swaps it into the ring slot rather than copying it.
         std::string message = std::format("sink {} {} -> {}: {} ({} events undelivered)",
-                                          static_cast<const void*>(failure.sink),
+                                          static_cast<const void*>(failure.sink.get()),
                                           to_string(failure.from),
                                           to_string(failure.to),
                                           failure.reason.empty() ? "no reason recorded" : failure.reason,
@@ -258,13 +254,6 @@ namespace menagerie::crow {
         // order -- no inversion is possible.
         std::vector<PendingTransition> transitions;
         std::function<void(const SinkFailure&)> callback;
-        // Declared at function scope (not inside the locked block below) so the table --
-        // and every sink it keeps alive -- outlives the callback loop after the lock is
-        // released. A sink that just transitioned to Healthy has no maintain() post
-        // holding its own shared_ptr (only non-Healthy sinks get posted below), so without
-        // this, a concurrent remove_sink() plus the caller dropping its own shared_ptr
-        // could free the sink between the closing brace and the callback loop, dangling
-        // the SinkFailure::sink pointer logger.hpp documents as valid for that duration.
         {
             std::lock_guard lock{sweep_mutex_};
 
@@ -272,9 +261,9 @@ namespace menagerie::crow {
             // snapshot taken earlier -- see its doc comment for why that distinction matters.
             republish_gate_from_registry();
 
-            std::shared_ptr<const SinkTable> sinks = snapshot();
-            transitions                            = report_transitions(*sinks);
-            callback                               = error_callback_;
+            const std::shared_ptr<const SinkTable> sinks = snapshot();
+            transitions                                  = report_transitions(*sinks);
+            callback                                     = error_callback_;
 
             const auto now_ms = detail::steady_now_ms();
             for (const auto& [sink, strand] : *sinks) {
@@ -283,11 +272,6 @@ namespace menagerie::crow {
                     boost::asio::post(strand, [sink] { sink->maintain(); });
                 }
             }
-
-            std::erase_if(reported_, [&sinks](const auto& entry) {
-                return std::ranges::none_of(*sinks,
-                                            [&entry](const SinkSlot& slot) { return slot.sink.get() == entry.first; });
-            });
         }
 
         // Invoked only after sweep_mutex_ is released: a callback that calls back into

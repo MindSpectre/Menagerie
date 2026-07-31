@@ -75,13 +75,12 @@ namespace menagerie::crow {
                 return 0;  // first retry may happen immediately; backoff starts after it fails
             }
             return static_cast<std::uint64_t>(
-                menagerie::chrono::exponential_backoff(consecutive_failures - 1, backoff_base, backoff_cap)
-                    .count());
+                menagerie::chrono::exponential_backoff(consecutive_failures - 1, backoff_base, backoff_cap).count());
         }
     }  // namespace detail
 
     /// True once a failed sink's backoff deadline has passed.
-    [[nodiscard]] constexpr bool retry_due(const DispatchHint& hint, const std::uint64_t now_ms) noexcept {
+    [[nodiscard, gnu::always_inline]] constexpr bool retry_due(const DispatchHint& hint, const std::uint64_t now_ms) noexcept {
         return now_ms >= hint.retry_at_ms;
     }
 }  // namespace menagerie::crow

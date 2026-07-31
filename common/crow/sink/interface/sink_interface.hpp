@@ -6,10 +6,15 @@
 #include <string_view>
 #include <vector>
 
+#include <boost/asio/any_io_executor.hpp>
+#include <boost/asio/strand.hpp>
+
 #include "detail/log_event.hpp"
 #include "detail/sink_status.hpp"
 
 namespace menagerie::crow {
+    class Logger;
+
     /**
      * @brief Base interface for all log sinks.
      *
@@ -170,5 +175,39 @@ namespace menagerie::crow {
         std::atomic<std::uint32_t> consecutive_failures_{0};
         mutable std::mutex state_mutex_;
         std::string last_error_;
+
+        /// The last status the registering Logger's janitor reported for this sink,
+        /// written only under that Logger's sweep_mutex_. Lives on the sink rather than
+        /// in a Logger-side map keyed by Sink* so a freed sink's address being reused by
+        /// a new allocation can never resurrect stale state. Starting at Healthy makes
+        /// first sight of a healthy sink a non-transition, while a sink that arrives
+        /// broken reports Healthy -> Dead on its first sweep.
+        friend class Logger;
+        SinkStatus reported_status_ = SinkStatus::Healthy;
     };
+
+    /// Per-sink slot: pairs a sink with its asio::strand for serial dispatch.
+    struct SinkSlot {
+        std::shared_ptr<Sink> sink;                                ///< The registered sink.
+        boost::asio::strand<boost::asio::any_io_executor> strand;  ///< Strand serializing dispatch to sink.
+    };
+
+    /// One sink's health, as reported by Logger::sink_report().
+    struct SinkReport {
+        std::shared_ptr<Sink> sink;  ///< The registered sink.
+        SinkStatus status;           ///< Its lifecycle state at report time.
+        std::uint64_t undelivered;   ///< Events not delivered while it was Dead.
+        std::string last_error;      ///< Reason recorded with the most recent failure.
+    };
+
+    /// One sink lifecycle transition, as observed by the janitor.
+    struct SinkFailure {
+        std::shared_ptr<const Sink> sink;  ///< The sink that changed state; safe to retain past the callback.
+        SinkStatus from;                   ///< Status at the previous sweep.
+        SinkStatus to;                     ///< Status now.
+        std::string_view reason;           ///< The sink's last recorded error; empty on recovery. Borrowed from the
+                                           ///< pending report -- valid only for the callback's duration, unlike sink.
+        std::uint64_t undelivered;         ///< Events not delivered while it was Dead.
+    };
+
 }  // namespace menagerie::crow

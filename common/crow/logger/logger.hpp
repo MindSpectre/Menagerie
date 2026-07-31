@@ -12,7 +12,6 @@
 #include <sstream>
 #include <string_view>
 #include <thread>
-#include <unordered_map>
 #include <vector>
 
 #include <boost/asio/any_io_executor.hpp>
@@ -28,29 +27,6 @@
 /// dispatches them to sinks from one consumer thread, plus the entry types, sinks,
 /// and LOG_*/COMPONENT_LOG_* macro API built around it.
 namespace menagerie::crow {
-    /// Per-sink slot: pairs a sink with its asio::strand for serial dispatch.
-    struct SinkSlot {
-        std::shared_ptr<Sink> sink;                                ///< The registered sink.
-        boost::asio::strand<boost::asio::any_io_executor> strand;  ///< Strand serializing dispatch to sink.
-    };
-
-    /// One sink's health, as reported by Logger::sink_report().
-    struct SinkReport {
-        std::shared_ptr<Sink> sink;  ///< The registered sink.
-        SinkStatus status;           ///< Its lifecycle state at report time.
-        std::uint64_t undelivered;   ///< Events not delivered while it was Dead.
-        std::string last_error;      ///< Reason recorded with the most recent failure.
-    };
-
-    /// One sink lifecycle transition, as observed by the janitor.
-    struct SinkFailure {
-        const Sink* sink;           ///< The sink that changed state; valid for the callback's duration.
-        SinkStatus from;            ///< Status at the previous sweep.
-        SinkStatus to;              ///< Status now.
-        std::string_view reason;    ///< The sink's last recorded error; empty on recovery.
-        std::uint64_t undelivered;  ///< Events not delivered while it was Dead.
-    };
-
     /**
      * @brief High-performance asynchronous logger using the Disruptor pattern.
      *
@@ -90,8 +66,8 @@ namespace menagerie::crow {
          * The executor's thread pool runs sink processing. Multiple loggers
          * can share the same executor (e.g., with HTTP/DB components).
          */
-        constexpr explicit Logger(boost::asio::any_io_executor executor,
-                                  const LoggerConfig& cfg = LoggerConfig::Builder{}.finalize())
+        explicit Logger(boost::asio::any_io_executor executor,
+                        const LoggerConfig& cfg = LoggerConfig::Builder{}.finalize())
             : disruptor_{cfg.ring_buffer_size(), create_wait_strategy(cfg.wait_strategy())},
               executor_{std::move(executor)} {
             start_threads(cfg);
@@ -102,7 +78,7 @@ namespace menagerie::crow {
          *
          * Creates an internal asio::thread_pool sized by LoggerConfig::pool_size.
          */
-        constexpr explicit Logger(const LoggerConfig& cfg = LoggerConfig::Builder{}.finalize())
+        explicit Logger(const LoggerConfig& cfg = LoggerConfig::Builder{}.finalize())
             : disruptor_{cfg.ring_buffer_size(), create_wait_strategy(cfg.wait_strategy())},
               owned_pool_{std::in_place, cfg.pool_size()},
               executor_{owned_pool_->get_executor()} {
@@ -138,18 +114,18 @@ namespace menagerie::crow {
 
         /// Aggregate minimum threshold across registered sinks; producers drop below it
         /// before formatting. detail::drop_all_threshold means no sink accepts anything.
-        [[nodiscard]] std::uint8_t gate_threshold() const noexcept {
+        [[nodiscard, gnu::always_inline]] std::uint8_t gate_threshold() const noexcept {
             return gate_.load(std::memory_order_relaxed);
         }
 
         /// Logs with a std::format format string. prefix is a logger/class
         /// prefix; pass an empty string_view if none.
         template <typename... Args>
-        constexpr void log(const LogLevel lvl,
-                           const std::string_view prefix,
-                           const std::source_location& loc,
-                           std::format_string<Args...> fmt,
-                           Args&&... args) {
+        void log(const LogLevel lvl,
+                 const std::string_view prefix,
+                 const std::source_location& loc,
+                 std::format_string<Args...> fmt,
+                 Args&&... args) {
             if (!passes_gate(lvl)) {
                 return;  // no sink would accept this: skip formatting and publishing entirely
             }
@@ -163,10 +139,10 @@ namespace menagerie::crow {
         /**
          * @brief Log with a simple message + prefix
          */
-        constexpr void log(const LogLevel lvl,
-                           const std::string_view prefix,
-                           const std::string_view msg,
-                           const std::source_location& loc = std::source_location::current()) {
+        void log(const LogLevel lvl,
+                 const std::string_view prefix,
+                 const std::string_view msg,
+                 const std::source_location& loc = std::source_location::current()) {
             if (!passes_gate(lvl)) {
                 return;  // no sink would accept this: skip formatting and publishing entirely
             }
@@ -185,9 +161,9 @@ namespace menagerie::crow {
          * Kept permanently for callers that don't care about prefix (tests,
          * utility code). Forwards to the prefix-aware overload with empty prefix.
          */
-        constexpr void log(const LogLevel lvl,
-                           const std::string_view msg,
-                           const std::source_location& loc = std::source_location::current()) {
+        void log(const LogLevel lvl,
+                 const std::string_view msg,
+                 const std::source_location& loc = std::source_location::current()) {
             log(lvl, std::string_view{}, msg, loc);
         }
 
@@ -200,10 +176,10 @@ namespace menagerie::crow {
             /// accumulated stream output is published as one event on destruction.
             template <typename SourceLocationTp = std::source_location>
                 requires std::is_same_v<std::remove_cvref_t<SourceLocationTp>, std::source_location>
-            constexpr StreamProxy(Logger* logger,
-                                  const LogLevel lvl,
-                                  const std::string_view prefix,
-                                  SourceLocationTp&& loc) noexcept
+            StreamProxy(Logger* logger,
+                        const LogLevel lvl,
+                        const std::string_view prefix,
+                        SourceLocationTp&& loc) noexcept
                 : logger_{logger},
                   level_{lvl},
                   loc_{std::forward<SourceLocationTp>(loc)},
@@ -218,7 +194,7 @@ namespace menagerie::crow {
                 return *this;
             }
 
-            constexpr ~StreamProxy() noexcept {
+            ~StreamProxy() noexcept {
                 if (logger_ == nullptr) {
                     return;  // gated out: nothing was ever meant to be published
                 }
@@ -249,7 +225,7 @@ namespace menagerie::crow {
         /// when the returned proxy is destroyed (typically at the end of the statement).
         template <typename SourceLocationTp = std::source_location>
             requires std::is_same_v<std::remove_cvref_t<SourceLocationTp>, std::source_location>
-        constexpr StreamProxy
+        StreamProxy
         stream(const LogLevel lvl, std::string_view prefix, SourceLocationTp loc = std::source_location::current()) {
             return StreamProxy{passes_gate(lvl) ? this : nullptr, lvl, prefix, std::forward<SourceLocationTp>(loc)};
         }
@@ -328,8 +304,14 @@ namespace menagerie::crow {
             publish_gate(*sinks_);
         }
 
-        /// True if any registered sink might accept an event at this level.
-        [[nodiscard]] bool passes_gate(const LogLevel lvl) const noexcept {
+        /// True if any registered sink might accept an event at this level. This is the
+        /// producer fast path's only work when an event is gated out: inline, it folds
+        /// into one relaxed load and a compare the optimizer can hoist across a caller's
+        /// logging loop (no_sinks benchmark: 5.2 -> 0.4 ns/attempt vs an opaque call).
+        /// always_inline makes that a contract rather than a cost-model outcome; the
+        /// gnu:: spelling is the one both clang and gcc honor (clang:: dies under
+        /// gcc's -Werror=attributes).
+        [[nodiscard, gnu::always_inline]] bool passes_gate(const LogLevel lvl) const noexcept {
             return static_cast<std::uint8_t>(lvl) >= gate_.load(std::memory_order_relaxed);
         }
 
@@ -352,7 +334,7 @@ namespace menagerie::crow {
         /**
          * @brief Apply pre-captured metadata to ring buffer slot (minimal critical path)
          */
-        constexpr static void apply_meta(LogEvent& event, const EventMeta& meta) noexcept {
+        static void apply_meta(LogEvent& event, const EventMeta& meta) noexcept {
             event.level           = meta.level;
             event.location        = meta.location;
             event.time_point      = meta.time_point;
@@ -374,9 +356,9 @@ namespace menagerie::crow {
          * @brief Starts the consumer thread, then (if configured) the janitor.
          *
          * The janitor must start last: everything janitor_loop()/sweep_once() touch
-         * (registry, gate, sweep_mutex_, reported_) is fully constructed by the time this
-         * runs, since it is called as the constructors' only statement, after every member
-         * has already been initialized. Starting it any earlier risks the same
+         * (registry, gate, sweep_mutex_, error_callback_) is fully constructed by the
+         * time this runs, since it is called as the constructors' only statement, after
+         * every member has already been initialized. Starting it any earlier risks the same
          * half-constructed-member race this codebase has already hit elsewhere.
          *
          * If starting the janitor throws (e.g. EAGAIN under thread exhaustion), the
@@ -447,15 +429,14 @@ namespace menagerie::crow {
         std::chrono::milliseconds health_check_interval_{0};
         std::jthread janitor_;
         mutable std::mutex sweep_mutex_;
-        std::unordered_map<const Sink*, SinkStatus> reported_;    // guarded by sweep_mutex_
         std::function<void(const SinkFailure&)> error_callback_;  // guarded by sweep_mutex_
 
-        /// One sink lifecycle transition awaiting report, with an owned copy of the
-        /// reason string: this outlives the sweep_mutex_ critical section that produced
-        /// it, since the callback that borrows it as a string_view runs after that lock
-        /// is released (see sweep_once()).
+        /// One sink lifecycle transition awaiting report. Owns everything the callback
+        /// touches after sweep_mutex_ is released (see sweep_once()): the shared_ptr
+        /// keeps the sink alive however the registry or its other owners race, and
+        /// reason is the owned copy backing SinkFailure::reason's string_view.
         struct PendingTransition {
-            const Sink* sink;
+            std::shared_ptr<const Sink> sink;
             SinkStatus from;
             SinkStatus to;
             std::string reason;
@@ -463,10 +444,11 @@ namespace menagerie::crow {
         };
 
         /// Compares each sink in table against the status recorded at the previous
-        /// sweep, updates reported_ to match, and returns what moved. Called with
-        /// sweep_mutex_ held; deliberately does not invoke the error callback itself --
-        /// see sweep_once() for why that happens only after the lock is released.
-        [[nodiscard]] std::vector<PendingTransition> report_transitions(const SinkTable& table);
+        /// sweep (Sink::reported_status_), updates it to match, and returns what moved.
+        /// Called with sweep_mutex_ held; deliberately does not invoke the error
+        /// callback itself -- see sweep_once() for why that happens only after the lock
+        /// is released.
+        [[nodiscard]] static std::vector<PendingTransition> report_transitions(const SinkTable& table);
 
         /// Re-logs the transition through this Logger when some registered sink would
         /// actually accept it, and falls back to stderr when none would.

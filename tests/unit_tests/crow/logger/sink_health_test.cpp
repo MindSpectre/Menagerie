@@ -387,6 +387,54 @@ TEST(SinkFailureReportTest, CustomCallbackSeesTheTransition) {
     fs::remove_all("blocked_callback");
 }
 
+TEST(SinkFailureReportTest, SinkOutlivesRemovalDuringItsOwnCallback) {
+    BlockedPath blocked{"blocked_retention"};
+
+    Logger logger{LoggerConfig::Builder{}.health_check_interval(std::chrono::milliseconds{0}).finalize()};
+    auto sink = std::make_shared<FileSink<LightEntry>>(FileSinkConfig::Builder{}
+                                                           .file(blocked.log_path())
+                                                           .add_time_to_filename(false)
+                                                           .rotate_file(false)
+                                                           .finalize());
+
+    // The callback for the recovery transition unregisters the sink and drops this
+    // test's own reference BEFORE touching failure.sink: the SinkFailure handle itself
+    // must be what keeps the sink alive. The recovery transition is the load-bearing
+    // choice -- a sink reported Healthy gets no maintain() post, so no strand closure
+    // holds a stray shared_ptr that would mask a dangling handle here. Run under the
+    // asan preset, this is the regression probe for SinkFailure's lifetime contract.
+    SinkStatus status_seen{SinkStatus::Dead};
+    bool callback_ran = false;
+    logger.set_error_callback([&](const SinkFailure& failure) {
+        if (failure.to != SinkStatus::Healthy) {
+            return;  // the Healthy -> Dead report from the first sweep is not the subject
+        }
+        ASSERT_TRUE(logger.remove_sink(sink));
+        sink.reset();
+        status_seen  = failure.sink->get_status();
+        callback_ran = true;
+    });
+
+    logger.add_sink(sink);
+    ASSERT_EQ(sink->get_status(), SinkStatus::Dead);
+    logger.sweep();  // reports Healthy -> Dead and posts a maintain() that fails again
+    // Let that maintain() post drain: its strand closure holds its own shared_ptr to
+    // the sink, and this test needs no such reference left by the time the callback
+    // below drops the last one on purpose.
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+
+    blocked.unblock();
+    sink->force_maintain();
+    ASSERT_EQ(sink->get_status(), SinkStatus::Healthy);
+
+    logger.sweep();  // reports Dead -> Healthy; the callback above runs on this thread
+    ASSERT_TRUE(callback_ran);
+    EXPECT_EQ(status_seen, SinkStatus::Healthy);
+
+    logger.shutdown();
+    fs::remove_all("blocked_retention");
+}
+
 TEST(SinkFailureReportTest, DefaultHandlerLogsThroughASurvivingSink) {
     BlockedPath blocked{"blocked_default"};
 
