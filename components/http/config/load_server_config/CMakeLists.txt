@@ -1,19 +1,19 @@
 ##############################################################################
 # Http Config — load_server_config / dump_server_config + config error types
 ##############################################################################
-add_library(${HTTP}.Config.LoadServerConfig STATIC
+add_library(${Http}.Config.LoadServerConfig STATIC
         load_server_config.cpp
         load_server_config.hpp
 )
 
-target_include_directories(${HTTP}.Config.LoadServerConfig PUBLIC
+target_include_directories(${Http}.Config.LoadServerConfig PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
-target_link_libraries(${HTTP}.Config.LoadServerConfig
+target_link_libraries(${Http}.Config.LoadServerConfig
         PUBLIC
-        ${HTTP}.Config.ServerConfig
-        ${HTTP}.Types
+        ${Http}.Config.ServerConfig
+        ${Http}.Types
         Menagerie::Common::Beavers
         Menagerie::Common::Serialization
         JsonCpp::JsonCpp

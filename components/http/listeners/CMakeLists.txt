@@ -1,7 +1,7 @@
 ##############################################################################
 # Http Listeners — transport layer: the ListenerBase polymorphic seam, the
 # connection tracker, and concrete listeners (TCP, TLS+ALPN, QUIC scaffold).
-# Per-leaf convention; the dotted ${HTTP}.Listeners target is an INTERFACE
+# Per-leaf convention; the dotted ${Http}.Listeners target is an INTERFACE
 # aggregate. Leaves are added by subsequent tasks.
 ##############################################################################
 
@@ -14,13 +14,13 @@ add_subdirectory(quic_listener)
 ##############################################################################
 # Unified interface aggregate
 ##############################################################################
-add_library(${HTTP}.Listeners INTERFACE)
+add_library(${Http}.Listeners INTERFACE)
 
-target_link_libraries(${HTTP}.Listeners INTERFACE
-        ${HTTP}.Listeners.Base
-        ${HTTP}.Listeners.ConnectionTracker
-        ${HTTP}.Listeners.Tcp
-        ${HTTP}.Listeners.Tls
-        ${HTTP}.Listeners.Quic
+target_link_libraries(${Http}.Listeners INTERFACE
+        ${Http}.Listeners.Base
+        ${Http}.Listeners.ConnectionTracker
+        ${Http}.Listeners.Tcp
+        ${Http}.Listeners.Tls
+        ${Http}.Listeners.Quic
 )
 ##############################################################################

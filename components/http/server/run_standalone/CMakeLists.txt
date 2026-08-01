@@ -1,15 +1,15 @@
 ##############################################################################
-# Http Server — run_standalone ("HTTP owns the process" convenience)
+# Http Server — run_standalone ("Http owns the process" convenience)
 ##############################################################################
-add_library(${HTTP}.Server.RunStandalone STATIC run_standalone.cpp)
+add_library(${Http}.Server.RunStandalone STATIC run_standalone.cpp)
 
-target_include_directories(${HTTP}.Server.RunStandalone PUBLIC
+target_include_directories(${Http}.Server.RunStandalone PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
-target_link_libraries(${HTTP}.Server.RunStandalone
+target_link_libraries(${Http}.Server.RunStandalone
         PUBLIC
-        ${HTTP}.Server.Core
+        ${Http}.Server.Core
         Boost::asio
 )
 ##############################################################################

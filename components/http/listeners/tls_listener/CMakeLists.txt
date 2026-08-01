@@ -1,24 +1,24 @@
 ##############################################################################
 # Http Listeners — TlsListener<Drivers...> + build_ssl_context (TCP+TLS+ALPN)
 ##############################################################################
-add_library(${HTTP}.Listeners.Tls STATIC
+add_library(${Http}.Listeners.Tls STATIC
         build_ssl_context.cpp
         tls_listener.hpp
 )
 
-target_include_directories(${HTTP}.Listeners.Tls PUBLIC
+target_include_directories(${Http}.Listeners.Tls PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
-target_link_libraries(${HTTP}.Listeners.Tls
+target_link_libraries(${Http}.Listeners.Tls
         PUBLIC
-        ${HTTP}.Listeners.Base
-        ${HTTP}.Listeners.ConnectionTracker
-        ${HTTP}.Connection.Tls
-        ${HTTP}.Types.Executor
-        ${HTTP}.Config.TlsConfig
-        ${HTTP}.Drivers.Concept
-        ${HTTP}.Routing.Router
+        ${Http}.Listeners.Base
+        ${Http}.Listeners.ConnectionTracker
+        ${Http}.Connection.Tls
+        ${Http}.Types.Executor
+        ${Http}.Config.TlsConfig
+        ${Http}.Drivers.Concept
+        ${Http}.Routing.Router
         Menagerie::Common::Chrono
         Boost::beast
         Boost::asio

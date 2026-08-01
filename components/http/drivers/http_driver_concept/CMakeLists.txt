@@ -1,15 +1,15 @@
 ##############################################################################
 # Http Drivers — HttpDriver concept (header-only)
 ##############################################################################
-add_library(${HTTP}.Drivers.Concept INTERFACE
+add_library(${Http}.Drivers.Concept INTERFACE
         http_driver_concept.hpp
 )
 
-target_include_directories(${HTTP}.Drivers.Concept INTERFACE
+target_include_directories(${Http}.Drivers.Concept INTERFACE
         ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
-target_link_libraries(${HTTP}.Drivers.Concept INTERFACE
-        ${HTTP}.Types.Enums
+target_link_libraries(${Http}.Drivers.Concept INTERFACE
+        ${Http}.Types.Enums
 )
 ##############################################################################

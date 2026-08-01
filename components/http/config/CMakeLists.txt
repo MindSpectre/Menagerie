@@ -1,6 +1,6 @@
 ##############################################################################
 # Http Config — configuration value types + JSON loading.
-# Per-leaf convention; the dotted ${HTTP}.Config target is an INTERFACE
+# Per-leaf convention; the dotted ${Http}.Config target is an INTERFACE
 # aggregate.
 ##############################################################################
 add_subdirectory(tls_config)
@@ -12,13 +12,13 @@ add_subdirectory(load_server_config)
 ##############################################################################
 # Unified interface aggregate
 ##############################################################################
-add_library(${HTTP}.Config INTERFACE)
+add_library(${Http}.Config INTERFACE)
 
-target_link_libraries(${HTTP}.Config INTERFACE
-        ${HTTP}.Config.TlsConfig
-        ${HTTP}.Config.ServerConfig
-        ${HTTP}.Config.Timeouts
-        ${HTTP}.Config.ListenerConfig
-        ${HTTP}.Config.LoadServerConfig
+target_link_libraries(${Http}.Config INTERFACE
+        ${Http}.Config.TlsConfig
+        ${Http}.Config.ServerConfig
+        ${Http}.Config.Timeouts
+        ${Http}.Config.ListenerConfig
+        ${Http}.Config.LoadServerConfig
 )
 ##############################################################################

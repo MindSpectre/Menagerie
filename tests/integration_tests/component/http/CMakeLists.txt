@@ -37,7 +37,7 @@ add_integration_test(${INTEGRATION_TESTING_TARGET}.Http.Server
         test_http_server_concurrency.cpp
         test_http_config_wiring.cpp
         LINK_LIBS
-        Menagerie.Component.HTTP.Server
+        Menagerie.Component.Http.Server
         ${SHARED_TESTING_TARGET}.Http
         Menagerie::Common::Chrono
         Boost::beast

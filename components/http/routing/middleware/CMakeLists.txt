@@ -1,14 +1,14 @@
 ##############################################################################
 # Http Routing — middleware shape (header-only)
 ##############################################################################
-add_library(${HTTP}.Routing.Middleware INTERFACE middleware.hpp)
+add_library(${Http}.Routing.Middleware INTERFACE middleware.hpp)
 
-target_include_directories(${HTTP}.Routing.Middleware INTERFACE
+target_include_directories(${Http}.Routing.Middleware INTERFACE
         ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
-target_link_libraries(${HTTP}.Routing.Middleware INTERFACE
-        ${HTTP}.Types.AsyncOutcome
-        ${HTTP}.Types.RequestContext
+target_link_libraries(${Http}.Routing.Middleware INTERFACE
+        ${Http}.Types.AsyncOutcome
+        ${Http}.Types.RequestContext
 )
 ##############################################################################

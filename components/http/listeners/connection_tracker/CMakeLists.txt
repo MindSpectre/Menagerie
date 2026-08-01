@@ -1,15 +1,15 @@
 ##############################################################################
 # Http Listeners — ConnectionTracker (in-flight counting + force-cancel, D2)
 ##############################################################################
-add_library(${HTTP}.Listeners.ConnectionTracker STATIC connection_tracker.cpp)
+add_library(${Http}.Listeners.ConnectionTracker STATIC connection_tracker.cpp)
 
-target_include_directories(${HTTP}.Listeners.ConnectionTracker PUBLIC
+target_include_directories(${Http}.Listeners.ConnectionTracker PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
-target_link_libraries(${HTTP}.Listeners.ConnectionTracker
+target_link_libraries(${Http}.Listeners.ConnectionTracker
         PUBLIC
-        ${HTTP}.Types.Executor
+        ${Http}.Types.Executor
         Boost::asio
         Menagerie::Common::Beavers
 )

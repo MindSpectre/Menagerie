@@ -1,18 +1,18 @@
 ##############################################################################
 # Http Routing — Router (dispatch facade for drivers)
 ##############################################################################
-add_library(${HTTP}.Routing.Router STATIC router.cpp)
+add_library(${Http}.Routing.Router STATIC router.cpp)
 
-target_include_directories(${HTTP}.Routing.Router PUBLIC
+target_include_directories(${Http}.Routing.Router PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
-target_link_libraries(${HTTP}.Routing.Router
+target_link_libraries(${Http}.Routing.Router
         PUBLIC
-        ${HTTP}.Routing.RouteRegistry
-        ${HTTP}.Types.AsyncOutcome
+        ${Http}.Routing.RouteRegistry
+        ${Http}.Types.AsyncOutcome
         Boost::asio
         PRIVATE
-        ${HTTP}.Types.ErrorResponses
+        ${Http}.Types.ErrorResponses
 )
 ##############################################################################

@@ -5,25 +5,25 @@
 # deliberately light (depends only on Enums) so Body can use the error structs
 # without pulling in Response/ResponseFactory — that would form a target cycle
 # (Response -> Body -> Errors -> Response).
-add_library(${HTTP}.Types.Errors INTERFACE errors.hpp)
+add_library(${Http}.Types.Errors INTERFACE errors.hpp)
 
-target_include_directories(${HTTP}.Types.Errors INTERFACE
+target_include_directories(${Http}.Types.Errors INTERFACE
         ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
-target_link_libraries(${HTTP}.Types.Errors INTERFACE
-        ${HTTP}.Types.Enums
+target_link_libraries(${Http}.Types.Errors INTERFACE
+        ${Http}.Types.Enums
 )
 
 # to_http_response DEFINITIONS (cold path). Separate target so the Response /
 # ResponseFactory dependency stays off the struct-only Errors target above.
-add_library(${HTTP}.Types.ErrorResponses STATIC errors.cpp)
+add_library(${Http}.Types.ErrorResponses STATIC errors.cpp)
 
-target_link_libraries(${HTTP}.Types.ErrorResponses
+target_link_libraries(${Http}.Types.ErrorResponses
         PUBLIC
-        ${HTTP}.Types.Errors
+        ${Http}.Types.Errors
         PRIVATE
-        ${HTTP}.Types.Response
-        ${HTTP}.Types.ResponseFactory
+        ${Http}.Types.Response
+        ${Http}.Types.ResponseFactory
 )
 ##############################################################################

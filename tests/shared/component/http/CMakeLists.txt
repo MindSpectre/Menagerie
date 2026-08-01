@@ -10,10 +10,10 @@ target_include_directories(${SHARED_TESTING_TARGET}.Http INTERFACE
 )
 
 target_link_libraries(${SHARED_TESTING_TARGET}.Http INTERFACE
-        Menagerie.Component.HTTP.Listeners
-        Menagerie.Component.HTTP.Drivers
-        Menagerie.Component.HTTP.Routing
-        Menagerie.Component.HTTP.Connection
-        Menagerie.Component.HTTP.Types
-        Menagerie.Component.HTTP.Config
+        Menagerie.Component.Http.Listeners
+        Menagerie.Component.Http.Drivers
+        Menagerie.Component.Http.Routing
+        Menagerie.Component.Http.Connection
+        Menagerie.Component.Http.Types
+        Menagerie.Component.Http.Config
 )

@@ -1,4 +1,4 @@
-set(HTTP ${COMPONENT}.HTTP)
+set(Http ${COMPONENT}.Http)
 
 
 ##############################################################################
@@ -51,21 +51,21 @@ add_subdirectory(server)
 
 
 ##############################################################################
-# HTTP Exported library
+# Http Exported library
 ##############################################################################
-add_combined_library(${HTTP}
+add_combined_library(${Http}
         DIRECTORIES
         export/
         SOURCES
         export/menagerie/http
         LIBRARIES
-        ${HTTP}.Types
-        ${HTTP}.Routing
-        ${HTTP}.Connection
-        ${HTTP}.Drivers
-        ${HTTP}.Listeners
-        ${HTTP}.Config
-        ${HTTP}.Server
+        ${Http}.Types
+        ${Http}.Routing
+        ${Http}.Connection
+        ${Http}.Drivers
+        ${Http}.Listeners
+        ${Http}.Config
+        ${Http}.Server
 )
 
 # Asio's thread_info_base is sized by this macro (max_mem_index = 6 * cache_size)
@@ -73,9 +73,9 @@ add_combined_library(${HTTP}
 # against ours gets a differently-laid-out struct — silent corruption. The root
 # CMakeLists sets it tree-wide; this re-exports it to anyone linking the umbrella.
 # Both read ASIO_RECYCLE_CACHE, so they cannot drift.
-target_compile_definitions(${HTTP} INTERFACE
+target_compile_definitions(${Http} INTERFACE
         BOOST_ASIO_RECYCLING_ALLOCATOR_CACHE_SIZE=${ASIO_RECYCLE_CACHE}
 )
 
-add_library(Menagerie::Component::Http ALIAS ${HTTP})
+add_library(Menagerie::Component::Http ALIAS ${Http})
 ##############################################################################

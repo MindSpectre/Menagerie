@@ -1,5 +1,5 @@
 ##############################################################################
-# Test HTTP Routing layer
+# Test Http Routing layer
 ##############################################################################
 add_unit_test(${UNIT_TESTING_TARGET}.Http.Routing
         routing/test_route_registry.cpp
@@ -11,14 +11,14 @@ add_unit_test(${UNIT_TESTING_TARGET}.Http.Routing
 )
 target_link_libraries(${UNIT_TESTING_TARGET}.Http.Routing
         PRIVATE
-        Menagerie.Component.HTTP.Routing
-        Menagerie.Component.HTTP.Types
+        Menagerie.Component.Http.Routing
+        Menagerie.Component.Http.Types
         ${TEST_LIBS}
 )
 ##############################################################################
 
 ##############################################################################
-# Test HTTP Connection layer
+# Test Http Connection layer
 ##############################################################################
 add_unit_test(${UNIT_TESTING_TARGET}.Http.Connection
         connection/test_request_arena.cpp
@@ -28,8 +28,8 @@ add_unit_test(${UNIT_TESTING_TARGET}.Http.Connection
 )
 target_link_libraries(${UNIT_TESTING_TARGET}.Http.Connection
         PRIVATE
-        Menagerie.Component.HTTP.Connection
-        Menagerie.Component.HTTP.Types
+        Menagerie.Component.Http.Connection
+        Menagerie.Component.Http.Types
         Boost::beast
         OpenSSL::SSL
         OpenSSL::Crypto
@@ -38,7 +38,7 @@ target_link_libraries(${UNIT_TESTING_TARGET}.Http.Connection
 ##############################################################################
 
 ##############################################################################
-# Test HTTP Types layer
+# Test Http Types layer
 ##############################################################################
 add_unit_test(${UNIT_TESTING_TARGET}.Http.Types
         types/test_http_enums.cpp
@@ -53,19 +53,19 @@ add_unit_test(${UNIT_TESTING_TARGET}.Http.Types
         types/test_allocation_gate.cpp
 )
 # Dotted aggregate of all the per-type Http Types leaf targets (no :: alias).
-# Deliberately NOT the Menagerie.Component.HTTP umbrella: per-layer links
+# Deliberately NOT the Menagerie.Component.Http umbrella: per-layer links
 # catch under-linking regressions in each layer's CMake (PR 7 D4); umbrella
 # propagation is guarded by the dedicated ...Http.Umbrella target below.
 target_link_libraries(${UNIT_TESTING_TARGET}.Http.Types
         PRIVATE
-        Menagerie.Component.HTTP.Types
+        Menagerie.Component.Http.Types
         Menagerie::Common::Chrono
         ${TEST_LIBS}
 )
 ##############################################################################
 
 ##############################################################################
-# Test HTTP Drivers layer
+# Test Http Drivers layer
 ##############################################################################
 add_unit_test(${UNIT_TESTING_TARGET}.Http.Drivers
         drivers/test_driver_scaffolds.cpp
@@ -75,17 +75,17 @@ add_unit_test(${UNIT_TESTING_TARGET}.Http.Drivers
 )
 target_link_libraries(${UNIT_TESTING_TARGET}.Http.Drivers
         PRIVATE
-        Menagerie.Component.HTTP.Drivers
-        Menagerie.Component.HTTP.Connection
-        Menagerie.Component.HTTP.Routing
-        Menagerie.Component.HTTP.Types
+        Menagerie.Component.Http.Drivers
+        Menagerie.Component.Http.Connection
+        Menagerie.Component.Http.Routing
+        Menagerie.Component.Http.Types
         Boost::beast
         ${TEST_LIBS}
 )
 ##############################################################################
 
 ##############################################################################
-# Test HTTP Listeners layer
+# Test Http Listeners layer
 ##############################################################################
 add_unit_test(${UNIT_TESTING_TARGET}.Http.Listeners
         listeners/test_connection_tracker.cpp
@@ -105,7 +105,7 @@ target_link_libraries(${UNIT_TESTING_TARGET}.Http.Listeners
 ##############################################################################
 
 ##############################################################################
-# Test HTTP Config layer
+# Test Http Config layer
 ##############################################################################
 add_unit_test(${UNIT_TESTING_TARGET}.Http.Config
         config/test_timeouts.cpp
@@ -116,15 +116,15 @@ add_unit_test(${UNIT_TESTING_TARGET}.Http.Config
 )
 target_link_libraries(${UNIT_TESTING_TARGET}.Http.Config
         PRIVATE
-        Menagerie.Component.HTTP.Config
-        Menagerie.Component.HTTP.Types
+        Menagerie.Component.Http.Config
+        Menagerie.Component.Http.Types
         JsonCpp::JsonCpp
         ${TEST_LIBS}
 )
 ##############################################################################
 
 ##############################################################################
-# Test HTTP Server layer (unit — attach_default_listeners; the Server
+# Test Http Server layer (unit — attach_default_listeners; the Server
 # lifecycle itself is integration-tested)
 ##############################################################################
 add_unit_test(${UNIT_TESTING_TARGET}.Http.Server
@@ -132,10 +132,10 @@ add_unit_test(${UNIT_TESTING_TARGET}.Http.Server
 )
 target_link_libraries(${UNIT_TESTING_TARGET}.Http.Server
         PRIVATE
-        Menagerie.Component.HTTP.Server
-        Menagerie.Component.HTTP.Config
-        Menagerie.Component.HTTP.Drivers
-        Menagerie.Component.HTTP.Types
+        Menagerie.Component.Http.Server
+        Menagerie.Component.Http.Config
+        Menagerie.Component.Http.Drivers
+        Menagerie.Component.Http.Types
         Boost::asio
         ${TEST_LIBS}
 )
@@ -143,7 +143,7 @@ target_link_libraries(${UNIT_TESTING_TARGET}.Http.Server
 
 ##############################################################################
 # Test the public umbrella (PR 7): <menagerie/http> + the combined
-# Menagerie.Component.HTTP library must expose every layer with NO other link.
+# Menagerie.Component.Http library must expose every layer with NO other link.
 # This target deliberately links nothing else (gtest aside) — it is the only
 # place the consumer-facing contract (one include, one library) is compiled.
 # It does NOT isolate per-layer LIBRARIES drops: the layer aggregates
@@ -156,7 +156,7 @@ add_unit_test(${UNIT_TESTING_TARGET}.Http.Umbrella
 )
 target_link_libraries(${UNIT_TESTING_TARGET}.Http.Umbrella
         PRIVATE
-        Menagerie.Component.HTTP
+        Menagerie.Component.Http
         ${TEST_LIBS}
 )
 ##############################################################################

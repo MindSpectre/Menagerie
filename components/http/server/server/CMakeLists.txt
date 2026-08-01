@@ -1,19 +1,19 @@
 ##############################################################################
 # Http Server — Server (executor-injected lifecycle orchestrator)
 ##############################################################################
-add_library(${HTTP}.Server.Core STATIC server.cpp)
+add_library(${Http}.Server.Core STATIC server.cpp)
 
-target_include_directories(${HTTP}.Server.Core PUBLIC
+target_include_directories(${Http}.Server.Core PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
-target_link_libraries(${HTTP}.Server.Core
+target_link_libraries(${Http}.Server.Core
         PUBLIC
-        ${HTTP}.Server.Observer
-        ${HTTP}.Types.Executor
-        ${HTTP}.Routing
-        ${HTTP}.Listeners
-        ${HTTP}.Config
+        ${Http}.Server.Observer
+        ${Http}.Types.Executor
+        ${Http}.Routing
+        ${Http}.Listeners
+        ${Http}.Config
         Boost::asio
         Menagerie::Common::Chrono
         Menagerie::Common::Beavers

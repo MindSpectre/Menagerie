@@ -1,5 +1,5 @@
 ##############################################################################
-# Minimal HTTP server (standalone path) - living documentation
+# Minimal Http server (standalone path) - living documentation
 # for the public <menagerie/http> API. Successor of the pre-redesign manual
 # handler example.
 ##############################################################################
