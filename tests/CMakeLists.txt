@@ -1,4 +1,5 @@
 set(TESTS_TARGET ${PROJECT_NAME}.Tests)
+set(SHARED_TESTING_TARGET ${TESTS_TARGET}.Shared)
 set(UNIT_TESTING_TARGET ${TESTS_TARGET}.Unit)
 set(FUNCTIONAL_TESTING_TARGET ${TESTS_TARGET}.Functional)
 set(INTEGRATION_TESTING_TARGET ${TESTS_TARGET}.Integration)
@@ -24,8 +25,9 @@ add_subdirectory(codesandbox)
 ##############################################################################
 if (BUILD_HTTP)
     message("Http tests will be built")
-    add_subdirectory(unit_tests/http)
-    add_subdirectory(integration_tests/http)
+    add_subdirectory(shared/component/http)
+    add_subdirectory(unit_tests/component/http)
+    add_subdirectory(integration_tests/component/http)
 endif ()
 ##############################################################################
 
@@ -34,8 +36,8 @@ endif ()
 ##############################################################################
 if (BUILD_DATABASE)
     message("Database tests will be built")
-    add_subdirectory(unit_tests/database)
-    add_subdirectory(integration_tests/database)
+    add_subdirectory(unit_tests/component/database)
+    add_subdirectory(integration_tests/component/database)
 endif ()
 ##############################################################################
 

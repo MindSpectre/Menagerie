@@ -5,12 +5,7 @@ add_integration_test(${INTEGRATION_TESTING_TARGET}.Http.Tcp
         test_http_tcp.cpp
         test_http_drain.cpp
         LINK_LIBS
-        Menagerie.Component.HTTP.Listeners
-        Menagerie.Component.HTTP.Drivers
-        Menagerie.Component.HTTP.Routing
-        Menagerie.Component.HTTP.Connection
-        Menagerie.Component.HTTP.Types
-        Menagerie.Component.HTTP.Config
+        ${SHARED_TESTING_TARGET}.Http
         Boost::beast
         OpenSSL::SSL
         OpenSSL::Crypto
@@ -24,12 +19,7 @@ target_include_directories(${INTEGRATION_TESTING_TARGET}.Http.Tcp PRIVATE
 add_integration_test(${INTEGRATION_TESTING_TARGET}.Http.Tls
         test_http_tls.cpp
         LINK_LIBS
-        Menagerie.Component.HTTP.Listeners
-        Menagerie.Component.HTTP.Drivers
-        Menagerie.Component.HTTP.Routing
-        Menagerie.Component.HTTP.Connection
-        Menagerie.Component.HTTP.Types
-        Menagerie.Component.HTTP.Config
+        ${SHARED_TESTING_TARGET}.Http
         Boost::beast
         OpenSSL::SSL
         OpenSSL::Crypto
@@ -48,12 +38,7 @@ add_integration_test(${INTEGRATION_TESTING_TARGET}.Http.Server
         test_http_config_wiring.cpp
         LINK_LIBS
         Menagerie.Component.HTTP.Server
-        Menagerie.Component.HTTP.Listeners
-        Menagerie.Component.HTTP.Drivers
-        Menagerie.Component.HTTP.Routing
-        Menagerie.Component.HTTP.Connection
-        Menagerie.Component.HTTP.Types
-        Menagerie.Component.HTTP.Config
+        ${SHARED_TESTING_TARGET}.Http
         Menagerie::Common::Chrono
         Boost::beast
         OpenSSL::SSL

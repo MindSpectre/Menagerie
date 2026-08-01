@@ -96,19 +96,11 @@ add_unit_test(${UNIT_TESTING_TARGET}.Http.Listeners
 )
 target_link_libraries(${UNIT_TESTING_TARGET}.Http.Listeners
         PRIVATE
-        Menagerie.Component.HTTP.Listeners
-        Menagerie.Component.HTTP.Connection
-        Menagerie.Component.HTTP.Drivers
-        Menagerie.Component.HTTP.Routing
-        Menagerie.Component.HTTP.Types
-        Menagerie.Component.HTTP.Config
+        ${SHARED_TESTING_TARGET}.Http
         Boost::beast
         OpenSSL::SSL
         OpenSSL::Crypto
         ${TEST_LIBS}
-)
-target_include_directories(${UNIT_TESTING_TARGET}.Http.Listeners PRIVATE
-        ${CMAKE_SOURCE_DIR}/tests/integration_tests/http
 )
 ##############################################################################
 

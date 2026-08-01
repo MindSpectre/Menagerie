@@ -22,7 +22,7 @@
 #include <server.hpp>
 #include <server_config.hpp>
 
-#include "http_test_fixture.hpp"  // TcpClient (reused Beast client)
+#include "http_test_fixture.hpp"
 
 namespace http_it {
 
