@@ -213,7 +213,11 @@ worker is idle, and a background cleanup thread periodically reaps workers that 
 is a small `std::shared_mutex` wrapper: `.read()` returns a `ReadProxy` holding a `shared_lock`,
 `.write()` (and `operator->`) return a `WriteProxy` holding a `unique_lock`, and `with_lock` /
 `with_read_lock` take a callable for scoped access. `ThreadPool` uses it internally to guard its
-worker list and task queue.
+worker list and task queue. Construction mirrors `T`'s own two initialization forms rather than
+collapsing them: the parenthesized form forwards to `T(args...)`, while the braced form goes
+through `T`'s `initializer_list` constructor - so
+`ThreadSafeResource<std::vector<int>>(5)` holds five elements and
+`ThreadSafeResource<std::vector<int>>{5}` holds one.
 
 **`AsioBackend` / `ShardedAsioBackend`** (`asio_backend/`)
 are RAII `io_context` runners for asio-based code (used throughout the resource-pool benchmarks).
