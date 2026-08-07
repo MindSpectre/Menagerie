@@ -194,7 +194,7 @@ add_subdirectory(common)
 ##############################################################################
 if (BUILD_COMPONENTS)
     message("Components will be built")
-    add_subdirectory(components)
+    add_subdirectory(component)
 endif ()
 ##############################################################################
 
