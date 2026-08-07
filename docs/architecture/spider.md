@@ -63,7 +63,7 @@ public:
 ```
 
 `spider.register_singleton<DatabaseService>(...)` / `spider.get<DatabaseService>()` mirror
-`tests/unit_tests/spider/test_spider.cpp`;
+`tests/unit_tests/common/spider/test_spider.cpp`;
 `SPIDER_WEB(spider::Resettable)` is the actual declaration in
 `components/http/routing/controller/controller.hpp`,
 and `SPIDER_WEB(spider::Immortal)` the one in
