@@ -2,6 +2,7 @@
 
 #include <atomic>
 #include <memory>
+#include <new>
 
 #include <connection_holder.hpp>
 
@@ -15,7 +16,9 @@ namespace menagerie::db::postgres {
      * through a std::shared_ptr; capabilities receive std::weak_ptr<ConnectionHolder>
      * derived from the pool's strong ref.
      */
-    class alignas(64) SlotHolder final : public ConnectionHolder, public std::enable_shared_from_this<SlotHolder> {
+    class alignas(std::hardware_destructive_interference_size) SlotHolder final
+        : public ConnectionHolder,
+          public std::enable_shared_from_this<SlotHolder> {
     public:
         /// Slot lifecycle state; read and CAS'd directly by the pool's acquire path.
         std::atomic<SlotStatus> status = SlotStatus::INACTIVE;

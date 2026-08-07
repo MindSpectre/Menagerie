@@ -2,6 +2,7 @@
 
 #include <atomic>
 #include <menagerie/beavers>
+#include <new>
 
 namespace menagerie::multithread {
 
@@ -10,7 +11,8 @@ namespace menagerie::multithread {
      *
      * ## Concept: False Sharing Prevention
      *
-     * Modern CPUs organize memory into cache lines (typically 64 bytes).
+     * Modern CPUs organize memory into cache lines (64 bytes on x86-64; up to 256
+     * on some AArch64 implementations - hence the standard constants below).
      * When multiple threads access different variables on the same cache line,
      * the CPU must invalidate and reload the entire line even though threads
      * aren't actually sharing data. This is called "false sharing" and kills performance.
@@ -24,13 +26,15 @@ namespace menagerie::multithread {
      * ```
      * When producer updates its cursor, consumer's cache line gets invalidated!
      *
-     * Solution: Align each sequence to its own cache line (64 bytes):
+     * Solution: Align each sequence to its own cache line, using
+     * `std::hardware_destructive_interference_size` - the standard's name for
+     * "minimum offset that keeps two objects off each other's cache line":
      * ```
-     * struct alignas(64) Good {
+     * struct alignas(std::hardware_destructive_interference_size) Good {
      *     std::atomic<int64_t> producer_cursor;  // Cache line 0
-     *     char padding[56];                      // Pad to 64 bytes
+     *     char padding[...];                     // Pad out the rest of the line
      * };
-     * struct alignas(64) Good2 {
+     * struct alignas(std::hardware_destructive_interference_size) Good2 {
      *     std::atomic<int64_t> consumer_cursor;  // Cache line 1 (SEPARATE!)
      * };
      * ```
@@ -46,7 +50,7 @@ namespace menagerie::multithread {
      * - `release`: All writes before this are visible to acquire
      * - `seq_cst`: Total global order (expensive, avoid on hot path)
      */
-    class alignas(64) Sequence {
+    class alignas(std::hardware_destructive_interference_size) Sequence {
     public:
         /**
          * @brief Initialize sequence with starting value
@@ -141,12 +145,14 @@ namespace menagerie::multithread {
     private:
         std::atomic<std::int64_t> value_;
 
-        // Padding to ensure 64-byte cache-line alignment
-        char padding_[64 - sizeof(std::atomic<std::int64_t>)]{};
+        // Padding so the sequence occupies a full cache line on its own
+        char padding_[std::hardware_destructive_interference_size - sizeof(std::atomic<std::int64_t>)]{};
     };
 
     // Compile-time verification that our alignment worked
-    static_assert(sizeof(Sequence) == 64, "Sequence must be exactly 64 bytes (one cache line)");
-    static_assert(alignof(Sequence) == 64, "Sequence must be 64-byte aligned");
+    static_assert(sizeof(Sequence) == std::hardware_destructive_interference_size,
+                  "Sequence must be exactly one cache line");
+    static_assert(alignof(Sequence) == std::hardware_destructive_interference_size,
+                  "Sequence must be cache-line aligned");
 
 }  // namespace menagerie::multithread

@@ -2,12 +2,16 @@
 
 #include <filesystem>
 #include <fstream>
+#include <menagerie/beavers>
 #include <mutex>
+#include <new>
 
 #include "config/file_sink_config.hpp"
 #include "detail/file_naming.hpp"
 
 namespace menagerie::crow {
+
+    using namespace beavers::literals;
 
     /**
      * @brief File sink with automatic rotation
@@ -251,7 +255,8 @@ namespace menagerie::crow {
         std::uint64_t bytes_written_ = 0;  // tracked in-process: no tellp(), no file_size() per write
         std::mutex mutex_;
         std::string format_buffer_;  // Reused across process() calls (no TL dependency)
-        alignas(std::hardware_destructive_interference_size) char stream_buffer_[64 * 1024]{};  // 64KB static buffer,
-                                                                                                // cache-line aligned
+        /// Static write buffer: the size is a bytes-per-write tuning knob (not a cache-line
+        /// multiple), while the alignment just starts it on its own line.
+        alignas(std::hardware_destructive_interference_size) char stream_buffer_[64_kb]{};
     };
 }  // namespace menagerie::crow

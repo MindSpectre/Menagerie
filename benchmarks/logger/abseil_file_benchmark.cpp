@@ -1,6 +1,8 @@
 #include <filesystem>
 #include <fstream>
+#include <menagerie/beavers>
 #include <mutex>
+#include <new>
 
 #include <absl/log/globals.h>
 #include <absl/log/initialize.h>
@@ -11,6 +13,8 @@
 #include "benchmark_harness.hpp"
 
 namespace {
+
+    using namespace menagerie::beavers::literals;
 
     class AbseilNullSink final : public absl::LogSink {
     public:
@@ -51,7 +55,7 @@ namespace {
     private:
         std::ofstream file_;
         std::mutex mutex_;
-        alignas(64) char buffer_[64 * 1024]{};
+        alignas(std::hardware_destructive_interference_size) char buffer_[64_kb]{};
     };
 
     constexpr std::size_t ABSEIL_PREFIX_EST = 70;

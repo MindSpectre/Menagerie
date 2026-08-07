@@ -2,6 +2,7 @@
 #include <barrier>
 #include <chrono>
 #include <menagerie/multithread>
+#include <new>
 #include <thread>
 #include <vector>
 
@@ -91,8 +92,8 @@ TEST_F(DisruptorTest, SequenceCompareAndSet) {
 
 TEST_F(DisruptorTest, SequenceCacheLineAlignment) {
     // Verify cache-line alignment to prevent false sharing
-    EXPECT_EQ(sizeof(Sequence), 64);
-    EXPECT_EQ(alignof(Sequence), 64);
+    EXPECT_EQ(sizeof(Sequence), std::hardware_destructive_interference_size);
+    EXPECT_EQ(alignof(Sequence), std::hardware_destructive_interference_size);
 
     // Verify multiple sequences don't share cache lines
     Sequence seq1{};
@@ -101,8 +102,9 @@ TEST_F(DisruptorTest, SequenceCacheLineAlignment) {
     const auto addr1 = reinterpret_cast<uintptr_t>(&seq1);
     const auto addr2 = reinterpret_cast<uintptr_t>(&seq2);
 
-    // They should be at least 64 bytes apart
-    EXPECT_GE(std::abs(static_cast<long long>(addr2 - addr1)), 64);
+    // They should be at least one destructive-interference span apart
+    EXPECT_GE(std::abs(static_cast<long long>(addr2 - addr1)),
+              static_cast<long long>(std::hardware_destructive_interference_size));
 }
 
 /*==============================================================================

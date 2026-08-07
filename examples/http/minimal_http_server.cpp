@@ -17,11 +17,14 @@
 #include <cstddef>
 #include <iostream>
 #include <memory>
+#include <menagerie/beavers>
 #include <menagerie/http>
 #include <string>
 #include <utility>
 
 namespace {
+
+    using namespace menagerie::beavers::literals;
 
     namespace http = menagerie::http;
 
@@ -49,7 +52,7 @@ namespace {
         /// converts the typed error into a 413 via errors.hpp's ADL
         /// to_http_response — the handler never builds an error response.
         static http::AsyncOutcome<http::Response, http::BodyLimitExceeded> echo(http::RequestContext ctx) {
-            auto body = co_await ctx.body().read_to_string(64 * 1024);
+            auto body = co_await ctx.body().read_to_string(64_kb);
             if (body.is_error()) {
                 co_return menagerie::beavers::err(body.error<http::BodyLimitExceeded>());
             }
