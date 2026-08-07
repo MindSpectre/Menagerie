@@ -5,10 +5,10 @@
 #include <chrono>
 #include <climits>
 #include <cstdint>
+#include <new>
 
 #if !defined(EVENT_COUNT_FORCE_FALLBACK) && defined(__linux__)
     #define EVENT_COUNT_USE_FUTEX 1
-    #include <ctime>
 
     #include <linux/futex.h>
     #include <sys/syscall.h>
@@ -49,7 +49,7 @@ namespace menagerie::multithread {
      * @c FUTEX_WAKE. Each @c prepare_wait() is paired with exactly one @c cancel_wait()
      * OR one @c wait_until().
      */
-    class alignas(64) EventCount {
+    class alignas(std::hardware_destructive_interference_size) EventCount {
     public:
         EventCount() noexcept                    = default;
         ~EventCount()                            = default;
@@ -127,8 +127,8 @@ namespace menagerie::multithread {
 
     inline void EventCount::wait_until(const std::uint32_t key,
                                        const std::chrono::steady_clock::time_point deadline) noexcept {
-        const auto now = std::chrono::steady_clock::now();
-        if (now < deadline && static_cast<std::uint32_t>(state_.load(std::memory_order_acquire) >> 32) == key) {
+        if (const auto now = std::chrono::steady_clock::now();
+            now < deadline && static_cast<std::uint32_t>(state_.load(std::memory_order_acquire) >> 32) == key) {
             const auto rel   = deadline - now;
             const auto secs  = std::chrono::duration_cast<std::chrono::seconds>(rel);
             const auto nsecs = std::chrono::duration_cast<std::chrono::nanoseconds>(rel - secs);
@@ -142,8 +142,8 @@ namespace menagerie::multithread {
     }
 
     inline void EventCount::notify(const int wake_count) noexcept {
-        const std::uint64_t prev = state_.fetch_add(epoch_increment, std::memory_order_seq_cst);
-        if (static_cast<std::uint32_t>(prev) != 0) {  // waiter_count != 0
+        if (const std::uint64_t prev = state_.fetch_add(epoch_increment, std::memory_order_seq_cst);
+            static_cast<std::uint32_t>(prev) != 0) {  // waiter_count != 0
             ::syscall(SYS_futex, epoch_addr(), FUTEX_WAKE_PRIVATE, wake_count, nullptr, nullptr, 0);
         }
     }

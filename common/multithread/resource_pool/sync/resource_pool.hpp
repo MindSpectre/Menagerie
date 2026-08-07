@@ -11,6 +11,7 @@
 #include <functional>
 #include <memory>
 #include <menagerie/beavers>
+#include <new>
 #include <optional>
 #include <stdexcept>
 #include <thread>
@@ -298,7 +299,7 @@ namespace menagerie::multithread {
 
     private:
         /// Cache-line-isolated, write-hot free-region bitset word.
-        struct alignas(64) PaddedWord {
+        struct alignas(std::hardware_destructive_interference_size) PaddedWord {
             std::atomic<std::uint64_t> bits{0};
         };
 
@@ -322,10 +323,10 @@ namespace menagerie::multithread {
         const std::size_t n_free_words_;
 
         std::array<Slot, MaxSize> storage_{};
-        // alignas(64) isolates this array from the write-hot storage_/free_words_ regions.
+        // The alignment isolates this array from the write-hot storage_/free_words_ regions.
         // Cells are intentionally NOT padded from each other: they are publish-once at
         // construction and read-mostly thereafter, so per-cell line sharing is harmless.
-        alignas(64) std::array<std::atomic<T*>, MaxSize> pinned_cells_{};
+        alignas(std::hardware_destructive_interference_size) std::array<std::atomic<T*>, MaxSize> pinned_cells_{};
         std::array<PaddedWord, word_count> free_words_{};
 
         /// Spin budget for acquire_for before parking on the EventCount.

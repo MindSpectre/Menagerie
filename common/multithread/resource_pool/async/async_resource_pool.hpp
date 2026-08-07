@@ -10,6 +10,7 @@
 #include <functional>
 #include <memory>
 #include <menagerie/beavers>
+#include <new>
 #include <optional>
 #include <stdexcept>
 #include <thread>
@@ -391,7 +392,7 @@ namespace menagerie::multithread {
             return false;
         }
 
-        struct alignas(64) PaddedWord {
+        struct alignas(std::hardware_destructive_interference_size) PaddedWord {
             std::atomic<std::uint64_t> bits{0};
         };
 
@@ -418,7 +419,7 @@ namespace menagerie::multithread {
         const std::size_t n_free_words_;
 
         std::array<Slot, MaxSize> storage_{};
-        alignas(64) std::array<std::atomic<T*>, MaxSize> pinned_cells_{};
+        alignas(std::hardware_destructive_interference_size) std::array<std::atomic<T*>, MaxSize> pinned_cells_{};
         std::array<PaddedWord, word_count> free_words_{};
         detail::WaiterList waiters_{};
         std::atomic<bool> shutdown_{false};

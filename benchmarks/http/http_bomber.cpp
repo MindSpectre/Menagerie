@@ -34,6 +34,7 @@
 #include <iomanip>
 #include <iostream>
 #include <memory>
+#include <menagerie/beavers>
 #include <new>
 #include <numeric>
 #include <span>
@@ -48,6 +49,8 @@ namespace net = boost::asio;
 using tcp     = net::ip::tcp;
 
 namespace {
+
+    using namespace menagerie::beavers::literals;
 
     // ── Configuration ────────────────────────────────────────────────────────
     struct Options {
@@ -123,7 +126,7 @@ namespace {
               run_(run),
               request_block_(request_block),
               sample_counter_(sample_seed % 64) {
-            read_buf_.reserve(64 * 1024);
+            read_buf_.reserve(64_kb);
         }
 
         void start() {

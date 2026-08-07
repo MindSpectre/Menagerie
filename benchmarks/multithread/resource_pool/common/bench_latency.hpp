@@ -3,13 +3,14 @@
 #include <algorithm>
 #include <chrono>
 #include <cstddef>
+#include <new>
 #include <vector>
 
 #include <benchmark/benchmark.h>
 
 namespace bench::pool {
 
-    struct alignas(64) LatencyCollector {
+    struct alignas(std::hardware_destructive_interference_size) LatencyCollector {
         std::vector<std::chrono::nanoseconds> samples;
 
         void reserve(const std::size_t n) {
