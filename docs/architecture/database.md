@@ -1,6 +1,6 @@
 # Database Component
 
-The database component (`components/database/`) is a layered PostgreSQL client. A provider-agnostic core --
+The database component (`component/database/`) is a layered PostgreSQL client. A provider-agnostic core --
 `base/`, `primitives/`, and `query/` -- describes tables, columns, and SQL expressions in C++ and compiles them
 into parameterized SQL text without knowing which database engine will run it. A provider layer supplies the
 engine-facing half: today that is `providers/postgresql/` only, built whenever `BUILD_POSTGRESQL` is on (the

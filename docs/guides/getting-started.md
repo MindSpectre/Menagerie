@@ -115,9 +115,9 @@ for the service container it starts).
 Feature toggles live in `cmake/features.cmake` and are set with `-D<NAME>=ON|OFF` on the
 `cmake --preset` invocation, or overridden per preset in `CMakePresets.json`:
 
-- `USE_BOOST` - enable Boost (ON by default; most of `common/` and all of `components/http`
+- `USE_BOOST` - enable Boost (ON by default; most of `common/` and all of `component/http`
   depend on it)
-- `BUILD_COMPONENTS` - build `components/` (http, database); OFF shrinks the build to
+- `BUILD_COMPONENTS` - build `component/` (http, database); OFF shrinks the build to
   `common/` only, as `dev-slim` and `tsan` do
 - `USE_TESTS` - build the GoogleTest suites under `tests/`
 - `DO_BENCHMARKS` - build the benchmark binaries under `benchmarks/`
@@ -147,7 +147,7 @@ cmake --build build/debug --target docs
 
 The generated site lands at `build/docs/html/index.html`; open it in a browser. The
 `Doxyfile` (`docs/doxygen/Doxyfile`) indexes `README.md`, `docs/architecture`, `docs/guides`,
-`common`, and `components`, and uses the vendored doxygen-awesome-css theme, so
+`common`, and `component`, and uses the vendored doxygen-awesome-css theme, so
 `docs/architecture/*.md` and `docs/guides/*.md` - including `docs/guides/http-server.md` for
 a walkthrough of running the example HTTP server - appear as pages alongside the generated
 API reference.

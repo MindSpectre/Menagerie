@@ -280,7 +280,7 @@ static http::AsyncOutcome<http::Response, http::NotFoundError> get_thing(http::R
 }
 ```
 
-`components/http/types/errors/errors.hpp` has the full struct + `to_http_response` list; a user-defined
+`component/http/types/errors/errors.hpp` has the full struct + `to_http_response` list; a user-defined
 error type only needs its own `to_http_response` overload discoverable by ADL next to the type.
 
 **Exceptions.** An exception that escapes a handler as a raw `throw` is not translated by routing - it
