@@ -146,7 +146,7 @@ static http::AsyncResponse user(http::RequestContext ctx) {
 }
 ```
 
-`GET /users/42?v=hi` returns `user:42 v=hi` (`tests/integration_tests/http/test_http_tcp.cpp-47,104-109`).
+`GET /users/42?v=hi` returns `user:42 v=hi` (`tests/integration_tests/component/http/test_http_tcp.cpp-47,104-109`).
 
 **Groups.** `server.in_group(prefix)` mounts a controller under a path prefix; `GroupBinding::in_group`
 nests further, and mounting a second controller in the same group chains off the first:
@@ -156,7 +156,7 @@ root().in_group("/api").in_group("/v2").add_controller(std::make_shared<UsersCon
 ```
 
 `GET /api/v2/users` resolves; `GET /users` (unprefixed) does not
-(`tests/unit_tests/http/routing/test_group.cpp-80`).
+(`tests/unit_tests/component/http/routing/test_group.cpp-80`).
 
 **Middleware.** A middleware is `std::function<AsyncResponse(RequestContext, const NextHandler&)>`,
 attached with `controller.add_middleware(mw)` (first added runs outermost). It can short-circuit by
@@ -181,7 +181,7 @@ http::Middleware tag_middleware() {
 }
 ```
 
-This matches `tests/unit_tests/http/routing/test_middleware.cpp`: the short-circuit case is
+This matches `tests/unit_tests/component/http/routing/test_middleware.cpp`: the short-circuit case is
 `ShortCircuitSkipsHandler` (lines 80-90), the post-process case is `PostHandlerResponseMutation`
 (lines 92-103).
 
@@ -242,7 +242,7 @@ const auto tls = http::TlsConfig::Builder{}
                       .finalize();
 ```
 
-(`tests/unit_tests/http/config/test_tls_config.cpp-18`). `min_version` is `"tls12"` (default) or
+(`tests/unit_tests/component/http/config/test_tls_config.cpp-18`). `min_version` is `"tls12"` (default) or
 `"tls13"`; `key_passphrase` is a secret field read from JSON but never re-emitted when the config is
 dumped back out. Once loaded, `attach_default_listeners(server)` reads `cfg.listeners()` and adds the
 matching listener + driver for each entry - the same call regardless of how many listeners, or which
@@ -280,7 +280,7 @@ static http::AsyncOutcome<http::Response, http::NotFoundError> get_thing(http::R
 }
 ```
 
-`components/http/types/errors/errors.hpp` has the full struct + `to_http_response` list; a user-defined
+`component/http/types/errors/errors.hpp` has the full struct + `to_http_response` list; a user-defined
 error type only needs its own `to_http_response` overload discoverable by ADL next to the type.
 
 **Exceptions.** An exception that escapes a handler as a raw `throw` is not translated by routing - it
@@ -294,7 +294,7 @@ static http::AsyncResponse boom(http::RequestContext) {
 ```
 
 `GET /boom` here returns a 500 response, not a dropped connection
-(`tests/integration_tests/http/test_http_tcp.cpp-57,132-136`). Routing misses use the same mechanism
+(`tests/integration_tests/component/http/test_http_tcp.cpp-57,132-136`). Routing misses use the same mechanism
 under the hood: an unmatched path is a `NotFoundError`, a matched path with the wrong verb is a
 `MethodNotAllowedError` - both collapse through `to_http_response` exactly like a handler's own typed
 error would.
@@ -312,7 +312,7 @@ server.wait_until_stopped();
 
 `stop()` is non-blocking, idempotent, and callable from any executor thread, including from inside a
 request handler or observer; calling it twice, or after shutdown has already completed, is a documented
-no-op (`tests/integration_tests/http/test_http_server_lifecycle.cpp-85`). `wait_until_stopped()`
+no-op (`tests/integration_tests/component/http/test_http_server_lifecycle.cpp-85`). `wait_until_stopped()`
 blocks the calling thread until graceful shutdown finishes; a caller already running on the executor
 being drained must use the awaitable `async_wait_stopped()` instead, or it would deadlock the shutdown
 it is waiting on.
@@ -331,7 +331,7 @@ EXPECT_EQ(res.result_int(), 200u);
 EXPECT_EQ(res.body(), "slow done");
 ```
 
-(`tests/integration_tests/http/test_http_server_lifecycle.cpp-159`, `GracefulShutdownCompletesInFlightRequests`).
+(`tests/integration_tests/component/http/test_http_server_lifecycle.cpp-159`, `GracefulShutdownCompletesInFlightRequests`).
 A handler that ignores cancellation past the drain deadline delays shutdown rather than corrupting it -
 `wait_until_stopped()` does not return until every force-cancelled connection has actually unwound, not
 just been told to.

@@ -97,7 +97,7 @@ Pipelining buys menagerie **1.21x**; it buys Drogon **7.0x**.
 
 ## Finding 1 — no `TCP_NODELAY` on accepted sockets
 
-`components/http/` never sets it. `tcp_listener.hpp` sets only `reuse_address`, and that on the *acceptor*. The h1
+`component/http/` never sets it. `tcp_listener.hpp` sets only `reuse_address`, and that on the *acceptor*. The h1
 driver writes one response per request, so a pipelined batch ships response 1 and then blocks on the peer's delayed ACK
 (~40 ms) before response 2 goes out.
 

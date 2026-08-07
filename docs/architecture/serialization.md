@@ -82,7 +82,7 @@ This shape (private default constructor, `friend class ConfigInterface`, a neste
 Self&&`-deduced setters) matches
 `common/crow/sink/console/config/console_sink_config.hpp`
 and is exercised end-to-end in
-`tests/unit_tests/serialization/test_config_interface.cpp`.
+`tests/unit_tests/common/serialization/test_config_interface.cpp`.
 
 ## Design notes
 

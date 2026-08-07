@@ -1,6 +1,6 @@
 # HTTP Component
 
-The HTTP component (`components/http/`) is Menagerie's server-side HTTP stack. Today it serves HTTP/1.1 over
+The HTTP component (`component/http/`) is Menagerie's server-side HTTP stack. Today it serves HTTP/1.1 over
 plain TCP and over TLS; HTTP/2 and HTTP/3 exist as compiling scaffolds (ALPN negotiation and a QUIC listener are
 already wired up, but their driver `serve()` bodies log a warning and close the connection) so the protocol work
 can land later without touching the surrounding architecture. Three goals show up in every layer: **one-way
@@ -12,7 +12,7 @@ a handler's failure modes are part of its signature instead of an exception thro
 
 ## Layer map
 
-The tree is organized as eight directories under `components/http/`, each a separate static library joined by the
+The tree is organized as eight directories under `component/http/`, each a separate static library joined by the
 umbrella export. Dependencies point strictly downward; nothing below `server` knows about controllers, and
 nothing below `drivers` knows about a byte stream's protocol.
 

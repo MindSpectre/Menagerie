@@ -9,7 +9,7 @@ INPUT                  = README.md \
                          docs/architecture \
                          docs/guides \
                          common \
-                         components
+                         component
 RECURSIVE              = YES
 EXCLUDE                = common/3rdparty
 FILE_PATTERNS          = *.hpp *.md

@@ -553,7 +553,7 @@ std::visit([&result]<typename E>(E&& err) { ... }, value_);
 
 ## Module Layout
 
-Each top-level module under `common/` (and each component under `components/`) ships an **umbrella header** at
+Each top-level module under `common/` (and each component under `component/`) ships an **umbrella header** at
 `<module>/export/menagerie/<module>` — a file with no extension containing only `#pragma once` and `#include` directives
 for every public header of the module:
 

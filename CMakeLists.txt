@@ -99,7 +99,7 @@ message("Compile options are ${general_compile_options}")
 # This MUST be global. `max_mem_index = 6 * cache_size` sizes thread_info_base
 # itself, which is embedded in io_context. Two TUs disagreeing on the value give
 # that struct two layouts — silent memory corruption, not a link error. So it goes
-# here rather than on any single target, and Menagerie.Component.HTTP re-exports it
+# here rather than on any single target, and Menagerie.Component.Http re-exports it
 # INTERFACE so external consumers of the umbrella inherit it too.
 set(ASIO_RECYCLE_CACHE "4" CACHE STRING "Asio per-thread recycled-memory slots per purpose tag")
 add_compile_definitions(BOOST_ASIO_RECYCLING_ALLOCATOR_CACHE_SIZE=${ASIO_RECYCLE_CACHE})
@@ -194,7 +194,7 @@ add_subdirectory(common)
 ##############################################################################
 if (BUILD_COMPONENTS)
     message("Components will be built")
-    add_subdirectory(components)
+    add_subdirectory(component)
 endif ()
 ##############################################################################
 
