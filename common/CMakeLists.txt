@@ -20,6 +20,6 @@ add_subdirectory(chrono)
 
 add_subdirectory(math)
 
-add_subdirectory(spider)
+add_subdirectory(locator-spider)
 
 add_subdirectory(algorithms)

@@ -96,7 +96,7 @@ target_link_libraries(${UNIT_TESTING_TARGET}.Crow
 #  Spider uint test
 ##############################################################################
 add_unit_test(${UNIT_TESTING_TARGET}.Spider
-        spider/test_spider.cpp
+        locator-spider/test_spider.cpp
 )
 
 target_link_libraries(${UNIT_TESTING_TARGET}.Spider
