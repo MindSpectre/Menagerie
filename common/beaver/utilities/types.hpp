@@ -3,7 +3,7 @@
 #include <string>
 #include <typeindex>
 
-namespace menagerie::beavers {
+namespace menagerie::beaver {
     /// Byte-size literal suffixes (`10_kb`, `4_mb`, ...), binary (1024-based) units.
     namespace literals {
         /// Byte (identity conversion).
@@ -73,4 +73,4 @@ namespace menagerie::beavers {
         return ti.name();
         // fallback
     }
-}  // namespace menagerie::beavers
+}  // namespace menagerie::beaver

@@ -2,7 +2,7 @@
 #include <string>
 #include <string_view>
 
-namespace menagerie::beavers {
+namespace menagerie::beaver {
     /**
      * @brief Transparent hash functor for unordered containers - enables
      *        heterogeneous lookup with `std::string`, `std::string_view`, and
@@ -53,4 +53,4 @@ namespace menagerie::beavers {
         }
     };
 
-}  // namespace menagerie::beavers
+}  // namespace menagerie::beaver

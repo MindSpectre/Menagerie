@@ -12,7 +12,7 @@ target_include_directories(${DATABASE_POSTGRESQL}.Session.Shared PUBLIC
 target_link_libraries(${DATABASE_POSTGRESQL}.Session.Shared
         PUBLIC
         ${DATABASE_POSTGRESQL}.Config
-        Menagerie::Common::Beavers
+        Menagerie::Common::Beaver
         Menagerie::Common::Serialization
 )
 ##############################################################################

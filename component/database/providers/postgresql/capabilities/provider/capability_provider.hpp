@@ -1,6 +1,6 @@
 #pragma once
 
-#include <menagerie/beavers>
+#include <menagerie/beaver>
 
 #include <postgres_errors.hpp>
 
@@ -18,10 +18,10 @@ namespace menagerie::db {
      */
     template <typename T>
     concept CapabilityProvider = requires(T provider, boost::asio::any_io_executor exec) {
-        { provider.with_sync() } -> std::same_as<beavers::Outcome<postgres::SyncExecutor, postgres::ErrorContext>>;
+        { provider.with_sync() } -> std::same_as<beaver::Outcome<postgres::SyncExecutor, postgres::ErrorContext>>;
         {
             provider.with_async(exec)
-        } -> std::same_as<beavers::Outcome<postgres::AsyncExecutor, postgres::ErrorContext>>;
+        } -> std::same_as<beaver::Outcome<postgres::AsyncExecutor, postgres::ErrorContext>>;
     };
 
 }  // namespace menagerie::db

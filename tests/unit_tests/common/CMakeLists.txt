@@ -119,27 +119,27 @@ target_link_libraries(${UNIT_TESTING_TARGET}.Algorithms
 ##############################################################################
 
 ##############################################################################
-# Test Beavers Result (Outcome)
+# Test Beaver Result (Outcome)
 ##############################################################################
-add_unit_test(${UNIT_TESTING_TARGET}.Beavers.Outcome
-        beavers/test_outcome.cpp
+add_unit_test(${UNIT_TESTING_TARGET}.Beaver.Outcome
+        beaver/test_outcome.cpp
 )
-target_link_libraries(${UNIT_TESTING_TARGET}.Beavers.Outcome
+target_link_libraries(${UNIT_TESTING_TARGET}.Beaver.Outcome
         PRIVATE
-        Menagerie::Common::Beavers
+        Menagerie::Common::Beaver
         ${TEST_LIBS}
 )
 ##############################################################################
 
 ##############################################################################
-# Test Beavers InlineString
+# Test Beaver InlineString
 ##############################################################################
-add_unit_test(${UNIT_TESTING_TARGET}.Beavers.Strings.InlineString
-        beavers/test_inline_string.cpp
+add_unit_test(${UNIT_TESTING_TARGET}.Beaver.Strings.InlineString
+        beaver/test_inline_string.cpp
 )
-target_link_libraries(${UNIT_TESTING_TARGET}.Beavers.Strings.InlineString
+target_link_libraries(${UNIT_TESTING_TARGET}.Beaver.Strings.InlineString
         PRIVATE
-        Menagerie::Common::Beavers
+        Menagerie::Common::Beaver
         ${TEST_LIBS}
 )
 ##############################################################################

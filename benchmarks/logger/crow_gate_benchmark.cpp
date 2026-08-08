@@ -227,7 +227,7 @@ namespace {
                 .file(path)
                 .add_time_to_filename(false)
                 .rotate_file(false)
-                .max_file_size(menagerie::beavers::literals::operator""_mb(4096))
+                .max_file_size(menagerie::beaver::literals::operator""_mb(4096))
                 .flush_each_entry(false)
                 .finalize()));
         return rig;

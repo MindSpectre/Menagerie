@@ -1,6 +1,6 @@
 #pragma once
 
-#include <menagerie/beavers>
+#include <menagerie/beaver>
 
 #include "basic.hpp"
 
@@ -27,7 +27,7 @@ namespace menagerie::db {
     /// Builds `DELETE FROM table` for a runtime DynamicTablePtr.
     template <typename DynamicTablePtrTp>
         requires std::constructible_from<DynamicTablePtr, std::remove_cvref_t<DynamicTablePtrTp>> &&
-                 (!beavers::IsStringLike<DynamicTablePtrTp>)
+                 (!beaver::IsStringLike<DynamicTablePtrTp>)
     auto delete_from(DynamicTablePtrTp&& table) noexcept {
         return DeleteExpr<DynamicTablePtr>{std::forward<DynamicTablePtrTp>(table)};
     }
@@ -35,7 +35,7 @@ namespace menagerie::db {
     // 2. std::string (general)
     /// @overload
     template <typename StringTp>
-        requires beavers::IsStringLike<StringTp> && (!beavers::IsStringViewLike<StringTp>)
+        requires beaver::IsStringLike<StringTp> && (!beaver::IsStringViewLike<StringTp>)
     constexpr auto delete_from(StringTp&& table_name) noexcept {
         return DeleteExpr<std::string>{std::forward<StringTp>(table_name)};
     }
@@ -43,7 +43,7 @@ namespace menagerie::db {
     // 3. string_view (more specific - wins due to subsumption)
     /// @overload
     template <typename StringTp>
-        requires beavers::IsStringViewLike<StringTp>
+        requires beaver::IsStringViewLike<StringTp>
     constexpr auto delete_from(StringTp&& table_name) noexcept {
         return DeleteExpr<std::string_view>{std::forward<StringTp>(table_name)};
     }

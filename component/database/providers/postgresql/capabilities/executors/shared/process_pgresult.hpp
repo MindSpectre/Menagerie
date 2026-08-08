@@ -1,6 +1,6 @@
 #pragma once
 
-#include <menagerie/beavers>
+#include <menagerie/beaver>
 
 #include <postgres_errors.hpp>
 #include <postgres_result.hpp>
@@ -15,11 +15,11 @@ namespace menagerie::db::postgres {
      * This is a common helper used by both sync and async executors
      * to process PGresult objects and handle errors consistently.
      */
-    inline beavers::Outcome<ResultBlock, ErrorContext> process_result(PGresult* result) {
+    inline beaver::Outcome<ResultBlock, ErrorContext> process_result(PGresult* result) {
         // Extract error if present
         if (auto error_ctx = extract_error(result)) {
             PQclear(result);
-            return beavers::err(std::move(*error_ctx));
+            return beaver::err(std::move(*error_ctx));
         }
 
         // Success - wrap result in ResultBlock (takes ownership)

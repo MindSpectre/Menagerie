@@ -1,11 +1,11 @@
-#include <menagerie/beavers>
+#include <menagerie/beaver>
 #include <string>
 #include <vector>
 
 #include <gtest/gtest.h>
 
 
-using namespace menagerie::beavers;
+using namespace menagerie::beaver;
 
 // Test error types
 enum class IOError { FileNotFound, PermissionDenied, DiskFull };

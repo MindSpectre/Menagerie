@@ -13,7 +13,7 @@ target_include_directories(${DATABASE_POSTGRESQL}.Result PUBLIC
 target_link_libraries(${DATABASE_POSTGRESQL}.Result PUBLIC
         ${DATABASE_POSTGRESQL}.Registries
         ${DATABASE}.Base.Errors
-        Menagerie::Common::Beavers
+        Menagerie::Common::Beaver
         PostgreSQL::PostgreSQL
         PRIVATE
         ${DATABASE}.Primitives.Field

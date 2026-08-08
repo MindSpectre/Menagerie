@@ -12,7 +12,7 @@ target_include_directories(${SERIALIZATION}.Config INTERFACE
         config
 )
 target_link_libraries(${SERIALIZATION}.Config INTERFACE
-        Menagerie::Common::Beavers
+        Menagerie::Common::Beaver
 )
 ##############################################################################
 

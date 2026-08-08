@@ -16,11 +16,11 @@ using namespace std::chrono_literals;
 
 static ConnectionConfig make_test_config() {
     auto credentials = ConnectionCredentials::Builder{}
-                           .host(menagerie::beavers::value_or(std::getenv("POSTGRES_HOST"), "localhost"))
-                           .port(menagerie::beavers::value_or(std::getenv("POSTGRES_PORT"), "5433"))
-                           .dbname(menagerie::beavers::value_or(std::getenv("POSTGRES_DB"), "test_db"))
-                           .user(menagerie::beavers::value_or(std::getenv("POSTGRES_USER"), "test_user"))
-                           .password(menagerie::beavers::value_or(std::getenv("POSTGRES_PASSWORD"), "test_password"))
+                           .host(menagerie::beaver::value_or(std::getenv("POSTGRES_HOST"), "localhost"))
+                           .port(menagerie::beaver::value_or(std::getenv("POSTGRES_PORT"), "5433"))
+                           .dbname(menagerie::beaver::value_or(std::getenv("POSTGRES_DB"), "test_db"))
+                           .user(menagerie::beaver::value_or(std::getenv("POSTGRES_USER"), "test_user"))
+                           .password(menagerie::beaver::value_or(std::getenv("POSTGRES_PASSWORD"), "test_password"))
                            .finalize();
     return ConnectionConfig::Builder{}.credentials(std::move(credentials)).ssl_mode(SslMode::DISABLE).finalize();
 }
@@ -216,7 +216,7 @@ TEST_F(LockFreeSessionTest, WithSyncMultipleSequentialCalls) {
 
 TEST_F(LockFreeSessionTest, WithAsyncExecutesSimpleQuery) {
     auto result =
-        run_async(io_, [this]() -> boost::asio::awaitable<menagerie::beavers::Outcome<ResultBlock, ErrorContext>> {
+        run_async(io_, [this]() -> boost::asio::awaitable<menagerie::beaver::Outcome<ResultBlock, ErrorContext>> {
             auto exec = session_->with_async(io_.get_executor()).value();
             co_return co_await exec.execute("SELECT 42 AS answer");
         });
@@ -229,7 +229,7 @@ TEST_F(LockFreeSessionTest, WithAsyncExecutesSimpleQuery) {
 TEST_F(LockFreeSessionTest, WithAsyncInsertsAndSelects) {
     // Insert via async
     auto insert_result =
-        run_async(io_, [this]() -> boost::asio::awaitable<menagerie::beavers::Outcome<ResultBlock, ErrorContext>> {
+        run_async(io_, [this]() -> boost::asio::awaitable<menagerie::beaver::Outcome<ResultBlock, ErrorContext>> {
             auto exec = session_->with_async(io_.get_executor()).value();
             co_return co_await exec.execute(
                 "INSERT INTO session_test_users (name, value) VALUES ($1, $2)", std::string{"Charlie"}, 7);
@@ -246,7 +246,7 @@ TEST_F(LockFreeSessionTest, WithAsyncInsertsAndSelects) {
 
 TEST_F(LockFreeSessionTest, WithAsyncReturnsErrorOnBadQuery) {
     auto result =
-        run_async(io_, [this]() -> boost::asio::awaitable<menagerie::beavers::Outcome<ResultBlock, ErrorContext>> {
+        run_async(io_, [this]() -> boost::asio::awaitable<menagerie::beaver::Outcome<ResultBlock, ErrorContext>> {
             auto exec = session_->with_async(io_.get_executor()).value();
             co_return co_await exec.execute("INVALID SYNTAX !!!");
         });
@@ -259,7 +259,7 @@ TEST_F(LockFreeSessionTest, WithAsyncReturnsErrorOnBadQuery) {
 TEST_F(LockFreeSessionTest, WithAsyncReleasesConnectionAfterScope) {
     const auto free_before = session_->pool_free_count();
 
-    run_async(io_, [this]() -> boost::asio::awaitable<menagerie::beavers::Outcome<ResultBlock, ErrorContext>> {
+    run_async(io_, [this]() -> boost::asio::awaitable<menagerie::beaver::Outcome<ResultBlock, ErrorContext>> {
         auto exec = session_->with_async(io_.get_executor()).value();
         // exec holds connection during co_await
         co_return co_await exec.execute("SELECT 1");
@@ -273,7 +273,7 @@ TEST_F(LockFreeSessionTest, WithAsyncMultipleSequentialCalls) {
     for (int i = 0; i < 5; ++i) {
         const auto n = i;
         auto result  = run_async(
-            io_, [this, n]() -> boost::asio::awaitable<menagerie::beavers::Outcome<ResultBlock, ErrorContext>> {
+            io_, [this, n]() -> boost::asio::awaitable<menagerie::beaver::Outcome<ResultBlock, ErrorContext>> {
                 auto exec = session_->with_async(io_.get_executor()).value();
                 co_return co_await exec.execute("SELECT $1::integer AS n", n);
             });

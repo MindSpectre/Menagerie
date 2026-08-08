@@ -22,7 +22,7 @@ target_link_libraries(${DATABASE_POSTGRESQL}.Session.FreeLock
         ${DATABASE_POSTGRESQL}.Errors
         ${DATABASE_POSTGRESQL}.Transaction
         ${DATABASE}.Base.Errors
-        Menagerie::Common::Beavers
+        Menagerie::Common::Beaver
         Menagerie::Common::Serialization
         Menagerie::Common::Multithread
         PostgreSQL::PostgreSQL

@@ -3,7 +3,7 @@
 #include <atomic>
 #include <cassert>
 #include <cstdint>
-#include <menagerie/beavers>
+#include <menagerie/beaver>
 
 #include "waiter_list.hpp"
 
@@ -16,7 +16,7 @@ namespace menagerie::multithread {
      * the type is exactly @c AsyncLease<T>. Must not outlive its pool.
      */
     template <typename T>
-    class AsyncLease : beavers::NonCopyable {
+    class AsyncLease : beaver::NonCopyable {
     public:
         using value_type = T;  ///< The leased resource type.
 

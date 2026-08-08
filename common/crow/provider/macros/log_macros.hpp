@@ -1,6 +1,6 @@
 #pragma once
 
-#include <menagerie/beavers>
+#include <menagerie/beaver>
 
 namespace menagerie::crow {
     /// No-op stream the LOG_*/COMPONENT_LOG_* macros expand to when logging is

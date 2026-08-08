@@ -5,7 +5,7 @@
 /// Foundation layer: result type, fixed-capacity strings, class-trait mixins,
 /// meta-programming concepts and templates, byte-order conversion, string
 /// hashing, and compile-time-friendly utilities. Depends on no other Menagerie library.
-namespace menagerie::beavers {
+namespace menagerie::beaver {
     /** @brief Mixin disabling copy operations while leaving move enabled. */
     struct NonCopyable {
         NonCopyable()                                        = default;
@@ -70,4 +70,4 @@ namespace menagerie::beavers {
      */
     template <typename T>
     struct TypePrinter;
-}  // namespace menagerie::beavers
+}  // namespace menagerie::beaver

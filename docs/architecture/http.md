@@ -7,7 +7,7 @@ can land later without touching the surrounding architecture. Three goals show u
 layering**, so application code depends on routing, routing depends on HTTP semantics, and neither the transport
 nor the protocol drivers know anything about controllers; a **zero-additional-allocation hot path**, where a
 successful request reuses a per-connection arena and the only unavoidable heap allocation is the user's own
-response-body bytes; and an **explicit, typed error model** built on `beavers::Outcome<Response, Errors...>`, so
+response-body bytes; and an **explicit, typed error model** built on `beaver::Outcome<Response, Errors...>`, so
 a handler's failure modes are part of its signature instead of an exception thrown into the void.
 
 ## Layer map
@@ -129,7 +129,7 @@ For an `Http11Driver` connection, one request's journey from accept to response 
 ## Error model
 
 A handler returns either `AsyncResponse` (`awaitable<Response, Strand>`) or `AsyncOutcome<Response, Errors...>`
-(`awaitable<beavers::Outcome<Response, Errors...>, Strand>`). The bake step in
+(`awaitable<beaver::Outcome<Response, Errors...>, Strand>`). The bake step in
 `controller.hpp` wraps an Outcome-returning handler so
 that after `co_await`ing it, `detail::collapse_outcome` calls `.visit()` on the result: the `Response`
 alternative passes through unchanged, and any error alternative `E` converts via an ADL-found
@@ -157,7 +157,7 @@ arena: error responses are the cold path, so `to_http_response(const E&)` stays 
 function with no allocator to thread through every user override.
 
 Routing misses use the same mechanism: `RouteRegistry::find_route` returns
-`beavers::Outcome<ResolvedRoute, NotFoundError, MethodNotAllowedError>`, and `Router::dispatch`
+`beaver::Outcome<ResolvedRoute, NotFoundError, MethodNotAllowedError>`, and `Router::dispatch`
 (`router.cpp`) converts a miss via the same
 `to_http_response` overloads.
 
@@ -290,7 +290,7 @@ private default constructor, a fluent `Builder`, a `fields()` tuple for the (de)
   (defaults 10 s / 30 s / 60 s), mapped by `attach_default_listeners` onto `Http11Config`'s three phase timeouts
   (`max_header_bytes` has no `ServerConfig` field and keeps its 16 KiB struct default).
 - **`load_server_config(path)`**
-  returns `beavers::Outcome<ServerConfig, ConfigFileError, ConfigParseError, ConfigSchemaError>`: the path must
+  returns `beaver::Outcome<ServerConfig, ConfigFileError, ConfigParseError, ConfigSchemaError>`: the path must
   be a regular file, JSON is parsed via jsoncpp's `CharReader`, unknown JSON keys are ignored, a missing key
   keeps its declared default, and an unknown enum string or a `validate()` failure surfaces as
   `ConfigSchemaError`. `dump_server_config` round-trips a config back to JSON, omitting the secret passphrase

@@ -1,13 +1,13 @@
 #pragma once
 
 #include <atomic>
-#include <menagerie/beavers>
+#include <menagerie/beaver>
 
 namespace menagerie::chrono {
     /// Cooperative-stop flag: Timer::execute_polite_vanish() flips it via cancel() on
     /// timeout, and the running callable is expected to poll stop_requested() and
     /// unwind. Cancelling does not forcibly stop anything by itself.
-    class CancellationToken : beavers::NonCopyable {
+    class CancellationToken : beaver::NonCopyable {
     public:
         /// Requests that the running callable stop.
         void cancel() noexcept {

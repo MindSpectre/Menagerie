@@ -3,7 +3,7 @@
 #include <cstddef>
 #include <memory>
 #include <memory_resource>
-#include <menagerie/beavers>
+#include <menagerie/beaver>
 
 namespace menagerie::http {
 
@@ -19,7 +19,7 @@ namespace menagerie::http {
      * Non-copyable AND non-movable: monotonic_buffer_resource is immovable, so
      * connections compose this by value and are constructed in place.
      */
-    class RequestArena : beavers::Immutable {
+    class RequestArena : beaver::Immutable {
     public:
         /// Allocates the single heap block, `size` bytes, that every
         /// allocation from this arena is bump-carved out of.

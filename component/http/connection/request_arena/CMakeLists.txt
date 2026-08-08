@@ -10,6 +10,6 @@ target_include_directories(${Http}.Connection.RequestArena PUBLIC
 )
 
 target_link_libraries(${Http}.Connection.RequestArena PUBLIC
-        Menagerie::Common::Beavers
+        Menagerie::Common::Beaver
 )
 ##############################################################################

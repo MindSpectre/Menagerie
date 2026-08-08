@@ -3,7 +3,7 @@
 The crypto library (`common/crypto/`) wraps OpenSSL for password/data hashing: an abstract hasher interface with
 HMAC-SHA256 and PBKDF2-HMAC-SHA256 implementations, a cryptographically secure salt generator, and a couple of
 small `menagerie::utilities` helpers (constant-time comparison, compile-time string concatenation) that ship
-through the same umbrella. It depends on `menagerie::beavers` and links OpenSSL's `libssl` / `libcrypto`
+through the same umbrella. It depends on `menagerie::beaver` and links OpenSSL's `libssl` / `libcrypto`
 privately. Everything is reached through `#include <menagerie/crypto>`
 (`export/menagerie/crypto`).
 

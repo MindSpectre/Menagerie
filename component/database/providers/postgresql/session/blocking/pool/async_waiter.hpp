@@ -25,7 +25,7 @@ namespace menagerie::db::postgres {
      * Timer callbacks hold only a std::weak_ptr, so shutdown clears the
      * deque and any lagging callback no-ops safely.
      */
-    struct AsyncWaiter : beavers::NonCopyable {
+    struct AsyncWaiter : beaver::NonCopyable {
         /// Completion signature: (error_code, acquired holder or null on failure).
         using Handler =
             boost::asio::any_completion_handler<void(boost::system::error_code, std::shared_ptr<QueuedHolder>)>;

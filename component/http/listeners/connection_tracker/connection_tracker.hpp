@@ -6,7 +6,7 @@
 #include <functional>
 #include <list>
 #include <memory>
-#include <menagerie/beavers>
+#include <menagerie/beaver>
 #include <mutex>
 #include <utility>
 
@@ -45,7 +45,7 @@ namespace menagerie::http {
      * still running never leaves the sweep dangling - it exits on its next
      * tick when the weak_ptr fails to lock (or the dtor's stop flag is seen).
      */
-    class ConnectionTracker : beavers::Immutable {
+    class ConnectionTracker : beaver::Immutable {
     public:
         ConnectionTracker() = default;
 
@@ -82,7 +82,7 @@ namespace menagerie::http {
         /// counter. Move-only (move nulls the source so the dtor is a no-op).
         /// Holds the State shared_ptr - release is safe even past the owning
         /// listener's death.
-        class Handle : beavers::NonCopyable {
+        class Handle : beaver::NonCopyable {
         public:
             /// Wraps a shared State plus the iterator this entry occupies in
             /// its `entries` list.

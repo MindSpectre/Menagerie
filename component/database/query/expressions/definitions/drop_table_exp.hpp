@@ -1,6 +1,6 @@
 #pragma once
 
-#include <menagerie/beavers>
+#include <menagerie/beaver>
 
 #include "basic.hpp"
 
@@ -46,7 +46,7 @@ namespace menagerie::db {
     /// Builds DROP TABLE for a runtime DynamicTablePtr.
     template <typename DynamicTablePtrTp>
         requires std::constructible_from<DynamicTablePtr, std::remove_cvref_t<DynamicTablePtrTp>> &&
-                 (!beavers::IsStringLike<DynamicTablePtrTp>)
+                 (!beaver::IsStringLike<DynamicTablePtrTp>)
     constexpr auto
     drop_table(DynamicTablePtrTp&& table, const bool if_exists = false, const bool cascade = false) noexcept {
         return DropTableExpr<DynamicTablePtr>{std::forward<DynamicTablePtrTp>(table), if_exists, cascade};
@@ -55,7 +55,7 @@ namespace menagerie::db {
     // Factory 2: std::string
     /// @overload
     template <typename StringTp>
-        requires beavers::IsStringLike<StringTp> && (!beavers::IsStringViewLike<StringTp>)
+        requires beaver::IsStringLike<StringTp> && (!beaver::IsStringViewLike<StringTp>)
     constexpr auto
     drop_table(StringTp&& table_name, const bool if_exists = false, const bool cascade = false) noexcept {
         return DropTableExpr<std::string>{std::forward<StringTp>(table_name), if_exists, cascade};
@@ -64,7 +64,7 @@ namespace menagerie::db {
     // Factory 3: string_view
     /// @overload
     template <typename StringTp>
-        requires beavers::IsStringViewLike<StringTp>
+        requires beaver::IsStringViewLike<StringTp>
     constexpr auto
     drop_table(StringTp&& table_name, const bool if_exists = false, const bool cascade = false) noexcept {
         return DropTableExpr<std::string_view>{std::forward<StringTp>(table_name), if_exists, cascade};

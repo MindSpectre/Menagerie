@@ -12,7 +12,7 @@ target_link_libraries(${Http}.Routing.RouteRegistry
         ${Http}.Routing.Middleware
         ${Http}.Types.Enums
         ${Http}.Types.Errors
-        Menagerie::Common::Beavers
+        Menagerie::Common::Beaver
         Boost::container
         Boost::unordered
         PRIVATE

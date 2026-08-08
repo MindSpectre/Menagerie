@@ -11,6 +11,6 @@ target_link_libraries(${Http}.Listeners.ConnectionTracker
         PUBLIC
         ${Http}.Types.Executor
         Boost::asio
-        Menagerie::Common::Beavers
+        Menagerie::Common::Beaver
 )
 ##############################################################################

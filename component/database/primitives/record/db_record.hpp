@@ -1,6 +1,6 @@
 #pragma once
 
-#include <menagerie/beavers>
+#include <menagerie/beaver>
 
 #include <boost/unordered/unordered_map.hpp>
 #include <db_field.hpp>
@@ -105,6 +105,6 @@ namespace menagerie::db {
     private:
         std::shared_ptr<const DynamicTable> schema_;
         std::vector<Field> fields_;
-        boost::unordered_map<std::string, std::size_t, beavers::StringHash, beavers::StringEqual> field_index_;
+        boost::unordered_map<std::string, std::size_t, beaver::StringHash, beaver::StringEqual> field_index_;
     };
 }  // namespace menagerie::db

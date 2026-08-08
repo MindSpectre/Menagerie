@@ -1,6 +1,6 @@
 #pragma once
 
-#include <menagerie/beavers>
+#include <menagerie/beaver>
 #include <tuple>
 
 namespace menagerie::db {
@@ -9,7 +9,7 @@ namespace menagerie::db {
      * @brief Result of QueryCompiler::compile_static(...): SQL text plus its parameter tuple, both usable at
      *        compile time.
      *
-     * SqlStringT is a fixed-capacity `beavers::InlineString<MaxLen>` (never std::string) so the whole object
+     * SqlStringT is a fixed-capacity `beaver::InlineString<MaxLen>` (never std::string) so the whole object
      * can live in a constexpr context with no heap allocation; Params... are the literal values collected in
      * source order while walking the expression tree.
      */
@@ -35,7 +35,7 @@ namespace menagerie::db {
 
         /// Number of captured parameters (sizeof...(Params)).
         [[nodiscard]] constexpr std::size_t size() const noexcept {
-            beavers::force_non_static(this);
+            beaver::force_non_static(this);
             return sizeof...(Params);
         }
     };

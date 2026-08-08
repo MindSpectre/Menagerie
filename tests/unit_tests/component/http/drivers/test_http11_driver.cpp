@@ -41,7 +41,7 @@ namespace {
         }
         AsyncResponse echo(RequestContext ctx) {
             auto body = co_await ctx.body().read_to_string(1 << 20);
-            if (!body)  // beavers::Outcome: explicit operator bool
+            if (!body)  // beaver::Outcome: explicit operator bool
                 co_return ctx.status(HttpStatus::payload_too_large, "too big");
             co_return ctx.json(std::move(body).value());  // .value(), not operator*
         }

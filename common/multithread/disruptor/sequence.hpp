@@ -1,7 +1,7 @@
 #pragma once
 
 #include <atomic>
-#include <menagerie/beavers>
+#include <menagerie/beaver>
 #include <new>
 
 namespace menagerie::multithread {
@@ -61,7 +61,7 @@ namespace menagerie::multithread {
          */
         explicit Sequence(const std::int64_t initial_value = -1) noexcept
             : value_{initial_value} {
-            beavers::unused_value(padding_);
+            beaver::unused_value(padding_);
         }
 
         /**

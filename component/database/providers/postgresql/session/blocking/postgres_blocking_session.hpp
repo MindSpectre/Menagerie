@@ -1,7 +1,7 @@
 #pragma once
 
 #include <chrono>
-#include <menagerie/beavers>
+#include <menagerie/beaver>
 #include <menagerie/crow>
 
 #include <boost/asio/awaitable.hpp>
@@ -21,7 +21,7 @@ namespace menagerie::db::postgres {
      * acquisition modes per method: try (non-blocking, fails on exhaustion),
      * timed (bounded wait), and blocking (unbounded until success/shutdown).
      */
-    class BlockingSession : beavers::Immutable {
+    class BlockingSession : beaver::Immutable {
     public:
         /// Constructs the underlying BlockingPool with the given configs.
         BlockingSession(ConnectionConfig connection_config, PoolConfig pool_config);
@@ -31,17 +31,17 @@ namespace menagerie::db::postgres {
         // -------- Sync Executor --------
 
         /// Non-blocking sync acquire; fails immediately if the pool is exhausted or shut down.
-        [[nodiscard]] beavers::Outcome<SyncExecutor, ErrorContext> try_with_sync() noexcept;
+        [[nodiscard]] beaver::Outcome<SyncExecutor, ErrorContext> try_with_sync() noexcept;
         /// Bounded sync acquire; blocks the calling thread up to timeout.
-        [[nodiscard]] beavers::Outcome<SyncExecutor, ErrorContext>
+        [[nodiscard]] beaver::Outcome<SyncExecutor, ErrorContext>
         with_sync(std::chrono::steady_clock::duration timeout) noexcept;
         /// Unbounded sync acquire; blocks the calling thread until a slot frees or shutdown().
-        [[nodiscard]] beavers::Outcome<SyncExecutor, ErrorContext> with_sync() noexcept;
+        [[nodiscard]] beaver::Outcome<SyncExecutor, ErrorContext> with_sync() noexcept;
 
         // -------- Async Executor --------
 
         /// Non-blocking async acquire; fails immediately if the pool is exhausted or shut down.
-        [[nodiscard]] beavers::Outcome<AsyncExecutor, ErrorContext>
+        [[nodiscard]] beaver::Outcome<AsyncExecutor, ErrorContext>
         try_with_async(boost::asio::any_io_executor exec) noexcept;
 
         /**
@@ -50,7 +50,7 @@ namespace menagerie::db::postgres {
          * Never blocks the calling thread; suspends the caller until a
          * slot is available or the timeout expires.
          */
-        [[nodiscard]] boost::asio::awaitable<beavers::Outcome<AsyncExecutor, ErrorContext>>
+        [[nodiscard]] boost::asio::awaitable<beaver::Outcome<AsyncExecutor, ErrorContext>>
         with_async(boost::asio::any_io_executor exec, std::chrono::steady_clock::duration timeout);
 
         /**
@@ -58,29 +58,29 @@ namespace menagerie::db::postgres {
          *
          * Suspends until a slot is available or the pool shuts down.
          */
-        [[nodiscard]] boost::asio::awaitable<beavers::Outcome<AsyncExecutor, ErrorContext>>
+        [[nodiscard]] boost::asio::awaitable<beaver::Outcome<AsyncExecutor, ErrorContext>>
         with_async(boost::asio::any_io_executor exec);
 
         // -------- Transactions --------
 
         /// Non-blocking: acquires a Transaction without sending BEGIN (caller must call begin()).
-        [[nodiscard]] beavers::Outcome<Transaction, ErrorContext>
+        [[nodiscard]] beaver::Outcome<Transaction, ErrorContext>
         try_begin_transaction(TransactionOptions opts = {}) noexcept;
         /// Bounded: acquires a Transaction (up to timeout) without sending BEGIN.
-        [[nodiscard]] beavers::Outcome<Transaction, ErrorContext>
+        [[nodiscard]] beaver::Outcome<Transaction, ErrorContext>
         begin_transaction(TransactionOptions opts, std::chrono::steady_clock::duration timeout) noexcept;
         /// Unbounded: acquires a Transaction without sending BEGIN.
-        [[nodiscard]] beavers::Outcome<Transaction, ErrorContext>
+        [[nodiscard]] beaver::Outcome<Transaction, ErrorContext>
         begin_transaction(TransactionOptions opts = {}) noexcept;
 
         /// Non-blocking: acquires a Transaction and immediately sends BEGIN.
-        [[nodiscard]] beavers::Outcome<AutoTransaction, ErrorContext>
+        [[nodiscard]] beaver::Outcome<AutoTransaction, ErrorContext>
         try_begin_auto_transaction(TransactionOptions opts = {}) noexcept;
         /// Bounded: acquires a Transaction (up to timeout) and immediately sends BEGIN.
-        [[nodiscard]] beavers::Outcome<AutoTransaction, ErrorContext>
+        [[nodiscard]] beaver::Outcome<AutoTransaction, ErrorContext>
         begin_auto_transaction(TransactionOptions opts, std::chrono::steady_clock::duration timeout) noexcept;
         /// Unbounded: acquires a Transaction and immediately sends BEGIN.
-        [[nodiscard]] beavers::Outcome<AutoTransaction, ErrorContext>
+        [[nodiscard]] beaver::Outcome<AutoTransaction, ErrorContext>
         begin_auto_transaction(TransactionOptions opts = {}) noexcept;
 
         // -------- Lifecycle + Stats --------

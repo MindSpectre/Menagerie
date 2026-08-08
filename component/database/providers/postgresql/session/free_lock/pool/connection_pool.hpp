@@ -4,7 +4,7 @@
 #include <chrono>
 #include <cstddef>
 #include <memory>
-#include <menagerie/beavers>
+#include <menagerie/beaver>
 #include <vector>
 
 #include <connection_holder.hpp>
@@ -29,7 +29,7 @@ namespace menagerie::db::postgres {
      * through FREE) on the first acquire that finds no FREE slot. The pool does not grow
      * dynamically.
      */
-    class ConnectionPool : beavers::Immutable {
+    class ConnectionPool : beaver::Immutable {
     public:
         /**
          * @brief Construct the pool: allocate capacity() slots and pre-warm min_connections() of them

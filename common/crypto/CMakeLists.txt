@@ -19,7 +19,7 @@ target_include_directories(${CRYPTO}.Encrypt PUBLIC
 
 target_link_libraries(${CRYPTO}.Encrypt
         PUBLIC
-        Menagerie::Common::Beavers
+        Menagerie::Common::Beaver
         PRIVATE
         OpenSSL::SSL
         OpenSSL::Crypto

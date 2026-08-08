@@ -10,7 +10,7 @@ add_library(${CHAMELEON}.Base INTERFACE
 )
 target_include_directories(${CHAMELEON}.Base INTERFACE base)
 target_link_libraries(${CHAMELEON}.Base INTERFACE
-        Menagerie::Common::Beavers
+        Menagerie::Common::Beaver
 )
 ##############################################################################
 

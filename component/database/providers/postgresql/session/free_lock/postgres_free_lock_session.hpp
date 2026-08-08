@@ -1,7 +1,7 @@
 #pragma once
 
 #include <chrono>
-#include <menagerie/beavers>
+#include <menagerie/beaver>
 #include <menagerie/crow>
 
 #include <capability_provider.hpp>
@@ -29,7 +29,7 @@ namespace menagerie::db::postgres {
      *   // Asynchronous
      *   auto result = co_await session.with_async(io_exec).execute("SELECT 1");
      */
-    class LockFreeSession : beavers::Immutable {
+    class LockFreeSession : beaver::Immutable {
     public:
         /**
          * @brief Construct the session: build the connection pool and start its janitor
@@ -48,7 +48,7 @@ namespace menagerie::db::postgres {
          * @brief Get a synchronous executor with an acquired connection
          * @return SyncExecutor on success, ErrorContext on pool exhaustion
          */
-        [[nodiscard]] beavers::Outcome<SyncExecutor, ErrorContext> with_sync();
+        [[nodiscard]] beaver::Outcome<SyncExecutor, ErrorContext> with_sync();
 
         /**
          * @brief Get a synchronous executor, waiting up to `timeout` for a free slot
@@ -56,7 +56,7 @@ namespace menagerie::db::postgres {
          *                Zero returns immediately (same as the no-arg overload).
          * @return SyncExecutor on success, ErrorContext{PoolExhausted} on full timeout
          */
-        [[nodiscard]] beavers::Outcome<SyncExecutor, ErrorContext>
+        [[nodiscard]] beaver::Outcome<SyncExecutor, ErrorContext>
         with_sync(std::chrono::steady_clock::duration timeout);
 
         /**
@@ -64,7 +64,7 @@ namespace menagerie::db::postgres {
          * @param exec Boost.Asio executor for async I/O
          * @return AsyncExecutor on success, ErrorContext on pool exhaustion
          */
-        [[nodiscard]] beavers::Outcome<AsyncExecutor, ErrorContext> with_async(boost::asio::any_io_executor exec);
+        [[nodiscard]] beaver::Outcome<AsyncExecutor, ErrorContext> with_async(boost::asio::any_io_executor exec);
 
         /**
          * @brief Get an async executor, waiting up to `timeout` for a free slot
@@ -76,7 +76,7 @@ namespace menagerie::db::postgres {
          * Note: the timeout wait blocks the calling thread. An awaitable variant
          * that suspends the coroutine may be added later.
          */
-        [[nodiscard]] beavers::Outcome<AsyncExecutor, ErrorContext>
+        [[nodiscard]] beaver::Outcome<AsyncExecutor, ErrorContext>
         with_async(boost::asio::any_io_executor exec, std::chrono::steady_clock::duration timeout);
 
         /// Shuts the session down: stops the janitor thread and drains the pool.
@@ -90,7 +90,7 @@ namespace menagerie::db::postgres {
          * @return An IDLE Transaction the caller must begin() itself, or
          *         ErrorContext{PoolExhausted} if no slot was immediately available
          */
-        [[nodiscard]] beavers::Outcome<Transaction, ErrorContext> begin_transaction(TransactionOptions opts = {});
+        [[nodiscard]] beaver::Outcome<Transaction, ErrorContext> begin_transaction(TransactionOptions opts = {});
 
         /**
          * @brief Begin a transaction, waiting up to `timeout` for a free slot
@@ -98,7 +98,7 @@ namespace menagerie::db::postgres {
          * @param timeout Duration to wait if the pool is exhausted on the first attempt.
          * @return Transaction on success, ErrorContext{PoolExhausted} on full timeout
          */
-        [[nodiscard]] beavers::Outcome<Transaction, ErrorContext>
+        [[nodiscard]] beaver::Outcome<Transaction, ErrorContext>
         begin_transaction(TransactionOptions opts, std::chrono::steady_clock::duration timeout);
 
         /**
@@ -107,7 +107,7 @@ namespace menagerie::db::postgres {
          * @return An ACTIVE AutoTransaction on success, ErrorContext{PoolExhausted} if
          *         no slot was immediately available, or the error from a failed BEGIN
          */
-        [[nodiscard]] beavers::Outcome<AutoTransaction, ErrorContext>
+        [[nodiscard]] beaver::Outcome<AutoTransaction, ErrorContext>
         begin_auto_transaction(TransactionOptions opts = {});
 
         /**
@@ -117,7 +117,7 @@ namespace menagerie::db::postgres {
          * @return AutoTransaction on success, ErrorContext{PoolExhausted} on full timeout
          *         or on failure of the implicit BEGIN
          */
-        [[nodiscard]] beavers::Outcome<AutoTransaction, ErrorContext>
+        [[nodiscard]] beaver::Outcome<AutoTransaction, ErrorContext>
         begin_auto_transaction(TransactionOptions opts, std::chrono::steady_clock::duration timeout);
 
         // -------- Pool Stats --------

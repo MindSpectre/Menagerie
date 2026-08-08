@@ -4,7 +4,7 @@
 #include <cstddef>
 #include <format>
 #include <iterator>
-#include <menagerie/beavers>
+#include <menagerie/beaver>
 #include <string>
 #include <string_view>
 #include <type_traits>
@@ -175,7 +175,7 @@ namespace menagerie::chameleon {
         constexpr Table() noexcept = default;
 
         /// Sets the column headers, resetting any previously added rows.
-        template <typename Self, beavers::IsStringLike... Args>
+        template <typename Self, beaver::IsStringLike... Args>
         [[nodiscard]] constexpr auto&& headers(this Self&& self, Args&&... names) {
             self.headers_.clear();
             self.headers_.reserve(sizeof...(Args));
@@ -278,7 +278,7 @@ namespace menagerie::chameleon {
         }
 
         /// Adds a column: name is the header, fn(row) computes each cell (formatted with std::format).
-        template <typename Self, beavers::IsStringLike StringTp, typename Fn>
+        template <typename Self, beaver::IsStringLike StringTp, typename Fn>
             requires std::invocable<Fn&, const value_type&>
         [[nodiscard]] constexpr auto&& column(this Self&& self, StringTp&& name, Fn fn) {
             using Result = std::invoke_result_t<Fn&, const value_type&>;

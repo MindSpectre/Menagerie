@@ -1,7 +1,7 @@
 #pragma once
 
 #include <cstdint>
-#include <menagerie/beavers>
+#include <menagerie/beaver>
 #include <menagerie/serialization>
 #include <stdexcept>
 #include <string>
@@ -25,11 +25,11 @@ namespace menagerie::http {
         enum class MinVersion : std::uint8_t { tls12, tls13 };
 
 
-        template <beavers::IsStringLike StringTp1 = std::string,
-                  beavers::IsStringLike StringTp2 = std::string,
-                  beavers::IsStringLike StringTp3 = std::string,
-                  beavers::IsStringLike StringTp4 = std::string,
-                  beavers::IsStringLike StringTp5 = std::string>
+        template <beaver::IsStringLike StringTp1 = std::string,
+                  beaver::IsStringLike StringTp2 = std::string,
+                  beaver::IsStringLike StringTp3 = std::string,
+                  beaver::IsStringLike StringTp4 = std::string,
+                  beaver::IsStringLike StringTp5 = std::string>
         /// No-validation escape hatch: constructs directly from the given
         /// fields without calling validate(). Prefer Builder or
         /// deserialize() outside test scaffolding.

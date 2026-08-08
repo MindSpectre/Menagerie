@@ -3,7 +3,7 @@
 #include <atomic>
 #include <chrono>
 #include <cstddef>
-#include <menagerie/beavers>
+#include <menagerie/beaver>
 #include <utility>
 
 #include <boost/asio/awaitable.hpp>
@@ -27,7 +27,7 @@ namespace menagerie::http {
      * Non-movable (composes the immovable RequestArena + cancellation_signal);
      * the TcpListener constructs it in place / on the heap per accept.
      */
-    class TcpConnection : beavers::Immutable {
+    class TcpConnection : beaver::Immutable {
     public:
         /// Raw Socket, NOT beast::basic_stream: with the per-op timeouts long
         /// gone (deadline sweep) and the write path flat, the beast wrapper

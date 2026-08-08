@@ -254,7 +254,7 @@ namespace menagerie::db {
 
     template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
     constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_select_end() {
-        beavers::force_non_static(this);
+        beaver::force_non_static(this);
     }
 
     template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
@@ -264,7 +264,7 @@ namespace menagerie::db {
 
     template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
     constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_from_end() {
-        beavers::force_non_static(this);
+        beaver::force_non_static(this);
     }
 
     template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
@@ -274,7 +274,7 @@ namespace menagerie::db {
 
     template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
     constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_where_end() {
-        beavers::force_non_static(this);
+        beaver::force_non_static(this);
     }
 
     template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
@@ -284,7 +284,7 @@ namespace menagerie::db {
 
     template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
     constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_group_by_end() {
-        beavers::force_non_static(this);
+        beaver::force_non_static(this);
     }
 
     template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
@@ -294,7 +294,7 @@ namespace menagerie::db {
 
     template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
     constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_having_end() {
-        beavers::force_non_static(this);
+        beaver::force_non_static(this);
     }
 
     template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
@@ -304,7 +304,7 @@ namespace menagerie::db {
 
     template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
     constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_order_by_end() {
-        beavers::force_non_static(this);
+        beaver::force_non_static(this);
     }
 
     template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
@@ -353,7 +353,7 @@ namespace menagerie::db {
 
     template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
     constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_join_end() {
-        beavers::force_non_static(this);
+        beaver::force_non_static(this);
     }
 
     template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
@@ -431,7 +431,7 @@ namespace menagerie::db {
 
     template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
     constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_insert_end() {
-        beavers::force_non_static(this);
+        beaver::force_non_static(this);
     }
 
     template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
@@ -471,7 +471,7 @@ namespace menagerie::db {
 
     template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
     constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_update_end() {
-        beavers::force_non_static(this);
+        beaver::force_non_static(this);
     }
 
     template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
@@ -481,7 +481,7 @@ namespace menagerie::db {
 
     template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
     constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_delete_end() {
-        beavers::force_non_static(this);
+        beaver::force_non_static(this);
     }
 
     template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
@@ -506,7 +506,7 @@ namespace menagerie::db {
 
     template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
     constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_when_end() {
-        beavers::force_non_static(this);
+        beaver::force_non_static(this);
         // Nothing needed after each WHEN clause
     }
 
@@ -517,7 +517,7 @@ namespace menagerie::db {
 
     template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
     constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_else_end() {
-        beavers::force_non_static(this);
+        beaver::force_non_static(this);
         // Nothing needed after ELSE clause
     }
 
@@ -658,7 +658,7 @@ namespace menagerie::db {
 
     template <IsSqlDialect DialectT, Appendable StringT, ParamMode Mode>
     constexpr void SqlGeneratorVisitor<DialectT, StringT, Mode>::visit_create_table_end() {
-        beavers::force_non_static(this);
+        beaver::force_non_static(this);
         // PostgreSQL doesn't need anything here //TODO? sql visitor must be unified(call dialect)
         // Other dialects might add ENGINE, CHARSET, etc.
     }

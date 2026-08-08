@@ -1,7 +1,7 @@
 #pragma once
 
 #include <memory_resource>
-#include <menagerie/beavers>
+#include <menagerie/beaver>
 #include <string_view>
 #include <utility>
 
@@ -19,7 +19,7 @@ namespace menagerie::http {
      * Default-constructed (ctx-less / error / test) it uses new_delete - the
      * cold path. Body is a value type. Drivers stamp Date/Server.
      */
-    struct Response : beavers::NonCopyable {
+    struct Response : beaver::NonCopyable {
         std::pmr::polymorphic_allocator<> alloc{};  ///< Sticky; never reassigned by move-assign.
         HttpStatus status   = HttpStatus::ok;        ///< Response status code.
         HttpVersion version = HttpVersion::http_1_1;  ///< Wire protocol version.
@@ -90,7 +90,7 @@ namespace menagerie::http {
             return std::forward<Self>(self);
         }
         /// Sets the response body to `content`; chainable.
-        template <typename Self, beavers::IsStringLike StringTp>
+        template <typename Self, beaver::IsStringLike StringTp>
         constexpr auto&& with_body(this Self&& self, StringTp&& content) {
             self.body = Body::owned(std::forward<StringTp>(content));
             return std::forward<Self>(self);

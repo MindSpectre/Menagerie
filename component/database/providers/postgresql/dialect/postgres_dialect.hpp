@@ -1,6 +1,6 @@
 #pragma once
 
-#include <menagerie/beavers>
+#include <menagerie/beaver>
 
 #include <dialect_concepts.hpp>
 #include <sql_params.hpp>
@@ -25,17 +25,17 @@ namespace menagerie::db::postgres {
         template <Appendable StringT>
         static constexpr void placeholder(StringT& query, const std::size_t index) {
             query += '$';
-            query += beavers::constexpr_to_string(index);
+            query += beaver::constexpr_to_string(index);
         }
 
         /// Appends " LIMIT <limit>" and, if offset > 0, " OFFSET <offset>".
         template <Appendable StringT>
         static constexpr void limit_clause(StringT& query, const std::size_t limit, const std::size_t offset) {
             query += " LIMIT ";
-            query += beavers::constexpr_to_string(limit);
+            query += beaver::constexpr_to_string(limit);
             if (offset > 0) {
                 query += " OFFSET ";
-                query += beavers::constexpr_to_string(offset);
+                query += beaver::constexpr_to_string(offset);
             }
         }
 

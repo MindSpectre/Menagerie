@@ -25,7 +25,7 @@ namespace menagerie::http {
     public:
         /// Binds a group over `registry` and `controller_sink`, both of which
         /// must outlive this GroupBinding, scoped under `prefix`.
-        template <beavers::IsStringLike StringTp>
+        template <beaver::IsStringLike StringTp>
         GroupBinding(RouteRegistry& registry,
                      std::vector<std::shared_ptr<HttpController>>& controller_sink,
                      StringTp&& prefix) UNRECOVERABLE_NOEXCEPT : registry_{&registry},

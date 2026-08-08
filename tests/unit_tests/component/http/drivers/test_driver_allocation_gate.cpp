@@ -108,11 +108,11 @@ namespace {
 
     private:
         AsyncResponse empty(RequestContext ctx) {
-            menagerie::beavers::force_non_const(this);
+            menagerie::beaver::force_non_const(this);
             co_return ctx.no_content();
         }
         AsyncResponse body(RequestContext ctx) {
-            menagerie::beavers::force_non_const(this);
+            menagerie::beaver::force_non_const(this);
             co_return ctx.ok(std::string(64, 'B'));  // >SSO: exactly one heap string
         }
     };

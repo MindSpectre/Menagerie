@@ -21,7 +21,7 @@
 using namespace menagerie::db;
 using namespace menagerie::db::postgres;
 using namespace menagerie::db::constraints;
-using menagerie::beavers::FixedString;
+using menagerie::beaver::FixedString;
 
 // =============================================================================
 // Shared definitions — tables, columns, compiler

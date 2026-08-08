@@ -29,7 +29,7 @@ namespace menagerie::http {
      *
      * Non-movable (composes the immovable RequestArena + cancellation_signal).
      */
-    class TlsConnection : beavers::Immutable {
+    class TlsConnection : beaver::Immutable {
     public:
         /// The Beast-compatible stream type (IsStreamConnection).
         using stream_type = boost::asio::ssl::stream<Stream>;

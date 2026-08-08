@@ -1,8 +1,8 @@
-#include <menagerie/beavers>
+#include <menagerie/beaver>
 
 #include <gtest/gtest.h>
 
-using menagerie::beavers::InlineString;
+using menagerie::beaver::InlineString;
 
 TEST(InlineStringTest, AssignStoresExactString) {
     InlineString<31> s;

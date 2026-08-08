@@ -1,6 +1,6 @@
 #pragma once
 
-#include <menagerie/beavers>
+#include <menagerie/beaver>
 #include <menagerie/crow>
 #include <string>
 #include <string_view>
@@ -16,7 +16,7 @@ namespace menagerie::db::postgres {
      * the transaction that created it. Move-only; if still active at destruction the
      * savepoint is released (not rolled back).
      */
-    class Savepoint : beavers::NonCopyable {
+    class Savepoint : beaver::NonCopyable {
     public:
         /// Releases the savepoint if it is still active.
         ~Savepoint();
@@ -27,9 +27,9 @@ namespace menagerie::db::postgres {
         Savepoint& operator=(Savepoint&& other) noexcept;
 
         /// Rolls back to this savepoint, undoing work done since it was created; stays active on success.
-        [[nodiscard]] beavers::Outcome<void, ErrorContext> rollback();
+        [[nodiscard]] beaver::Outcome<void, ErrorContext> rollback();
         /// Releases this savepoint, folding its work into the enclosing transaction; becomes inactive on success.
-        [[nodiscard]] beavers::Outcome<void, ErrorContext> release();
+        [[nodiscard]] beaver::Outcome<void, ErrorContext> release();
 
         /// Name this savepoint was created with.
         [[nodiscard]] constexpr std::string_view name() const noexcept {
@@ -50,14 +50,14 @@ namespace menagerie::db::postgres {
         std::string name_;
         bool active_ = true;
 
-        template <beavers::IsStringLike StringTp>
+        template <beaver::IsStringLike StringTp>
         constexpr Savepoint(PGconn* conn, StringTp&& name)
             : conn_{conn},
               name_{std::forward<StringTp>(name)} {
             COMPONENT_LOG_INF() << "Savepoint '" << name_ << "' created";
         }
 
-        [[nodiscard]] beavers::Outcome<void, ErrorContext> execute_control(const std::string& sql) const;
+        [[nodiscard]] beaver::Outcome<void, ErrorContext> execute_control(const std::string& sql) const;
     };
 
 }  // namespace menagerie::db::postgres

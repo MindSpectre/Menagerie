@@ -5,7 +5,7 @@
 #include <condition_variable>
 #include <cstddef>
 #include <memory>
-#include <menagerie/beavers>
+#include <menagerie/beaver>
 #include <menagerie/crow>
 #include <menagerie/spider>
 #include <mutex>
@@ -91,7 +91,7 @@ namespace menagerie::http {
      * destructor is an RAII backstop that runs the stop->wait sequence itself
      * (see ~Server()).
      */
-    class Server : beavers::Immutable {
+    class Server : beaver::Immutable {
     public:
         /// Declares the Server's Spider registry lifetime policy as Immortal
         /// (never auto-cleaned up by the registry).

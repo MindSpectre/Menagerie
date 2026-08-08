@@ -1,7 +1,7 @@
 #pragma once
 
 #include <cstdint>
-#include <menagerie/beavers>
+#include <menagerie/beaver>
 #include <menagerie/serialization>
 #include <string>
 #include <string_view>
@@ -32,11 +32,11 @@ namespace menagerie::db::postgres {
     class ConnectionCredentials final : public serialization::ConfigInterface<ConnectionCredentials, Json::Value> {
     public:
         /// Constructs credentials directly from host, port, dbname, user, and password.
-        template <beavers::IsStringLike StringTp1,
-                  beavers::IsStringLike StringTp2,
-                  beavers::IsStringLike StringTp3,
-                  beavers::IsStringLike StringTp4,
-                  beavers::IsStringLike StringTp5>
+        template <beaver::IsStringLike StringTp1,
+                  beaver::IsStringLike StringTp2,
+                  beaver::IsStringLike StringTp3,
+                  beaver::IsStringLike StringTp4,
+                  beaver::IsStringLike StringTp5>
         constexpr ConnectionCredentials(
             StringTp1&& host, StringTp2&& port, StringTp3&& dbname, StringTp4&& user, StringTp5&& password)
             : host_{std::forward<StringTp1>(host)},

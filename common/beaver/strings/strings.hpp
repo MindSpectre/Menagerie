@@ -4,7 +4,7 @@
 #include <stdexcept>
 #include <string_view>
 
-namespace menagerie::beavers {
+namespace menagerie::beaver {
 
     /**
      * @brief Compile-time string usable as a non-type template parameter.
@@ -143,4 +143,4 @@ namespace menagerie::beavers {
             return view() == other;
         }
     };
-}  // namespace menagerie::beavers
+}  // namespace menagerie::beaver

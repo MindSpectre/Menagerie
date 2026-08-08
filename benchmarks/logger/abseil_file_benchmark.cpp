@@ -1,6 +1,6 @@
 #include <filesystem>
 #include <fstream>
-#include <menagerie/beavers>
+#include <menagerie/beaver>
 #include <mutex>
 #include <new>
 
@@ -14,7 +14,7 @@
 
 namespace {
 
-    using namespace menagerie::beavers::literals;
+    using namespace menagerie::beaver::literals;
 
     class AbseilNullSink final : public absl::LogSink {
     public:

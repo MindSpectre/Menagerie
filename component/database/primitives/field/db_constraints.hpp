@@ -1,6 +1,6 @@
 #pragma once
 
-#include <menagerie/beavers>
+#include <menagerie/beaver>
 #include <string_view>
 
 namespace menagerie::db {
@@ -15,11 +15,11 @@ namespace menagerie::db {
 
         // Parameterized constraints
         /// References `Column` in `Table`.
-        template <beavers::FixedString Table, beavers::FixedString Column>
+        template <beaver::FixedString Table, beaver::FixedString Column>
         struct ForeignKey {};
 
         /// Attaches a literal default value.
-        template <beavers::FixedString Value>
+        template <beaver::FixedString Value>
         struct Default {};
 
         /// Caps the field's maximum length at N.
@@ -27,7 +27,7 @@ namespace menagerie::db {
         struct MaxLength {};
 
         /// Overrides the field's inferred SQL type with a literal one.
-        template <beavers::FixedString SqlType>
+        template <beaver::FixedString SqlType>
         struct DbType {};
 
     }  // namespace constraints
@@ -42,14 +42,14 @@ namespace menagerie::db {
         template <typename T>
         struct is_foreign_key : std::false_type {};
 
-        template <beavers::FixedString T, beavers::FixedString C>
+        template <beaver::FixedString T, beaver::FixedString C>
         struct is_foreign_key<constraints::ForeignKey<T, C>> : std::true_type {};
 
         /// Whether T is a constraints::Default<...> specialization.
         template <typename T>
         struct is_default : std::false_type {};
 
-        template <beavers::FixedString V>
+        template <beaver::FixedString V>
         struct is_default<constraints::Default<V>> : std::true_type {};
 
         /// Whether T is a constraints::MaxLength<...> specialization.
@@ -63,7 +63,7 @@ namespace menagerie::db {
         template <typename T>
         struct is_db_type : std::false_type {};
 
-        template <beavers::FixedString S>
+        template <beaver::FixedString S>
         struct is_db_type<constraints::DbType<S>> : std::true_type {};
 
         /// Finds the ForeignKey<...> constraint in Cs..., if any; found is
@@ -77,7 +77,7 @@ namespace menagerie::db {
         struct extract_foreign_key<First, Rest...> : extract_foreign_key<Rest...> {};
 
         /// Match case: a ForeignKey<Table, Column> constraint was found in the pack.
-        template <beavers::FixedString Table, beavers::FixedString Column, typename... Rest>
+        template <beaver::FixedString Table, beaver::FixedString Column, typename... Rest>
         struct extract_foreign_key<constraints::ForeignKey<Table, Column>, Rest...> {
             static constexpr bool found = true;  ///< Always true for this match case.
             /// The referenced table name.
@@ -101,7 +101,7 @@ namespace menagerie::db {
         struct extract_default<First, Rest...> : extract_default<Rest...> {};
 
         /// Match case: a Default<Value> constraint was found in the pack.
-        template <beavers::FixedString Value, typename... Rest>
+        template <beaver::FixedString Value, typename... Rest>
         struct extract_default<constraints::Default<Value>, Rest...> {
             static constexpr bool found = true;  ///< Always true for this match case.
             /// The default value literal.
@@ -138,7 +138,7 @@ namespace menagerie::db {
         struct extract_db_type<First, Rest...> : extract_db_type<Rest...> {};
 
         /// Match case: a DbType<SqlType> constraint was found in the pack.
-        template <beavers::FixedString SqlType, typename... Rest>
+        template <beaver::FixedString SqlType, typename... Rest>
         struct extract_db_type<constraints::DbType<SqlType>, Rest...> {
             static constexpr bool found = true;  ///< Always true for this match case.
             /// The literal SQL type override.

@@ -74,11 +74,11 @@ namespace menagerie::test {
         // Connect to PostgreSQL using environment variables
         void ConnectToDatabase() {
             const auto credentials = db::postgres::ConnectionCredentials::Builder{}
-                                         .host(beavers::value_or(std::getenv("POSTGRES_HOST"), "localhost"))
-                                         .port(beavers::value_or(std::getenv("POSTGRES_PORT"), "5433"))
-                                         .dbname(beavers::value_or(std::getenv("POSTGRES_DB"), "test_db"))
-                                         .user(beavers::value_or(std::getenv("POSTGRES_USER"), "test_user"))
-                                         .password(beavers::value_or(std::getenv("POSTGRES_PASSWORD"), "test_password"))
+                                         .host(beaver::value_or(std::getenv("POSTGRES_HOST"), "localhost"))
+                                         .port(beaver::value_or(std::getenv("POSTGRES_PORT"), "5433"))
+                                         .dbname(beaver::value_or(std::getenv("POSTGRES_DB"), "test_db"))
+                                         .user(beaver::value_or(std::getenv("POSTGRES_USER"), "test_user"))
+                                         .password(beaver::value_or(std::getenv("POSTGRES_PASSWORD"), "test_password"))
                                          .finalize();
 
             conn_ = PQconnectdb(credentials.to_connection_string().c_str());

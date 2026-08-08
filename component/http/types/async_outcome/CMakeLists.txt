@@ -9,7 +9,7 @@ target_include_directories(${Http}.Types.AsyncOutcome INTERFACE
 
 target_link_libraries(${Http}.Types.AsyncOutcome INTERFACE
         Boost::asio
-        Menagerie::Common::Beavers
+        Menagerie::Common::Beaver
         ${Http}.Types.Executor
 )
 ##############################################################################

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <menagerie/beavers>
+#include <menagerie/beaver>
 
 #include <boost/asio/awaitable.hpp>
 #include <executor.hpp>
@@ -19,7 +19,7 @@ namespace menagerie::http {
     /// loop. Ops co_awaited inside these coroutines must use the matching
     /// `use_strand_awaitable` token (executor.hpp).
     template <typename T, typename... Es>
-    using AsyncOutcome = boost::asio::awaitable<beavers::Outcome<T, Es...>, Strand>;
+    using AsyncOutcome = boost::asio::awaitable<beaver::Outcome<T, Es...>, Strand>;
 
     /// The common "no typed errors" case. Response is a struct - the forward
     /// declaration above suffices for the alias; users who instantiate it

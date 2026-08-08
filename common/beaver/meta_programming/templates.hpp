@@ -3,7 +3,7 @@
 #include <type_traits>
 #include <variant>
 #include <vector>
-namespace menagerie::beavers {
+namespace menagerie::beaver {
     /// Always `false`, dependent on `T` - use in `static_assert` inside a template
     /// so the assertion only fires when the template is instantiated.
     template <typename>
@@ -128,7 +128,7 @@ namespace menagerie::beavers {
     template <typename T, typename... Args>
     decltype(auto) get_arg(Args&&... args) {
         auto args_tuple = std::forward_as_tuple(args...);
-        return beavers::pick<T>(args_tuple);
+        return beaver::pick<T>(args_tuple);
     }
 
     /// True iff some argument's decayed type equals `T`.
@@ -231,4 +231,4 @@ namespace menagerie::beavers {
     /// Convenience alias for `merge_variants<V1, V2>::type`.
     template <typename V1, typename V2>
     using merge_variants_t = merge_variants<V1, V2>::type;
-}  // namespace menagerie::beavers
+}  // namespace menagerie::beaver

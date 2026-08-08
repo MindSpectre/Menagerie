@@ -6,7 +6,7 @@
 
 #include "templates.hpp"
 
-namespace menagerie::beavers {
+namespace menagerie::beaver {
     /// `T` exposes a static data member `name` convertible to `std::string_view`.
     template <typename T>
     concept HasStaticNameMember = requires {
@@ -31,7 +31,7 @@ namespace menagerie::beavers {
 
     /// `T` (cvref-stripped) is a specialization of `std::chrono::duration`.
     template <typename T>
-    concept IsDuration = beavers::is_specialization_of_v<std::remove_cvref_t<T>, std::chrono::duration>;
+    concept IsDuration = beaver::is_specialization_of_v<std::remove_cvref_t<T>, std::chrono::duration>;
 
     /// `T` matches one of `Args...` exactly (no cvref stripping).
     template <typename T, typename... Args>
@@ -64,4 +64,4 @@ namespace menagerie::beavers {
     /// Concept for callables whose return type is some `Outcome<...>`.
     template <typename T>
     concept IsOutcome = is_specialization_of_v<std::remove_cvref_t<T>, Outcome>;
-}  // namespace menagerie::beavers
+}  // namespace menagerie::beaver

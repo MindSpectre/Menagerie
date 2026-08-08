@@ -1,7 +1,7 @@
 #pragma once
 
 #include <memory>
-#include <menagerie/beavers>
+#include <menagerie/beaver>
 #include <menagerie/crow>
 #include <utility>
 
@@ -24,7 +24,7 @@ namespace menagerie::db::postgres {
      * When constructed with a ConnectionSlot, acts as a move-only RAII
      * wrapper that resets the slot on destruction.
      */
-    class SyncExecutor : beavers::NonCopyable {
+    class SyncExecutor : beaver::NonCopyable {
     public:
         /**
          * @brief Construct a sync executor with a PostgreSQL connection (standalone)
@@ -77,9 +77,9 @@ namespace menagerie::db::postgres {
          * @param query SQL query string (must be null-terminated: std::string, pmr::string, const char*)
          * @return ResultBlock on success, ErrorContext on failure
          */
-        template <beavers::IsNullTerminatedString QueryT>
-        [[nodiscard]] beavers::Outcome<ResultBlock, ErrorContext> execute(const QueryT& query) const {
-            return execute_impl(beavers::as_c_str(query), nullptr);
+        template <beaver::IsNullTerminatedString QueryT>
+        [[nodiscard]] beaver::Outcome<ResultBlock, ErrorContext> execute(const QueryT& query) const {
+            return execute_impl(beaver::as_c_str(query), nullptr);
         }
 
         /**
@@ -88,10 +88,10 @@ namespace menagerie::db::postgres {
          * @param params Parameter values
          * @return ResultBlock on success, ErrorContext on failure
          */
-        template <beavers::IsNullTerminatedString QueryT>
-        [[nodiscard]] beavers::Outcome<ResultBlock, ErrorContext> execute(const QueryT& query,
+        template <beaver::IsNullTerminatedString QueryT>
+        [[nodiscard]] beaver::Outcome<ResultBlock, ErrorContext> execute(const QueryT& query,
                                                                           const Params& params) const {
-            return execute_impl(beavers::as_c_str(query), &params);
+            return execute_impl(beaver::as_c_str(query), &params);
         }
 
         /**
@@ -105,9 +105,9 @@ namespace menagerie::db::postgres {
          *
          * Uses stack-allocated buffer for small parameter sets (< 2KB), falls back to heap if needed.
          */
-        template <beavers::IsNullTerminatedString QueryT, typename... Args>
+        template <beaver::IsNullTerminatedString QueryT, typename... Args>
             requires(db::IsFieldValueType<Args> && ...)
-        [[nodiscard]] beavers::Outcome<ResultBlock, ErrorContext> execute(const QueryT& query, Args&&... args) const {
+        [[nodiscard]] beaver::Outcome<ResultBlock, ErrorContext> execute(const QueryT& query, Args&&... args) const {
             // Stack buffer for small parameter sets (avoids heap allocation)
             std::array<std::byte, 2048> stack_buffer{};
             std::pmr::monotonic_buffer_resource pool{stack_buffer.data(), stack_buffer.size()};
@@ -119,7 +119,7 @@ namespace menagerie::db::postgres {
 
             // Get params and execute (pool stays alive during synchronous execute call)
             const auto params = sink.native_packet();
-            return execute_impl(beavers::as_c_str(query), params.get());
+            return execute_impl(beaver::as_c_str(query), params.get());
         }
 
         /**
@@ -131,9 +131,9 @@ namespace menagerie::db::postgres {
          *
          * Example: execute("SELECT * FROM users WHERE id = $1 AND active = $2", std::tuple{42, true})
          */
-        template <beavers::IsNullTerminatedString QueryT, typename... Args>
+        template <beaver::IsNullTerminatedString QueryT, typename... Args>
             requires(db::IsFieldValueType<Args> && ...)
-        [[nodiscard]] beavers::Outcome<ResultBlock, ErrorContext> execute(const QueryT& query,
+        [[nodiscard]] beaver::Outcome<ResultBlock, ErrorContext> execute(const QueryT& query,
                                                                           const std::tuple<Args...>& args) const {
             return std::apply([&](const Args&... a) { return execute(query, a...); }, args);
         }
@@ -151,7 +151,7 @@ namespace menagerie::db::postgres {
          */
         template <typename SqlStringT, typename... Params>
             requires(db::IsFieldValueType<Params> && ...)
-        [[nodiscard]] beavers::Outcome<ResultBlock, ErrorContext>
+        [[nodiscard]] beaver::Outcome<ResultBlock, ErrorContext>
         execute(const CompiledStaticQuery<SqlStringT, Params...>& query) const {
             return execute(query.c_sql(), query.params());
         }
@@ -161,7 +161,7 @@ namespace menagerie::db::postgres {
          * @param query Compiled query object
          * @return ResultBlock on success, ErrorContext on failure
          */
-        [[nodiscard]] beavers::Outcome<ResultBlock, ErrorContext> execute(const CompiledDynamicQuery& query) const;
+        [[nodiscard]] beaver::Outcome<ResultBlock, ErrorContext> execute(const CompiledDynamicQuery& query) const;
 
         /// Returns the underlying libpq connection handle.
         [[nodiscard]] PGconn* native_handle() const noexcept {
@@ -174,7 +174,7 @@ namespace menagerie::db::postgres {
         PGconn* conn_ = nullptr;
         std::weak_ptr<ConnectionHolder> holder_;
 
-        [[nodiscard]] beavers::Outcome<ResultBlock, ErrorContext> execute_impl(const char* query,
+        [[nodiscard]] beaver::Outcome<ResultBlock, ErrorContext> execute_impl(const char* query,
                                                                                const Params* params) const;
     };
 

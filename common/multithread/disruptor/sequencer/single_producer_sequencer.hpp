@@ -92,7 +92,7 @@ namespace menagerie::multithread {
         /// possible with a single in-order producer, so this is just `available`.
         [[nodiscard]] std::int64_t get_highest_published([[maybe_unused]] const std::int64_t lower_bound,
                                                          const std::int64_t available_sequence) const noexcept {
-            beavers::force_non_static(this);
+            beaver::force_non_static(this);
             return available_sequence;
         }
 

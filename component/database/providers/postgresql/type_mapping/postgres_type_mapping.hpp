@@ -1,6 +1,6 @@
 #pragma once
 
-#include <menagerie/beavers>
+#include <menagerie/beaver>
 #include <span>
 #include <string>
 #include <string_view>
@@ -130,7 +130,7 @@ namespace menagerie::db::postgres {
     }  // namespace detail
 
     // This will cause a compile error if any FieldValue type is missing a PostgreSQL mapping
-    static_assert(beavers::all_variant_types_satisfy_v<FieldValue, detail::has_postgres_mapping>,
+    static_assert(beaver::all_variant_types_satisfy_v<FieldValue, detail::has_postgres_mapping>,
                   "Missing PostgreSQL SQL type mapping for one or more FieldValue types. "
                   "Add SqlTypeMapping<T, Providers::PostgreSQL> specialization for the missing type(s).");
 

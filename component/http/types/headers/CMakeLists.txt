@@ -10,6 +10,6 @@ target_include_directories(${Http}.Types.Headers PUBLIC
 target_link_libraries(${Http}.Types.Headers PUBLIC
         Boost::beast
         Boost::container
-        Menagerie::Common::Beavers
+        Menagerie::Common::Beaver
 )
 ##############################################################################

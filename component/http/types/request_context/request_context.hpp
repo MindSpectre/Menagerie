@@ -187,17 +187,17 @@ namespace menagerie::http {
         // default).
 
         /// 200 OK with `body` (text/plain by default), allocated in the request arena.
-        template <beavers::IsStringViewLike StringTp = std::string_view>
+        template <beaver::IsStringViewLike StringTp = std::string_view>
         Response ok(StringTp&& body = {}, const std::string_view ct = "text/plain") UNRECOVERABLE_NOEXCEPT {
             return make_response(HttpStatus::ok, ct, true, std::forward<StringTp>(body));
         }
         /// 200 OK with `body` as application/json, allocated in the request arena.
-        template <beavers::IsStringViewLike StringTp>
+        template <beaver::IsStringViewLike StringTp>
         Response json(StringTp&& body) UNRECOVERABLE_NOEXCEPT {
             return make_response(HttpStatus::ok, "application/json", true, std::forward<StringTp>(body));
         }
         /// 201 Created with `body` (application/json by default), allocated in the request arena.
-        template <beavers::IsStringViewLike StringTp = std::string_view>
+        template <beaver::IsStringViewLike StringTp = std::string_view>
         Response created(StringTp&& body = {}, const std::string_view ct = "application/json") UNRECOVERABLE_NOEXCEPT {
             return make_response(HttpStatus::created, ct, true, std::forward<StringTp>(body));
         }
@@ -207,7 +207,7 @@ namespace menagerie::http {
         /// in the request arena; `status` defaults to 302 Found.
         Response redirect(std::string_view location, HttpStatus status = HttpStatus::found) const;
         /// An arbitrary `s` status response with `body`, allocated in the request arena.
-        template <beavers::IsStringViewLike StringTp = std::string_view>
+        template <beaver::IsStringViewLike StringTp = std::string_view>
         Response status(const HttpStatus s,
                         StringTp&& body           = {},
                         const std::string_view ct = "text/plain") UNRECOVERABLE_NOEXCEPT {
@@ -221,7 +221,7 @@ namespace menagerie::http {
     private:
         // IsStringViewLike, not just IsStringLike: the body must be viewable
         // without consuming for the empty check below.
-        template <beavers::IsStringViewLike StringTp>
+        template <beaver::IsStringViewLike StringTp>
         Response make_response(const HttpStatus s, const std::string_view ct, const bool with_ct, StringTp&& body) {
             Response r{alloc_};  // alloc + headers bound to the arena
             r.status = s;

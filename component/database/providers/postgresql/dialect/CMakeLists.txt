@@ -14,7 +14,7 @@ target_link_libraries(${DATABASE_POSTGRESQL}.Dialect
         ${DATABASE}.Base.Dialect
         ${DATABASE}.Base.TypeMapping
         ${DATABASE_POSTGRESQL}.Registries
-        Menagerie::Common::Beavers
+        Menagerie::Common::Beaver
         PRIVATE
         ${DATABASE_POSTGRESQL}.Params
 )

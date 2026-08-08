@@ -20,7 +20,7 @@ namespace menagerie::multithread {
     /// touched only by its own runner thread plus cross-shard wake posts, so the heavy
     /// shared-scheduler-lock contention of one io_context run by N threads disappears.
     /// Single-threaded contexts also need no per-coroutine strand.
-    class ShardedAsioBackend : beavers::NonCopyable {
+    class ShardedAsioBackend : beaver::NonCopyable {
     public:
         /// @param n         number of shards (single-threaded io_contexts).
         /// @param pin       pin each shard's runner to a core when true.

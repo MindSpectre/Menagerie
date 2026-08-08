@@ -9,7 +9,7 @@
 #include <cstddef>
 #include <functional>
 #include <memory>
-#include <menagerie/beavers>
+#include <menagerie/beaver>
 #include <new>
 #include <optional>
 #include <stdexcept>
@@ -71,7 +71,7 @@ namespace menagerie::multithread {
      *          as-is.
      */
     template <typename T, std::size_t MaxSize>
-    class AsyncResourcePool : beavers::Immutable {
+    class AsyncResourcePool : beaver::Immutable {
         static_assert(MaxSize > 0, "AsyncResourcePool MaxSize must be non-zero");
         static_assert(std::move_constructible<T> || std::copy_constructible<T>,
                       "AsyncResourcePool<T>: T must be move- or copy-constructible");

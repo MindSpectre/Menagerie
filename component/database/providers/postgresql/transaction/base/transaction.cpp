@@ -43,10 +43,10 @@ namespace menagerie::db::postgres {
         return *this;
     }
 
-    beavers::Outcome<void, ErrorContext> Transaction::begin() {
+    beaver::Outcome<void, ErrorContext> Transaction::begin() {
         COMPONENT_LOG_ENTER_FUNCTION();
         if (status_ != TransactionStatus::IDLE) {
-            return beavers::err(ErrorContext{ErrorCode{ClientErrorCode::InvalidState}});
+            return beaver::err(ErrorContext{ErrorCode{ClientErrorCode::InvalidState}});
         }
         auto result = execute_control(options_.to_begin_sql());
         if (result.is_success()) {
@@ -57,10 +57,10 @@ namespace menagerie::db::postgres {
         return result;
     }
 
-    beavers::Outcome<void, ErrorContext> Transaction::commit() {
+    beaver::Outcome<void, ErrorContext> Transaction::commit() {
         COMPONENT_LOG_ENTER_FUNCTION();
         if (status_ != TransactionStatus::ACTIVE) {
-            return beavers::err(ErrorContext{ErrorCode{ClientErrorCode::InvalidState}});
+            return beaver::err(ErrorContext{ErrorCode{ClientErrorCode::InvalidState}});
         }
         auto result = execute_control("COMMIT");
         if (result.is_success()) {
@@ -71,10 +71,10 @@ namespace menagerie::db::postgres {
         return result;
     }
 
-    beavers::Outcome<void, ErrorContext> Transaction::rollback() {
+    beaver::Outcome<void, ErrorContext> Transaction::rollback() {
         COMPONENT_LOG_ENTER_FUNCTION();
         if (status_ != TransactionStatus::ACTIVE) {
-            return beavers::err(ErrorContext{ErrorCode{ClientErrorCode::InvalidState}});
+            return beaver::err(ErrorContext{ErrorCode{ClientErrorCode::InvalidState}});
         }
         auto result = execute_control("ROLLBACK");
         if (result.is_success()) {
@@ -85,33 +85,33 @@ namespace menagerie::db::postgres {
         return result;
     }
 
-    beavers::Outcome<SyncExecutor, ErrorContext> Transaction::with_sync() const {
+    beaver::Outcome<SyncExecutor, ErrorContext> Transaction::with_sync() const {
         if (status_ != TransactionStatus::ACTIVE) {
-            return beavers::err(ErrorContext{ErrorCode{ClientErrorCode::InvalidState}});
+            return beaver::err(ErrorContext{ErrorCode{ClientErrorCode::InvalidState}});
         }
         return SyncExecutor{conn_};
     }
 
-    beavers::Outcome<AsyncExecutor, ErrorContext> Transaction::with_async(boost::asio::any_io_executor exec) const {
+    beaver::Outcome<AsyncExecutor, ErrorContext> Transaction::with_async(boost::asio::any_io_executor exec) const {
         if (status_ != TransactionStatus::ACTIVE) {
-            return beavers::err(ErrorContext{ErrorCode{ClientErrorCode::InvalidState}});
+            return beaver::err(ErrorContext{ErrorCode{ClientErrorCode::InvalidState}});
         }
         return AsyncExecutor{conn_, std::move(exec)};
     }
 
-    beavers::Outcome<Savepoint, ErrorContext> Transaction::savepoint(std::string name) const {
+    beaver::Outcome<Savepoint, ErrorContext> Transaction::savepoint(std::string name) const {
         COMPONENT_LOG_ENTER_FUNCTION();
         if (status_ != TransactionStatus::ACTIVE) {
-            return beavers::err(ErrorContext{ErrorCode{ClientErrorCode::InvalidState}});
+            return beaver::err(ErrorContext{ErrorCode{ClientErrorCode::InvalidState}});
         }
         if (!is_valid_identifier(name)) {
             auto err    = ErrorContext{ErrorCode{ClientErrorCode::InvalidArgument}};
             err.message = std::format("Invalid savepoint name: '{}'", name);
-            return beavers::err(std::move(err));
+            return beaver::err(std::move(err));
         }
         const std::string sql = std::format(R"(SAVEPOINT "{}")", name);
         if (auto result = execute_control(sql); !result.is_success()) {
-            return beavers::err(result.error<ErrorContext>());
+            return beaver::err(result.error<ErrorContext>());
         }
         return Savepoint{conn_, std::move(name)};
     }
@@ -126,12 +126,12 @@ namespace menagerie::db::postgres {
         COMPONENT_LOG_INF() << "Transaction created";
     }
 
-    beavers::Outcome<void, ErrorContext> Transaction::execute_control(const std::string& sql) const {
+    beaver::Outcome<void, ErrorContext> Transaction::execute_control(const std::string& sql) const {
         const SyncExecutor inner{conn_};
         if (auto result = inner.execute(sql); !result.is_success()) {
-            return beavers::err(result.error<ErrorContext>());
+            return beaver::err(result.error<ErrorContext>());
         }
-        return beavers::ok();
+        return beaver::ok();
     }
 
 }  // namespace menagerie::db::postgres

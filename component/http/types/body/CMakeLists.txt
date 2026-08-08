@@ -12,7 +12,7 @@ target_link_libraries(${Http}.Types.Body
         ${Http}.Types.AsyncOutcome
         ${Http}.Types.Errors
         Boost::asio
-        Menagerie::Common::Beavers
+        Menagerie::Common::Beaver
         JsonCpp::JsonCpp
         PRIVATE
         ${Http}.Types.UrlDecode

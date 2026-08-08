@@ -1,6 +1,6 @@
 #pragma once
 
-#include <menagerie/beavers>
+#include <menagerie/beaver>
 #include <string>
 
 #include "detail/hash_interface.hpp"
@@ -30,7 +30,7 @@ namespace menagerie::crypto {
         }
 
         /// Sets the HMAC key used by subsequent hash_function calls.
-        template <beavers::IsStringLike StringTp>
+        template <beaver::IsStringLike StringTp>
         constexpr void set_key(StringTp&& key) & noexcept {
             key_ = std::forward<StringTp>(key);
         }

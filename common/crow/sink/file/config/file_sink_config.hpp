@@ -1,7 +1,7 @@
 #pragma once
 
 #include <filesystem>
-#include <menagerie/beavers>
+#include <menagerie/beaver>
 #include <menagerie/chrono>
 #include <menagerie/serialization>
 
@@ -109,7 +109,7 @@ namespace menagerie::crow {
         std::string time_format_in_file_name_ = chrono::clock_formats::iso8601;
 
         bool rotate_file_            = true;
-        std::uint64_t max_file_size_ = beavers::literals::operator""_mb(100);
+        std::uint64_t max_file_size_ = beaver::literals::operator""_mb(100);
         bool flush_each_entry_       = false;
         PrefixFilter prefix_filter_{};
     };

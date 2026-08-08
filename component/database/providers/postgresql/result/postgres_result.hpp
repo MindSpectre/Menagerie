@@ -1,6 +1,6 @@
 #pragma once
 #include <memory>
-#include <menagerie/beavers>
+#include <menagerie/beaver>
 #include <optional>
 
 #include <libpq-fe.h>
@@ -13,10 +13,10 @@ namespace menagerie::db::postgres {
      * @brief Owning wrapper around a libpq PGresult, exposing row/column access
      *        through RowView/FieldView without copying the result data.
      *
-     * Move-only (via beavers::NonCopyable); the underlying PGresult is released
+     * Move-only (via beaver::NonCopyable); the underlying PGresult is released
      * through PQclear() on destruction.
      */
-    class ResultBlock : beavers::NonCopyable {
+    class ResultBlock : beaver::NonCopyable {
     public:
         /// Takes ownership of an existing PGresult (e.g. from PQexec()/PQgetResult()).
         explicit ResultBlock(PGresult* r)

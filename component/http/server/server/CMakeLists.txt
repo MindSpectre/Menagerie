@@ -16,7 +16,7 @@ target_link_libraries(${Http}.Server.Core
         ${Http}.Config
         Boost::asio
         Menagerie::Common::Chrono
-        Menagerie::Common::Beavers
+        Menagerie::Common::Beaver
         Menagerie::Common::Spider
         Menagerie::Common::Crow
 )

@@ -2,7 +2,7 @@
 
 #include <algorithm>
 #include <cstddef>
-#include <menagerie/beavers>
+#include <menagerie/beaver>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -25,13 +25,13 @@ namespace menagerie::chameleon {
     class Box {
     public:
         /// Constructs a Box wrapping body; nothing renders until render() is called.
-        template <beavers::IsStringLike BodyTp>
+        template <beaver::IsStringLike BodyTp>
         constexpr explicit Box(BodyTp&& body) noexcept
             : body_{std::forward<BodyTp>(body)} {
         }
 
         /// Sets a title centered in the top border.
-        template <typename Self, beavers::IsStringLike StringTp>
+        template <typename Self, beaver::IsStringLike StringTp>
         [[nodiscard]] constexpr auto&& title(this Self&& self, StringTp&& title) {
             self.title_ = std::forward<StringTp>(title);
             return std::forward<Self>(self);
@@ -159,7 +159,7 @@ namespace menagerie::chameleon {
     };
 
     /// Starts a Box builder around body.
-    template <beavers::IsStringLike BodyTp>
+    template <beaver::IsStringLike BodyTp>
     [[nodiscard]] constexpr Box box(BodyTp&& body) {
         return Box{std::forward<BodyTp>(body)};
     }

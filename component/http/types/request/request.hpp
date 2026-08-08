@@ -1,6 +1,6 @@
 #pragma once
 
-#include <menagerie/beavers>
+#include <menagerie/beaver>
 #include <string_view>
 
 #include <body.hpp>
@@ -21,7 +21,7 @@ namespace menagerie::http {
      * `headers` and `body` are move-only value types. A Request must be
      * constructed with a Headers bound to an allocator (there is no null state).
      */
-    struct Request : beavers::NonCopyable {
+    struct Request : beaver::NonCopyable {
         HttpMethod method   = HttpMethod::unknown;  ///< Parsed request method.
         HttpVersion version = HttpVersion::http_1_1;  ///< Wire protocol version.
         std::string_view target;  ///< Raw request target; a view into the receive buffer.

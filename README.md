@@ -13,7 +13,7 @@ built through CMake presets, with dependencies resolved via vcpkg.
 | `http` | Server-side HTTP/1.1 stack over TCP and TLS; HTTP/2 and HTTP/3 exist as compiling scaffolds. | [docs/architecture/http.md](docs/architecture/http.md) |
 | `database` | Layered PostgreSQL client with a provider-agnostic, compile-time-checkable query core. | [docs/architecture/database.md](docs/architecture/database.md) |
 | `multithread` | Concurrency primitives: resource pools, a futex-based park/notify primitive, a lock-free ring buffer, a growable thread pool. | [docs/architecture/multithread.md](docs/architecture/multithread.md) |
-| `beavers` | Foundation layer: a typed result type, fixed-capacity strings, class-trait mixins, meta-programming utilities. | [docs/architecture/beavers.md](docs/architecture/beavers.md) |
+| `beaver` | Foundation layer: a typed result type, fixed-capacity strings, class-trait mixins, meta-programming utilities. | [docs/architecture/beaver.md](docs/architecture/beaver.md) |
 | `crow` | Asynchronous logging stack: a Disruptor-backed ring buffer dispatching to console and file sinks. | [docs/architecture/crow.md](docs/architecture/crow.md) |
 | `chameleon` | Terminal text-formatting toolkit: ANSI colors, box-drawing glyphs, and Box/Section/Table renderers. | [docs/architecture/chameleon.md](docs/architecture/chameleon.md) |
 | `chrono` | Timing toolkit: wall-clock formatting, HTTP-date rendering, a hardware tick counter, stopwatches, deadline-bound execution. | [docs/architecture/chrono.md](docs/architecture/chrono.md) |

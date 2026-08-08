@@ -1,7 +1,7 @@
 #pragma once
 
 #include <cstddef>
-#include <menagerie/beavers>
+#include <menagerie/beaver>
 #include <string>
 #include <string_view>
 
@@ -49,7 +49,7 @@ namespace menagerie::http {
      * Unknown JSON keys are ignored (the fields() walk reads known names
      * only). An empty file is a parse error, not an empty config.
      */
-    beavers::Outcome<ServerConfig, ConfigFileError, ConfigParseError, ConfigSchemaError>
+    beaver::Outcome<ServerConfig, ConfigFileError, ConfigParseError, ConfigSchemaError>
     load_server_config(std::string_view path);
 
     /// Round-trip companion: serialize - which validates first. Secret

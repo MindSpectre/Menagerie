@@ -21,7 +21,7 @@ namespace menagerie::db {
      *
      * Checked with std::string as the concrete Appendable type, since the
      * dialect methods themselves are templates constrained on Appendable so
-     * they can also write into fixed-capacity buffers (e.g. beavers::InlineString).
+     * they can also write into fixed-capacity buffers (e.g. beaver::InlineString).
      */
     template <typename T>
     concept IsSqlDialect = requires(std::string& s,

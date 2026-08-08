@@ -77,7 +77,7 @@ namespace menagerie::multithread {
         }
 
     private:
-        struct Concept : beavers::NonCopyable {
+        struct Concept : beaver::NonCopyable {
             Concept()                                                    = default;
             virtual ~Concept()                                           = default;
             virtual std::int64_t wait_for(std::int64_t, const Sequence&) = 0;

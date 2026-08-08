@@ -1,6 +1,6 @@
 #pragma once
 
-#include <menagerie/beavers>
+#include <menagerie/beaver>
 
 #include "basic.hpp"
 
@@ -38,7 +38,7 @@ namespace menagerie::db {
     /// Builds CREATE TABLE for a runtime DynamicTable schema.
     template <typename DynamicTablePtrTp>
         requires std::constructible_from<DynamicTablePtr, std::remove_cvref_t<DynamicTablePtrTp>> &&
-                 (!beavers::IsStringLike<DynamicTablePtrTp>)
+                 (!beaver::IsStringLike<DynamicTablePtrTp>)
     constexpr auto create_table(DynamicTablePtrTp&& table, const bool if_not_exists = false) noexcept {
         return CreateTableExpr<DynamicTablePtr>{std::forward<DynamicTablePtrTp>(table), if_not_exists};
     }

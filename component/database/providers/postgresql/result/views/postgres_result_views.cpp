@@ -1,6 +1,6 @@
 #include "postgres_result_views.hpp"
 
-#include <menagerie/beavers>
+#include <menagerie/beaver>
 #include <variant>
 
 #include <db_field_value.hpp>
@@ -47,7 +47,7 @@ namespace menagerie::db::postgres {
         if (format_ == FormatRegistry::binary && oid_ == OidTypeRegistry::oid_int2) {
             uint16_t be;
             std::memcpy(&be, ptr_, 2);
-            return static_cast<int16_t>(beavers::ntoh(be));
+            return static_cast<int16_t>(beaver::ntoh(be));
         }
         return decode_integer_text<int16_t>();
     }
@@ -56,7 +56,7 @@ namespace menagerie::db::postgres {
         if (format_ == FormatRegistry::binary && oid_ == OidTypeRegistry::oid_int4) {
             uint32_t be;
             std::memcpy(&be, ptr_, 4);
-            return static_cast<int32_t>(beavers::ntoh(be));
+            return static_cast<int32_t>(beaver::ntoh(be));
         }
         return decode_integer_text<int32_t>();
     }
@@ -65,7 +65,7 @@ namespace menagerie::db::postgres {
         if (format_ == FormatRegistry::binary && oid_ == OidTypeRegistry::oid_int8) {
             uint64_t be;
             std::memcpy(&be, ptr_, 8);
-            return static_cast<int64_t>(beavers::ntoh(be));
+            return static_cast<int64_t>(beaver::ntoh(be));
         }
         return decode_integer_text<int64_t>();
     }
@@ -75,12 +75,12 @@ namespace menagerie::db::postgres {
         if (format_ == FormatRegistry::binary && oid_ == OidTypeRegistry::oid_int4) {
             uint32_t be;
             std::memcpy(&be, ptr_, 4);
-            return static_cast<uint16_t>(beavers::ntoh(be));
+            return static_cast<uint16_t>(beaver::ntoh(be));
         }
         if (format_ == FormatRegistry::binary && oid_ == OidTypeRegistry::oid_int2) {
             uint16_t be;
             std::memcpy(&be, ptr_, 2);
-            return beavers::ntoh(be);
+            return beaver::ntoh(be);
         }
         return decode_integer_text<uint16_t>();
     }
@@ -90,12 +90,12 @@ namespace menagerie::db::postgres {
         if (format_ == FormatRegistry::binary && oid_ == OidTypeRegistry::oid_int8) {
             uint64_t be;
             std::memcpy(&be, ptr_, 8);
-            return static_cast<uint32_t>(beavers::ntoh(be));
+            return static_cast<uint32_t>(beaver::ntoh(be));
         }
         if (format_ == FormatRegistry::binary && oid_ == OidTypeRegistry::oid_int4) {
             uint32_t be;
             std::memcpy(&be, ptr_, 4);
-            return beavers::ntoh(be);
+            return beaver::ntoh(be);
         }
         return decode_integer_text<uint32_t>();
     }
@@ -105,7 +105,7 @@ namespace menagerie::db::postgres {
         if (format_ == FormatRegistry::binary && oid_ == OidTypeRegistry::oid_int8) {
             uint64_t be;
             std::memcpy(&be, ptr_, 8);
-            return beavers::ntoh(be);
+            return beaver::ntoh(be);
         }
         return decode_integer_text<uint64_t>();
     }
@@ -114,7 +114,7 @@ namespace menagerie::db::postgres {
         if (format_ == FormatRegistry::binary && oid_ == OidTypeRegistry::oid_float4) {  // <- FIXED: was oid_float8
             uint32_t be;
             std::memcpy(&be, ptr_, 4);
-            const uint32_t host = beavers::ntoh(be);
+            const uint32_t host = beaver::ntoh(be);
             float f;
             std::memcpy(&f, &host, 4);
             return f;
@@ -140,7 +140,7 @@ namespace menagerie::db::postgres {
         if (format_ == FormatRegistry::binary && oid_ == OidTypeRegistry::oid_float8) {
             uint64_t be;
             std::memcpy(&be, ptr_, 8);
-            const uint64_t host = beavers::ntoh(be);
+            const uint64_t host = beaver::ntoh(be);
             double d;
             std::memcpy(&d, &host, 8);
             return d;

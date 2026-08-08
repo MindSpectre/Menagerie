@@ -35,7 +35,7 @@ target_include_directories(${MULTITHREAD}.Disruptor INTERFACE
 
 target_link_libraries(${MULTITHREAD}.Disruptor INTERFACE
         Threads::Threads
-        Menagerie::Common::Beavers
+        Menagerie::Common::Beaver
         ${MULTITHREAD}.Utils
 )
 ##############################################################################

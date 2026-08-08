@@ -37,6 +37,6 @@ namespace menagerie::crow {
     /// every Meta* mixin (timestamp, source location, thread id, process id, prefix).
     template <>
     struct detail::entry_traits<DetailedEntry> {
-        using wants = beavers::type_list<MetaTimePoint, MetaSource, MetaThread, MetaProcess, MetaPrefix>;  ///< Mixins DetailedEntry composes.
+        using wants = beaver::type_list<MetaTimePoint, MetaSource, MetaThread, MetaProcess, MetaPrefix>;  ///< Mixins DetailedEntry composes.
     };
 }  // namespace menagerie::crow

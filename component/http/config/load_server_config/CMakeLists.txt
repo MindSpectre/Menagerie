@@ -14,7 +14,7 @@ target_link_libraries(${Http}.Config.LoadServerConfig
         PUBLIC
         ${Http}.Config.ServerConfig
         ${Http}.Types
-        Menagerie::Common::Beavers
+        Menagerie::Common::Beaver
         Menagerie::Common::Serialization
         JsonCpp::JsonCpp
 )

@@ -2,7 +2,7 @@
 #include <bit>
 #include <concepts>
 
-namespace menagerie::beavers {
+namespace menagerie::beaver {
     // Network byte order is big-endian.
     // These functions convert between host and network byte order.
 
@@ -22,4 +22,4 @@ namespace menagerie::beavers {
     constexpr T hton(const T host) noexcept {
         return ntoh(host);
     }
-}  // namespace menagerie::beavers
+}  // namespace menagerie::beaver

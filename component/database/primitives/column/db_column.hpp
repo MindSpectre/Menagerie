@@ -1,5 +1,5 @@
 #pragma once
-#include <menagerie/beavers>
+#include <menagerie/beaver>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -15,14 +15,14 @@ namespace menagerie::db {
     class Column {
     public:
         /// Constructs a column named `name`, qualified by `table`.
-        template <beavers::IsStringLike StringTp1, beavers::IsStringLike StringTp2>
+        template <beaver::IsStringLike StringTp1, beaver::IsStringLike StringTp2>
         constexpr explicit Column(StringTp1&& name, StringTp2&& table)
             : name_{std::forward<StringTp1>(name)},
               table_{std::forward<StringTp2>(table)} {
         }
 
         /// Constructs a column named `name`, with no table qualifier.
-        template <beavers::IsStringLike StringTp>
+        template <beaver::IsStringLike StringTp>
         constexpr explicit Column(StringTp&& name)
             : name_{std::forward<StringTp>(name)} {
         }
@@ -43,21 +43,21 @@ namespace menagerie::db {
         }
 
         /// Sets the table qualifier; returns *this for chaining.
-        template <beavers::IsStringLike StringTp>
+        template <beaver::IsStringLike StringTp>
         constexpr Column& set_table(StringTp&& table) {
             table_ = std::forward<StringTp>(table);
             return *this;
         }
 
         /// Sets the column name; returns *this for chaining.
-        template <beavers::IsStringLike StringTp>
+        template <beaver::IsStringLike StringTp>
         constexpr Column& set_name(StringTp&& name) {
             name_ = std::forward<StringTp>(name);
             return *this;
         }
 
         /// Returns a copy of this column with `alias` as its SQL alias.
-        template <beavers::IsStringLike StringTp>
+        template <beaver::IsStringLike StringTp>
         [[nodiscard]] constexpr Column as(StringTp&& alias) const {
             Column result{name_, table_};
             result.alias_ = std::forward<StringTp>(alias);
@@ -78,7 +78,7 @@ namespace menagerie::db {
     class AllColumns {
     public:
         /// Constructs a `table.*` wildcard.
-        template <beavers::IsStringLike StringTp>
+        template <beaver::IsStringLike StringTp>
         constexpr explicit AllColumns(StringTp&& table)
             : table_{std::forward<StringTp>(table)} {
         }

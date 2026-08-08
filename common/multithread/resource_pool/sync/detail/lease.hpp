@@ -3,7 +3,7 @@
 #include <atomic>
 #include <cassert>
 #include <cstdint>
-#include <menagerie/beavers>
+#include <menagerie/beaver>
 
 #include <event_count.hpp>
 
@@ -26,7 +26,7 @@ namespace menagerie::multithread {
      * @tparam T the pooled resource type.
      */
     template <typename T>
-    class Lease : beavers::NonCopyable {
+    class Lease : beaver::NonCopyable {
     public:
         using value_type = T;  ///< The leased resource type.
 

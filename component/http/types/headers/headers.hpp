@@ -3,7 +3,7 @@
 #include <cstddef>
 #include <iterator>
 #include <memory_resource>
-#include <menagerie/beavers>
+#include <menagerie/beaver>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -44,7 +44,7 @@ namespace menagerie::http {
      * view_of_beast(fields). Mutators and promotion allocate through the bound
      * allocator - never the global heap.
      */
-    class Headers : beavers::NonCopyable {
+    class Headers : beaver::NonCopyable {
     public:
         /// A single header entry: (name, value) as string_views into the
         /// backing storage.

@@ -2,7 +2,7 @@
 
 #include <charconv>
 #include <cstring>
-#include <menagerie/beavers>
+#include <menagerie/beaver>
 #include <optional>
 #include <stdexcept>
 #include <string_view>
@@ -111,7 +111,7 @@ namespace menagerie::db::postgres {
             } else if constexpr (std::is_same_v<T, std::vector<std::uint8_t>>) {
                 return decode_binary_vector();
             } else {
-                static_assert(menagerie::beavers::dependent_false_v<T>,
+                static_assert(menagerie::beaver::dependent_false_v<T>,
                               "Unsupported type for FieldView::as<T>(). "
                               "Supported types: bool, char, int16_t, int32_t, int64_t, "
                               "uint16_t, uint32_t, uint64_t, float, double, string, "

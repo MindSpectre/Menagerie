@@ -1,5 +1,5 @@
 #include <memory>
-#include <menagerie/beavers>
+#include <menagerie/beaver>
 #include <stdexcept>
 #include <string>
 
@@ -193,7 +193,7 @@ namespace {
             Get("/tea", [](RequestContext ctx) -> AsyncOutcome<Response, myapp::TeapotError> {
                 if (ctx.query<bool>("brew").value_or(false))
                     co_return ctx.ok("brewing");
-                co_return menagerie::beavers::err(myapp::TeapotError{"earl-grey"});
+                co_return menagerie::beaver::err(myapp::TeapotError{"earl-grey"});
             });
         }
 
@@ -201,15 +201,15 @@ namespace {
         static AsyncOutcome<Response, NotFoundError> get_user(RequestContext ctx) {
             if (const auto id = ctx.path_param<int>("id"); id && *id == 42)
                 co_return ctx.ok("user-42");
-            co_return menagerie::beavers::err(NotFoundError{"user", "?"});
+            co_return menagerie::beaver::err(NotFoundError{"user", "?"});
         }
 
         static AsyncOutcome<Response, BadRequestError, ForbiddenError> create_user(RequestContext ctx) {
             const auto mode = ctx.query<std::string>("mode");
             if (mode == "bad")
-                co_return menagerie::beavers::err(BadRequestError{"bad mode"});
+                co_return menagerie::beaver::err(BadRequestError{"bad mode"});
             if (mode == "forbidden")
-                co_return menagerie::beavers::err(ForbiddenError{"no"});
+                co_return menagerie::beaver::err(ForbiddenError{"no"});
             co_return ctx.created("ok");
         }
     };

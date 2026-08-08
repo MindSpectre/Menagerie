@@ -17,11 +17,11 @@ protected:
         // Get connection parameters from environment or use defaults (matching docker-compose.test.yml)
         const auto credentials =
             ConnectionCredentials::Builder{}
-                .host(menagerie::beavers::value_or(std::getenv("POSTGRES_HOST"), "localhost"))
-                .port(menagerie::beavers::value_or(std::getenv("POSTGRES_PORT"), "5433"))
-                .dbname(menagerie::beavers::value_or(std::getenv("POSTGRES_DB"), "test_db"))
-                .user(menagerie::beavers::value_or(std::getenv("POSTGRES_USER"), "test_user"))
-                .password(menagerie::beavers::value_or(std::getenv("POSTGRES_PASSWORD"), "test_password"))
+                .host(menagerie::beaver::value_or(std::getenv("POSTGRES_HOST"), "localhost"))
+                .port(menagerie::beaver::value_or(std::getenv("POSTGRES_PORT"), "5433"))
+                .dbname(menagerie::beaver::value_or(std::getenv("POSTGRES_DB"), "test_db"))
+                .user(menagerie::beaver::value_or(std::getenv("POSTGRES_USER"), "test_user"))
+                .password(menagerie::beaver::value_or(std::getenv("POSTGRES_PASSWORD"), "test_password"))
                 .finalize();
 
         // Connect to database

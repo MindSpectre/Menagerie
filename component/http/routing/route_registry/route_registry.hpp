@@ -4,7 +4,7 @@
 #include <cstddef>
 #include <functional>
 #include <memory_resource>
-#include <menagerie/beavers>
+#include <menagerie/beaver>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -96,7 +96,7 @@ namespace menagerie::http {
      *
      * Lifecycle: add_route() during build, then freeze(), then find_route() only.
      */
-    class RouteRegistry : beavers::NonCopyable {
+    class RouteRegistry : beaver::NonCopyable {
     public:
         /// Constructs an empty, unfrozen registry using `norm` to canonicalize
         /// paths at both registration and lookup.
@@ -125,7 +125,7 @@ namespace menagerie::http {
         /// match wins over parametric. A known path with no handler for
         /// `method` yields MethodNotAllowedError carrying the populated verb
         /// set, rather than NotFoundError.
-        [[nodiscard]] beavers::Outcome<ResolvedRoute, NotFoundError, MethodNotAllowedError>
+        [[nodiscard]] beaver::Outcome<ResolvedRoute, NotFoundError, MethodNotAllowedError>
         find_route(HttpMethod method, std::string_view path, std::pmr::polymorphic_allocator<> arena_alloc) const;
 
     private:

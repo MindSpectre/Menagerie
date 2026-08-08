@@ -1,6 +1,6 @@
 #pragma once
 
-#include <menagerie/beavers>
+#include <menagerie/beaver>
 #include <string_view>
 #include <type_traits>
 
@@ -19,7 +19,7 @@ namespace menagerie::db {
      * foreign_column()/default_value()/max_length()/db_type() accessors are
      * only well-formed when the corresponding constraint is present.
      */
-    template <typename CppType, beavers::FixedString Name, typename... Constraints>
+    template <typename CppType, beaver::FixedString Name, typename... Constraints>
     class StaticFieldSchema {
     public:
         using value_type = CppType;  ///< The C++ type this field maps to.

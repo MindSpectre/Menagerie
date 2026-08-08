@@ -1,6 +1,6 @@
 #pragma once
 
-#include <menagerie/beavers>
+#include <menagerie/beaver>
 #include <thread>
 
 namespace menagerie::multithread {
@@ -48,7 +48,7 @@ namespace menagerie::multithread {
         /// Spins for up to 100 attempts, then calls `std::this_thread::yield()` and
         /// resets the counter, until `cursor` reaches `sequence`.
         [[nodiscard]] std::int64_t wait_for(const std::int64_t sequence, const Sequence& cursor) const {
-            beavers::force_non_static(this);
+            beaver::force_non_static(this);
             std::int64_t available_sequence;
             int spin_tries = 0;
 
@@ -67,13 +67,13 @@ namespace menagerie::multithread {
 
         /// No-op: a yield() cannot be woken explicitly, waiters simply reschedule.
         void signal() const noexcept {
-            beavers::force_non_static(this);
+            beaver::force_non_static(this);
             // No-op: yield() is not blockable
         }
 
         /// No-op: same reasoning as `signal()`.
         void signal_all() const noexcept {
-            beavers::force_non_static(this);
+            beaver::force_non_static(this);
             // No-op
         }
     };

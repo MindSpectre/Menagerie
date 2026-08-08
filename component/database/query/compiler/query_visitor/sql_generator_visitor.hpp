@@ -16,7 +16,7 @@ namespace menagerie::db {
      *
      * Implements the visit_xxx_impl(...) hooks QueryVisitor's visit() overloads call: each hook appends the
      * SQL fragment for its piece of syntax (a keyword, an operator, a delimiter, ...) to sql_, quoting
-     * identifiers and formatting/binding values through DialectT. StringT is beavers::InlineString<MaxLen>
+     * identifiers and formatting/binding values through DialectT. StringT is beaver::InlineString<MaxLen>
      * on the constexpr path (QueryCompiler::compile_static) and std::pmr::string on the runtime path
      * (QueryCompiler::compile_dynamic); Mode picks how literal values are handled: Inline formats them
      * directly into sql_, Tuple leaves a placeholder and returns them via capture_param()/cat_params() for
@@ -125,12 +125,12 @@ namespace menagerie::db {
         /// Emits nothing; opening hook bracketing a unary expression (no parens, unlike
         /// visit_binary_expr_start/end).
         constexpr void visit_unary_expr_start() {
-            beavers::force_non_static(this);
+            beaver::force_non_static(this);
         }
         /// Emits nothing; closing hook bracketing a unary expression (no parens, unlike
         /// visit_binary_expr_start/end).
         constexpr void visit_unary_expr_end() {
-            beavers::force_non_static(this);
+            beaver::force_non_static(this);
         }
         /// Emits `(`, opening a parenthesized subquery.
         constexpr void visit_subquery_start();

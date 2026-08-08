@@ -37,11 +37,11 @@ namespace menagerie::db::postgres {
         return *this;
     }
 
-    beavers::Outcome<ResultBlock, ErrorContext> SyncExecutor::execute(const CompiledDynamicQuery& query) const {
+    beaver::Outcome<ResultBlock, ErrorContext> SyncExecutor::execute(const CompiledDynamicQuery& query) const {
         if (query.provider() != Providers::PostgreSQL) {
             ErrorContext ec{ErrorCode{ClientErrorCode::SyntaxError}};
             ec.context = "Wrong provider. Query was compiled not by PostgreSQL";
-            return beavers::err(ec);
+            return beaver::err(ec);
         }
         const auto params_ptr = query.backend_packet_as<Params>();
         if (!params_ptr) {
@@ -50,14 +50,14 @@ namespace menagerie::db::postgres {
         return execute_impl(query.c_sql(), params_ptr.get());
     }
 
-    beavers::Outcome<ResultBlock, ErrorContext> SyncExecutor::execute_impl(const char* query,
+    beaver::Outcome<ResultBlock, ErrorContext> SyncExecutor::execute_impl(const char* query,
                                                                            const Params* params) const {
         COMPONENT_LOG_ENTER_FUNCTION();
         COMPONENT_LOG_TRC() << CROW_PARAMS(query, params);
         if (const auto ec = check_connection(conn_); ec) {
             ErrorContext ctx(ec);
             COMPONENT_LOG_ERR() << "Connection failed: " << ctx;
-            return beavers::err(std::move(ctx));
+            return beaver::err(std::move(ctx));
         }
 
         PGresult* result = (params == nullptr || params->values.empty())
@@ -74,7 +74,7 @@ namespace menagerie::db::postgres {
         if (!result) {
             auto ec = extract_connection_error(conn_);
             COMPONENT_LOG_ERR() << "Connection failed: " << ec;
-            return beavers::err(std::move(ec));
+            return beaver::err(std::move(ec));
         }
 
         return process_result(result);

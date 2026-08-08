@@ -108,7 +108,7 @@ namespace menagerie::db {
         }
 
         /// Sets a display alias (e.g. `AS alias` in SELECT) and returns *this for chaining.
-        template <typename Self, beavers::IsStringLike StringTp>
+        template <typename Self, beaver::IsStringLike StringTp>
         constexpr auto&& as(this Self&& self, StringTp&& alias) {
             self.alias = std::forward<StringTp>(alias);
             return std::forward<Self>(self);
@@ -174,13 +174,13 @@ namespace menagerie::db {
     class AliasableExpression : public Expression<Derived> {
     public:
         /// Constructs with an initial display alias.
-        template <beavers::IsStringLike StringTp>
+        template <beaver::IsStringLike StringTp>
         constexpr explicit AliasableExpression(StringTp&& alias)
             : alias{std::forward<StringTp>(alias)} {
         }
 
         /// Sets the display alias and returns *this (as Derived) for chaining.
-        template <typename Self, beavers::IsStringLike StringTp>
+        template <typename Self, beaver::IsStringLike StringTp>
         constexpr auto&& as(this Self&& self, StringTp&& name) {
             self.alias = std::forward<StringTp>(name);
             return static_cast<std::conditional_t<std::is_lvalue_reference_v<Self>, Derived&, Derived&&>>(
@@ -240,7 +240,7 @@ namespace menagerie::db {
         }
 
         /// Sets the joined table's alias and returns *this for chaining.
-        template <typename Self, beavers::IsStringLike StringTp>
+        template <typename Self, beaver::IsStringLike StringTp>
         constexpr auto&& as(this Self&& self, StringTp&& name) {
             self.right_alias_ = std::forward<StringTp>(name);
             return std::forward<Self>(self);
@@ -356,8 +356,8 @@ namespace menagerie::db {
         // JOIN - IsStringLike && !IsStringViewLike -> std::string
         /// @overload
         template <typename Self, typename TableTp>
-            requires(has_feature<AllowJoin, AllowedFeatures...>) && beavers::IsStringLike<TableTp> &&
-                    (!beavers::IsStringViewLike<TableTp>)
+            requires(has_feature<AllowJoin, AllowedFeatures...>) && beaver::IsStringLike<TableTp> &&
+                    (!beaver::IsStringViewLike<TableTp>)
         [[nodiscard]] constexpr auto join(this Self&& self, TableTp&& table, JoinType type = JoinType::INNER) {
             return JoinBuilder<Derived, std::string>{
                 std::forward<Self>(self).derived(), std::forward<TableTp>(table), type};

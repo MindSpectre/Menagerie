@@ -1,6 +1,6 @@
 #pragma once
 
-#include <menagerie/beavers>
+#include <menagerie/beaver>
 
 #include <boost/unordered_map.hpp>
 #include <providers.hpp>
@@ -16,26 +16,26 @@ namespace menagerie::db {
     class DynamicTable {
     public:
         /// Constructs an empty table named `table_name`, with no provider set.
-        template <beavers::IsStringLike StringTp>
+        template <beaver::IsStringLike StringTp>
         constexpr explicit DynamicTable(StringTp&& table_name) noexcept
             : table_name_{std::forward<StringTp>(table_name)} {
         }
 
         /// Constructs an empty table named `table_name`, bound to `provider`
         /// (enables the provider-inferring add_field<T>(name) overload).
-        template <beavers::IsStringLike StringTp>
+        template <beaver::IsStringLike StringTp>
         constexpr explicit DynamicTable(StringTp&& table_name, const Providers provider) noexcept
             : table_name_{std::forward<StringTp>(table_name)},
               provider_{provider} {
         }
 
         /// Adds a field named `name` with the literal SQL type `db_type`.
-        template <typename T, beavers::IsStringLike StringTp1, beavers::IsStringLike StringTp2>
+        template <typename T, beaver::IsStringLike StringTp1, beaver::IsStringLike StringTp2>
         DynamicTable& add_field(StringTp1&& name, StringTp2&& db_type);
 
         /// Adds a field named `name` with the literal SQL type `db_type`;
         /// `cpp_type` is accepted for future type-checking but not yet used.
-        template <beavers::IsStringLike StringTp1, beavers::IsStringLike StringTp2>
+        template <beaver::IsStringLike StringTp1, beaver::IsStringLike StringTp2>
         DynamicTable& add_field(StringTp1&& name, StringTp2&& db_type, std::type_index cpp_type);
 
         /**
@@ -45,7 +45,7 @@ namespace menagerie::db {
          *        DynamicTable(name, provider) constructor, or one of the
          *        two/three-argument add_field overloads, instead.
          */
-        template <typename T, beavers::IsStringLike StringTp>
+        template <typename T, beaver::IsStringLike StringTp>
         DynamicTable& add_field(StringTp&& name);
 
         /**
@@ -102,7 +102,7 @@ namespace menagerie::db {
     private:
         std::string table_name_;
         std::vector<DynamicFieldSchema> fields_;
-        boost::unordered_map<std::string, std::size_t, beavers::StringHash, beavers::StringEqual> field_index_;
+        boost::unordered_map<std::string, std::size_t, beaver::StringHash, beaver::StringEqual> field_index_;
         Providers provider_ = Providers::None;
     };
 }  // namespace menagerie::db

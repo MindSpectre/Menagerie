@@ -44,7 +44,7 @@ and a deadline-bound function executor built on top of `ThreadPool`. Everything 
   2^attempt` clamped to `cap`, with the shift itself clamped so `1u << shift` cannot overflow.
 - **`sleep_for<Duration>(d)` / `async_sleep_for<Duration>(d)`**
   -- blocking (`std::this_thread::sleep_for`) and coroutine (`boost::asio::awaitable<void>`, backed by
-  `steady_timer`) sleeps, constrained to `beavers::IsDuration`.
+  `steady_timer`) sleeps, constrained to `beaver::IsDuration`.
 
 ## Usage
 

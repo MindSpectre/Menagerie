@@ -1,6 +1,6 @@
 #pragma once
 
-#include <menagerie/beavers>
+#include <menagerie/beaver>
 // CROW_PARAMS below is the main macro; everything above it is implementation
 // plumbing for stringifying a variadic parameter list as "name=value, name2=value2".
 

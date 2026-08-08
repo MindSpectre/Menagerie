@@ -17,7 +17,7 @@ namespace menagerie::http {
     /// rest of the stack today, but carries no real QUIC transport state yet;
     /// ngtcp2 state lands when h3 is implemented. Deliberately NOT
     /// IsStreamConnection (QUIC is not a single byte stream).
-    class QuicConnection : beavers::Immutable {
+    class QuicConnection : beaver::Immutable {
     public:
         /// Allocates the request arena; no transport-specific setup yet.
         explicit QuicConnection(const std::size_t arena_size = 8192)
@@ -36,13 +36,13 @@ namespace menagerie::http {
         /// Scaffold no-op (IsConnection); QUIC timeout enforcement arrives
         /// with the real h3 transport. See TcpConnection::set_deadline_after.
         void set_deadline_after(std::chrono::milliseconds) noexcept {
-            beavers::force_non_const(this);
+            beaver::force_non_const(this);
         }
 
         /// Scaffold no-op (IsConnection); nothing to close until the QUIC
         /// transport lands.
         boost::asio::awaitable<void, Strand> async_close() {
-            beavers::force_non_const(this);
+            beaver::force_non_const(this);
             co_return;
         }
 
@@ -54,7 +54,7 @@ namespace menagerie::http {
         /// Scaffold stub (IsConnection); returns a default-constructed
         /// address until the QUIC transport parses the peer's address.
         [[nodiscard]] boost::asio::ip::address remote_address() const {
-            beavers::force_non_static(this);
+            beaver::force_non_static(this);
             return {};
         }
 

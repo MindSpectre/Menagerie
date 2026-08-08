@@ -18,7 +18,7 @@ namespace menagerie::db::postgres {
      * Uses std::jthread with stop_token for immediate cancellation
      * without spinning or sleeping through the full interval.
      */
-    class PoolJanitor : beavers::Immutable {
+    class PoolJanitor : beaver::Immutable {
     public:
         /**
          * @brief Starts the background sweep thread immediately

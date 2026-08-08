@@ -43,7 +43,7 @@ namespace menagerie::db {
 
         /// @overload
         template <typename Self, typename TableTp>
-            requires beavers::IsStringLike<TableTp> && (!beavers::IsStringViewLike<TableTp>)
+            requires beaver::IsStringLike<TableTp> && (!beaver::IsStringViewLike<TableTp>)
         [[nodiscard]] constexpr auto from(this Self&& self, TableTp&& table_name) {
             return FromTableExpr<SelectExpr, std::string>{std::forward<Self>(self), std::forward<TableTp>(table_name)};
         }

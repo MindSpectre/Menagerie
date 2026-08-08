@@ -23,7 +23,7 @@ target_link_libraries(${DATABASE_POSTGRESQL}.Session.Blocking
         ${DATABASE_POSTGRESQL}.Config
         ${DATABASE_POSTGRESQL}.Errors
         ${DATABASE}.Base.Errors
-        Menagerie::Common::Beavers
+        Menagerie::Common::Beaver
         PostgreSQL::PostgreSQL
 )
 ##############################################################################

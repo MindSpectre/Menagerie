@@ -26,7 +26,7 @@ namespace menagerie::http {
      * caller emits terminal on that slot (stops accepting) and awaits
      * drain_until(deadline) (in-flight requests finish or are force-cancelled).
      */
-    class ListenerBase : beavers::Immutable {
+    class ListenerBase : beaver::Immutable {
     public:
         ListenerBase()          = default;
         virtual ~ListenerBase() = default;

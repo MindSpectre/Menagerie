@@ -32,7 +32,7 @@ namespace menagerie::http {
         template <IsConnection ConnT>
         AsyncVoid serve(ConnT& conn, Router& /*router*/) {
             COMPONENT_LOG_WRN() << "Http3Driver::serve() not implemented (scaffold)";
-            beavers::force_non_const(this);
+            beaver::force_non_const(this);
             co_await conn.async_close();
         }
 

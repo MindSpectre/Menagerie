@@ -56,7 +56,7 @@ namespace menagerie::http {
         /// constructed into its member directly - no by-value relay moves.
         /// `host` is only IsStringLike-constrained: literals/string_views
         /// construct host_ in place, no std::string temporary at call sites.
-        template <typename VectorExecutorTp, beavers::IsStringLike StringTp, typename DriverTp>
+        template <typename VectorExecutorTp, beaver::IsStringLike StringTp, typename DriverTp>
             requires std::is_same_v<std::remove_cvref_t<VectorExecutorTp>, std::vector<Executor>> &&
                          std::is_same_v<std::remove_cvref_t<DriverTp>, Driver>
         TcpListener(VectorExecutorTp&& execs,

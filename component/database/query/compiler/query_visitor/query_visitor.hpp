@@ -85,7 +85,7 @@ namespace menagerie::db {
 
         /// Visits a SQL NULL literal.
         constexpr auto visit(const NullLiteral& null) {
-            beavers::unused_value(null);
+            beaver::unused_value(null);
             derived().visit_null_impl();
             return derived().no_params();
         }

@@ -2,7 +2,7 @@
 
 #include <cstddef>
 #include <format>
-#include <menagerie/beavers>
+#include <menagerie/beaver>
 #include <ranges>
 #include <string>
 #include <string_view>
@@ -25,13 +25,13 @@ namespace menagerie::chameleon {
     class Section {
     public:
         /// Constructs a Section with the given title; nothing renders until render() is called.
-        template <beavers::IsStringLike TitleTp>
+        template <beaver::IsStringLike TitleTp>
         constexpr explicit Section(TitleTp&& title) noexcept
             : title_{std::forward<TitleTp>(title)} {
         }
 
         /// Appends a label/value row; value is formatted with std::format.
-        template <typename Self, beavers::IsStringLike LabelTp, typename ValueTp>
+        template <typename Self, beaver::IsStringLike LabelTp, typename ValueTp>
             requires std::formattable<std::remove_cvref_t<ValueTp>, char>
         [[nodiscard]] constexpr auto&& row(this Self&& self, LabelTp&& label, ValueTp&& value) {
             self.rows_.emplace_back(std::forward<LabelTp>(label), std::format("{}", std::forward<ValueTp>(value)));
@@ -151,7 +151,7 @@ namespace menagerie::chameleon {
     };
 
     /// Starts a Section builder with the given title.
-    template <beavers::IsStringLike TitleTp>
+    template <beaver::IsStringLike TitleTp>
     [[nodiscard]] constexpr Section section(TitleTp&& title) {
         return Section{std::forward<TitleTp>(title)};
     }

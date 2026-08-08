@@ -8,19 +8,19 @@ namespace menagerie::db::postgres {
         : tx_{std::move(tx)} {
     }
 
-    beavers::Outcome<void, ErrorContext> AutoTransaction::commit() {
+    beaver::Outcome<void, ErrorContext> AutoTransaction::commit() {
         return tx_.commit();
     }
 
-    beavers::Outcome<SyncExecutor, ErrorContext> AutoTransaction::with_sync() const {
+    beaver::Outcome<SyncExecutor, ErrorContext> AutoTransaction::with_sync() const {
         return tx_.with_sync();
     }
 
-    beavers::Outcome<AsyncExecutor, ErrorContext> AutoTransaction::with_async(boost::asio::any_io_executor exec) const {
+    beaver::Outcome<AsyncExecutor, ErrorContext> AutoTransaction::with_async(boost::asio::any_io_executor exec) const {
         return tx_.with_async(std::move(exec));
     }
 
-    beavers::Outcome<Savepoint, ErrorContext> AutoTransaction::savepoint(std::string name) const {
+    beaver::Outcome<Savepoint, ErrorContext> AutoTransaction::savepoint(std::string name) const {
         return tx_.savepoint(std::move(name));
     }
 

@@ -5,7 +5,7 @@
 #include <cstddef>
 #include <deque>
 #include <memory>
-#include <menagerie/beavers>
+#include <menagerie/beaver>
 #include <mutex>
 #include <utility>
 #include <variant>
@@ -44,7 +44,7 @@ namespace menagerie::db::postgres {
      * deque so fairness is preserved regardless of which acquisition
      * mode each caller uses.
      */
-    class BlockingPool : beavers::Immutable {
+    class BlockingPool : beaver::Immutable {
     public:
         /// Completion signature for async_acquire: (error_code, acquired holder or null on failure).
         using AsyncSignature = void(boost::system::error_code, std::shared_ptr<QueuedHolder>);

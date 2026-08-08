@@ -1,6 +1,6 @@
 #pragma once
 
-#include <menagerie/beavers>
+#include <menagerie/beaver>
 #include <string>
 #include <string_view>
 
@@ -22,14 +22,14 @@ namespace menagerie::db {
         using value_type = CppType;  ///< The C++ type this column maps to.
 
         /// Constructs a column named `name`, qualified by `table`.
-        template <beavers::IsStringLike StringTp1, beavers::IsStringLike StringTp2>
+        template <beaver::IsStringLike StringTp1, beaver::IsStringLike StringTp2>
         constexpr TypedColumn(StringTp1&& name, StringTp2&& table)
             : name_{std::forward<StringTp1>(name)},
               table_{std::forward<StringTp2>(table)} {
         }
 
         /// Constructs a column named `name`, qualified by `table`, with SQL alias `alias`.
-        template <beavers::IsStringLike StringTp1, beavers::IsStringLike StringTp2, beavers::IsStringLike StringTp3>
+        template <beaver::IsStringLike StringTp1, beaver::IsStringLike StringTp2, beaver::IsStringLike StringTp3>
         constexpr TypedColumn(StringTp1&& name, StringTp2&& table, StringTp3&& alias)
             : name_{std::forward<StringTp1>(name)},
               table_{std::forward<StringTp2>(table)},
@@ -52,7 +52,7 @@ namespace menagerie::db {
         }
 
         /// Returns a copy of this column with `alias` as its SQL alias.
-        template <beavers::IsStringLike StringTp>
+        template <beaver::IsStringLike StringTp>
         [[nodiscard]] constexpr TypedColumn as(StringTp&& alias) const {
             return TypedColumn{name_, table_, std::forward<StringTp>(alias)};
         }

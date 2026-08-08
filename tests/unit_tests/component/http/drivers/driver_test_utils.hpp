@@ -50,7 +50,7 @@ namespace http_driver_test {
             return signal_.slot();
         }
         [[nodiscard]] boost::asio::ip::address remote_address() const {
-            menagerie::beavers::force_non_static(this);
+            menagerie::beaver::force_non_static(this);
             return boost::asio::ip::make_address("127.0.0.1");
         }
         [[nodiscard]] static menagerie::http::Protocol negotiated_protocol() noexcept {

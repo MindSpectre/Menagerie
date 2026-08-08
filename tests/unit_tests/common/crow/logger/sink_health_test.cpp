@@ -226,7 +226,7 @@ namespace {
 
 template <>
 struct menagerie::crow::detail::entry_traits<ThrowingEntry> {
-    using wants = menagerie::beavers::type_list<>;
+    using wants = menagerie::beaver::type_list<>;
 };
 
 TEST(FileSinkHealthTest, HealthySinkDyingMidBatchCountsTheRestAsUndelivered) {

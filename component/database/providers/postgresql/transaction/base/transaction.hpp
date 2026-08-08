@@ -1,7 +1,7 @@
 #pragma once
 
 #include <memory>
-#include <menagerie/beavers>
+#include <menagerie/beaver>
 #include <menagerie/crow>
 
 #include <capability_provider.hpp>
@@ -27,7 +27,7 @@ namespace menagerie::db::postgres {
      * an ACTIVE Transaction without commit() runs a safety-net ROLLBACK before the
      * connection holder is released.
      */
-    class Transaction : beavers::NonCopyable {
+    class Transaction : beaver::NonCopyable {
     public:
         /// Runs a safety-net ROLLBACK if still ACTIVE, then releases the connection holder.
         ~Transaction();
@@ -59,25 +59,25 @@ namespace menagerie::db::postgres {
          * @return Success, or ErrorContext{InvalidState} if this transaction is not IDLE.
          * @throw std::invalid_argument under the same condition as TransactionOptions::to_begin_sql().
          */
-        [[nodiscard]] beavers::Outcome<void, ErrorContext> begin();
+        [[nodiscard]] beaver::Outcome<void, ErrorContext> begin();
 
         /// Sends COMMIT, moving ACTIVE -> COMMITTED. Returns ErrorContext{InvalidState} unless ACTIVE.
-        [[nodiscard]] beavers::Outcome<void, ErrorContext> commit();
+        [[nodiscard]] beaver::Outcome<void, ErrorContext> commit();
 
         /// Sends ROLLBACK, moving ACTIVE -> ROLLED_BACK. Returns ErrorContext{InvalidState} unless ACTIVE.
-        [[nodiscard]] beavers::Outcome<void, ErrorContext> rollback();
+        [[nodiscard]] beaver::Outcome<void, ErrorContext> rollback();
 
         // -------- Capability Provision --------
 
         /// Borrows a synchronous executor bound to this transaction's connection. Returns ErrorContext{InvalidState}
         /// unless ACTIVE.
-        [[nodiscard]] beavers::Outcome<SyncExecutor, ErrorContext> with_sync() const;
+        [[nodiscard]] beaver::Outcome<SyncExecutor, ErrorContext> with_sync() const;
         /**
          * @brief Borrows an asynchronous executor bound to this transaction's connection.
          * @param exec Boost.Asio executor the async operations complete on.
          * @return The executor, or ErrorContext{InvalidState} unless this transaction is ACTIVE.
          */
-        [[nodiscard]] beavers::Outcome<AsyncExecutor, ErrorContext> with_async(boost::asio::any_io_executor exec) const;
+        [[nodiscard]] beaver::Outcome<AsyncExecutor, ErrorContext> with_async(boost::asio::any_io_executor exec) const;
 
         // -------- Savepoints --------
 
@@ -86,7 +86,7 @@ namespace menagerie::db::postgres {
          * @return The Savepoint, or ErrorContext{InvalidState} unless ACTIVE, or
          *         ErrorContext{InvalidArgument} if name is not a valid identifier.
          */
-        [[nodiscard]] beavers::Outcome<Savepoint, ErrorContext> savepoint(std::string name) const;
+        [[nodiscard]] beaver::Outcome<Savepoint, ErrorContext> savepoint(std::string name) const;
 
         // -------- Introspection --------
 
@@ -123,7 +123,7 @@ namespace menagerie::db::postgres {
 
         Transaction(std::weak_ptr<ConnectionHolder> holder, TransactionOptions opts);
 
-        [[nodiscard]] beavers::Outcome<void, ErrorContext> execute_control(const std::string& sql) const;
+        [[nodiscard]] beaver::Outcome<void, ErrorContext> execute_control(const std::string& sql) const;
     };
 
     static_assert(CapabilityProvider<Transaction>);

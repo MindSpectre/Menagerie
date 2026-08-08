@@ -16,6 +16,6 @@ target_include_directories(${DATABASE}.Primitives.Field INTERFACE
 
 target_link_libraries(${DATABASE}.Primitives.Field INTERFACE
         Boost::container
-        Menagerie::Common::Beavers
+        Menagerie::Common::Beaver
 )
 ##############################################################################

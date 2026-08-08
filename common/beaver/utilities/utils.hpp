@@ -9,7 +9,7 @@
 #include "concepts.hpp"
 #include "templates.hpp"
 
-namespace menagerie::beavers {
+namespace menagerie::beaver {
     /// Discards a value, silencing unused-variable warnings.
     template <typename V>
     constexpr void unused_value(V&& value) {
@@ -183,4 +183,4 @@ namespace menagerie::beavers {
             return s;
         }
     }
-}  // namespace menagerie::beavers
+}  // namespace menagerie::beaver

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <cstddef>
-#include <menagerie/beavers>
+#include <menagerie/beaver>
 #include <utility>
 
 #include "ring_buffer/ring_buffer.hpp"
@@ -61,7 +61,7 @@ namespace menagerie::multithread {
      */
     template <typename T, template <typename> class SequencerT, IsWaitStrategy WaitStrategyT>
         requires IsSequencer<SequencerT<WaitStrategyT>>
-    class Disruptor : beavers::Immutable {
+    class Disruptor : beaver::Immutable {
     public:
         /**
          * @param buffer_size Ring size; must be a non-zero power of 2.

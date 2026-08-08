@@ -1,11 +1,11 @@
-# Beavers Library
+# Beaver Library
 
-The beavers library (`common/beavers/`) is Menagerie's foundation layer: a header-only grab bag of the
+The beaver library (`common/beaver/`) is Menagerie's foundation layer: a header-only grab bag of the
 primitives every other component builds on top of -- a typed result type, fixed-capacity strings, class-trait
 mixins, meta-programming concepts and templates, byte-order conversion, transparent string hashing, and a
 handful of compile-time-friendly utility functions. It has no dependencies on any other Menagerie library.
-Everything is reached through the umbrella `#include <menagerie/beavers>`
-(`export/menagerie/beavers`); there is no single "front door"
+Everything is reached through the umbrella `#include <menagerie/beaver>`
+(`export/menagerie/beaver`); there is no single "front door"
 type, since each header solves an unrelated problem.
 
 ## Key types
@@ -51,9 +51,9 @@ type, since each header solves an unrelated problem.
 ## Usage
 
 ```cpp
-#include <menagerie/beavers>
+#include <menagerie/beaver>
 
-using namespace menagerie::beavers;
+using namespace menagerie::beaver;
 
 enum class IOError { FileNotFound, PermissionDenied, DiskFull };
 

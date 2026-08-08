@@ -1,7 +1,7 @@
 #pragma once
 
 #include <array>
-#include <menagerie/beavers>
+#include <menagerie/beaver>
 #include <string_view>
 
 #include <db_typed_column.hpp>
@@ -23,7 +23,7 @@ namespace menagerie::db {
      * NTTP (FixedString), eliminating runtime storage and SSO dependency;
      * every type in FieldSchemas must satisfy IsStaticFieldSchema.
      */
-    template <beavers::FixedString TableName, typename... FieldSchemas>
+    template <beaver::FixedString TableName, typename... FieldSchemas>
         requires(IsStaticFieldSchema<FieldSchemas> && ...)
     class StaticTable {
     public:
@@ -36,7 +36,7 @@ namespace menagerie::db {
 
         /// Compile-time name lookup: auto-deduces the value type and returns
         /// a TypedColumn. A name not present in FieldSchemas is a compile error.
-        template <beavers::FixedString Name>
+        template <beaver::FixedString Name>
         [[nodiscard]] constexpr auto column() const {
             constexpr auto I = find_index<Name>();
             static_assert(I < N, "Column name not found in StaticTable");
@@ -63,7 +63,7 @@ namespace menagerie::db {
 
         /// Number of fields in FieldSchemas.
         [[nodiscard]] constexpr std::size_t field_count() const noexcept {
-            beavers::force_non_static(this);
+            beaver::force_non_static(this);
             return N;
         }
 
@@ -76,12 +76,12 @@ namespace menagerie::db {
         /// declaration order, entirely at compile time.
         template <typename Visitor>
         constexpr void for_each_field(Visitor&& v) const {
-            beavers::force_non_static(this);
+            beaver::force_non_static(this);
             (v.template operator()<FieldSchemas>(), ...);
         }
 
     private:
-        template <beavers::FixedString Name>
+        template <beaver::FixedString Name>
         static constexpr std::size_t find_index() {
             constexpr std::array<std::string_view, N> names = {FieldSchemas::name()...};
             for (std::size_t i = 0; i < names.size(); ++i) {

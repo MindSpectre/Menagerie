@@ -19,7 +19,7 @@ if (benchmark_FOUND AND libpqxx_FOUND)
             benchmark::benchmark_main
             PostgreSQL::PostgreSQL
             Boost::headers
-            Menagerie::Common::Beavers
+            Menagerie::Common::Beaver
     )
 
     add_subdirectory(concurrency_scenarios)

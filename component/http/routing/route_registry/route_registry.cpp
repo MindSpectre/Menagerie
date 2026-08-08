@@ -217,7 +217,7 @@ namespace menagerie::http {
         return out;
     }
 
-    beavers::Outcome<ResolvedRoute, NotFoundError, MethodNotAllowedError>
+    beaver::Outcome<ResolvedRoute, NotFoundError, MethodNotAllowedError>
     RouteRegistry::find_route(const HttpMethod method,
                               const std::string_view path,
                               const std::pmr::polymorphic_allocator<> arena_alloc) const {
@@ -229,7 +229,7 @@ namespace menagerie::http {
             if (const ContextHandler& h = it->second[idx]) [[likely]] {
                 return ResolvedRoute{&h, ResolvedRoute::ParamVec{arena_alloc}};
             }
-            return beavers::err(MethodNotAllowedError{allowed_methods(it->second)});
+            return beaver::err(MethodNotAllowedError{allowed_methods(it->second)});
         }
 
         for (const ParamTemplate& tmpl : parametric_) {
@@ -240,9 +240,9 @@ namespace menagerie::http {
                 return ResolvedRoute{&h, std::move(params)};
             }
             // First shape match decides 405 - no fall-through.
-            return beavers::err(MethodNotAllowedError{allowed_methods(tmpl.by_method)});
+            return beaver::err(MethodNotAllowedError{allowed_methods(tmpl.by_method)});
         }
-        return beavers::err(NotFoundError{"route", std::string{normalized}});
+        return beaver::err(NotFoundError{"route", std::string{normalized}});
     }
 
     std::string RouteConflictAggregateError::format_message(const std::vector<RouteConflictError>& conflicts) {

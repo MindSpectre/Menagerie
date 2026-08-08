@@ -85,7 +85,7 @@ namespace menagerie::http {
             stop_all();  // workers join at scope exit, then signals/server/contexts unwind
             throw;
         }
-        beavers::unused_value(signals);
+        beaver::unused_value(signals);
         server.wait_until_stopped();  // workers keep driving ALL contexts until here
 
         // NOW it is safe to tear the executors down (canonical stop -> wait ->

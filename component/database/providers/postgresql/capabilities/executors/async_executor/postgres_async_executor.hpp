@@ -1,7 +1,7 @@
 #pragma once
 
 #include <memory>
-#include <menagerie/beavers>
+#include <menagerie/beaver>
 #include <menagerie/crow>
 #include <utility>
 
@@ -36,7 +36,7 @@ namespace menagerie::db::postgres {
      * Thread safety: NOT thread-safe. Use strand if concurrent access needed.
      * Cancellation: Supports asio cancellation_slot for query cancellation.
      */
-    class AsyncExecutor : beavers::NonCopyable {
+    class AsyncExecutor : beaver::NonCopyable {
     public:
         /**
          * @brief Construct executor with exclusive connection access (standalone)
@@ -98,10 +98,10 @@ namespace menagerie::db::postgres {
          * @param query SQL query string (must be null-terminated: std::string, pmr::string, const char*)
          * @return Awaitable result
          */
-        template <beavers::IsNullTerminatedString StringQueryT>
-        [[nodiscard]] boost::asio::awaitable<beavers::Outcome<ResultBlock, ErrorContext>>
+        template <beaver::IsNullTerminatedString StringQueryT>
+        [[nodiscard]] boost::asio::awaitable<beaver::Outcome<ResultBlock, ErrorContext>>
         execute(const StringQueryT& query) const {
-            co_return co_await execute_impl(beavers::as_c_str(query), nullptr);
+            co_return co_await execute_impl(beaver::as_c_str(query), nullptr);
         }
 
         /**
@@ -110,10 +110,10 @@ namespace menagerie::db::postgres {
          * @param params Parameter pack
          * @return Awaitable result
          */
-        template <beavers::IsNullTerminatedString StringQueryT>
-        [[nodiscard]] boost::asio::awaitable<beavers::Outcome<ResultBlock, ErrorContext>>
+        template <beaver::IsNullTerminatedString StringQueryT>
+        [[nodiscard]] boost::asio::awaitable<beaver::Outcome<ResultBlock, ErrorContext>>
         execute(const StringQueryT& query, const Params& params) const {
-            co_return co_await execute_impl(beavers::as_c_str(query), &params);
+            co_return co_await execute_impl(beaver::as_c_str(query), &params);
         }
 
         /**
@@ -128,9 +128,9 @@ namespace menagerie::db::postgres {
          *
          * Example: co_await exec.execute("SELECT * FROM t WHERE id = $1", 42);
          */
-        template <beavers::IsNullTerminatedString StringQueryT, typename... Args>
+        template <beaver::IsNullTerminatedString StringQueryT, typename... Args>
             requires(db::IsFieldValueType<std::remove_cvref_t<Args>> && ...)
-        [[nodiscard]] boost::asio::awaitable<beavers::Outcome<ResultBlock, ErrorContext>> execute(StringQueryT query,
+        [[nodiscard]] boost::asio::awaitable<beaver::Outcome<ResultBlock, ErrorContext>> execute(StringQueryT query,
                                                                                                   Args... args) const {
             std::array<std::byte, 2048> stack_buffer{};
             std::pmr::monotonic_buffer_resource pool{stack_buffer.data(), stack_buffer.size()};
@@ -140,7 +140,7 @@ namespace menagerie::db::postgres {
             (sink.push(FieldValue{std::move(args)}), ...);
 
             const auto params = sink.native_packet();
-            co_return co_await execute_impl(beavers::as_c_str(query), params.get());
+            co_return co_await execute_impl(beaver::as_c_str(query), params.get());
         }
 
         /**
@@ -153,9 +153,9 @@ namespace menagerie::db::postgres {
          *
          * Example: co_await exec.execute("SELECT * FROM t WHERE id = $1", std::tuple{42});
          */
-        template <beavers::IsNullTerminatedString StringQueryT, typename... Args>
+        template <beaver::IsNullTerminatedString StringQueryT, typename... Args>
             requires(db::IsFieldValueType<Args> && ...)
-        [[nodiscard]] boost::asio::awaitable<beavers::Outcome<ResultBlock, ErrorContext>>
+        [[nodiscard]] boost::asio::awaitable<beaver::Outcome<ResultBlock, ErrorContext>>
         execute(StringQueryT query, std::tuple<Args...> args) const {
             co_return co_await std::apply([&](Args&... a) { return execute(std::move(query), std::move(a)...); }, args);
         }
@@ -169,7 +169,7 @@ namespace menagerie::db::postgres {
          */
         template <typename SqlStringT, typename... Params>
             requires(db::IsFieldValueType<Params> && ...)
-        [[nodiscard]] boost::asio::awaitable<beavers::Outcome<ResultBlock, ErrorContext>>
+        [[nodiscard]] boost::asio::awaitable<beaver::Outcome<ResultBlock, ErrorContext>>
         execute(CompiledStaticQuery<SqlStringT, Params...> query) const {
             co_return co_await execute(query.c_sql(), query.params());
         }
@@ -179,7 +179,7 @@ namespace menagerie::db::postgres {
          * @param query CompiledQuery object
          * @return Awaitable result
          */
-        [[nodiscard]] boost::asio::awaitable<beavers::Outcome<ResultBlock, ErrorContext>>
+        [[nodiscard]] boost::asio::awaitable<beaver::Outcome<ResultBlock, ErrorContext>>
         execute(const CompiledDynamicQuery& query) const;
 
         // Accessors
@@ -203,7 +203,7 @@ namespace menagerie::db::postgres {
         std::weak_ptr<ConnectionHolder> holder_;
 
         // Core implementation
-        [[nodiscard]] boost::asio::awaitable<beavers::Outcome<ResultBlock, ErrorContext>>
+        [[nodiscard]] boost::asio::awaitable<beaver::Outcome<ResultBlock, ErrorContext>>
         execute_impl(const char* query, const Params* params) const;
 
         // Async primitives
@@ -211,7 +211,7 @@ namespace menagerie::db::postgres {
         [[nodiscard]] boost::asio::awaitable<std::optional<ErrorContext>> async_consume_until_ready() const;
 
         // Result collection
-        [[nodiscard]] beavers::Outcome<ResultBlock, ErrorContext> collect_single_result() const;
+        [[nodiscard]] beaver::Outcome<ResultBlock, ErrorContext> collect_single_result() const;
 
         // Validation
         [[nodiscard]] std::optional<ErrorContext> validate_state() const;

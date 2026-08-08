@@ -10,7 +10,7 @@
 #include "concepts.hpp"
 #include "templates.hpp"
 
-namespace menagerie::beavers {
+namespace menagerie::beaver {
     /**
      * @brief Exception thrown by Outcome accessors when called on an alternative
      *        that is not currently held.
@@ -33,7 +33,7 @@ namespace menagerie::beavers {
 
         /// Returns the message passed to the constructor, or a default one.
         [[nodiscard]] const char* what() const noexcept override {
-            return msg_ != nullptr ? msg_ : "menagerie::beavers::BadOutcomeAccess";
+            return msg_ != nullptr ? msg_ : "menagerie::beaver::BadOutcomeAccess";
         }
 
     private:
@@ -640,7 +640,7 @@ namespace menagerie::beavers {
         }
 
     private:
-        // TODO: reimplement std::variant suggested beavers::variant
+        // TODO: reimplement std::variant suggested beaver::variant
         std::variant<T, Errors...> value_;
     };
 
@@ -913,7 +913,7 @@ namespace menagerie::beavers {
         }
 
     private:
-        // TODO: reimplement std::variant suggested beavers::variant
+        // TODO: reimplement std::variant suggested beaver::variant
         std::variant<std::monostate, Errors...> value_;
     };
 
@@ -965,4 +965,4 @@ namespace menagerie::beavers {
         }
     }
 
-}  // namespace menagerie::beavers
+}  // namespace menagerie::beaver

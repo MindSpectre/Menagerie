@@ -10,7 +10,7 @@ target_include_directories(${CHRONO}.Utilities INTERFACE
         utilities/
 )
 target_link_libraries(${CHRONO}.Utilities INTERFACE
-        Menagerie::Common::Beavers
+        Menagerie::Common::Beaver
         Boost::asio
 )
 ##############################################################################
@@ -26,7 +26,7 @@ target_include_directories(${CHRONO}.Stopwatch INTERFACE
         stopwatch/
 )
 target_link_libraries(${CHRONO}.Stopwatch INTERFACE
-        Menagerie::Common::Beavers
+        Menagerie::Common::Beaver
 )
 ##############################################################################
 
@@ -56,7 +56,7 @@ target_include_directories(${CHRONO}.Timer PUBLIC
         timer/
 )
 target_link_libraries(${CHRONO}.Timer PUBLIC
-        Menagerie::Common::Beavers
+        Menagerie::Common::Beaver
         Menagerie::Common::Multithread
 )
 ##############################################################################

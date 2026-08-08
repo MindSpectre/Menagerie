@@ -21,7 +21,7 @@ namespace menagerie::chrono {
      * holds a lock at cancellation time. Prefer execute_polite_vanish() unless the
      * callable is known-uncooperative.
      */
-    class Timer : beavers::NonCopyable {
+    class Timer : beaver::NonCopyable {
     public:
         /// Builds an owned ThreadPool from config.
         explicit Timer(const multithread::ThreadPoolConfig& config) {

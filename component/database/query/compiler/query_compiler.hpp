@@ -12,7 +12,7 @@ namespace menagerie::db {
     /**
      * @brief Turns an expression tree into SQL, in either a compile-time or a runtime path.
      *
-     * compile_static(...) writes into a fixed-capacity beavers::InlineString, allocates nothing, and can run
+     * compile_static(...) writes into a fixed-capacity beaver::InlineString, allocates nothing, and can run
      * in a constexpr context when the expression itself is constexpr; compile_dynamic(...) allocates a
      * std::pmr::monotonic_buffer_resource arena and writes into a std::pmr::string for expressions whose
      * shape or values are only known at runtime. DefaultMode picks each path's default ParamMode, with
@@ -35,7 +35,7 @@ namespace menagerie::db {
         template <ParamMode Mode = StaticDefault, std::size_t MaxLen = 1024, IsQuery Expr>
             requires(Mode != ParamMode::Sink)
         [[nodiscard]] constexpr auto compile_static(const Expression<Expr>& expr) const {
-            SqlGeneratorVisitor<DialectT, beavers::InlineString<MaxLen>, Mode> visitor{};
+            SqlGeneratorVisitor<DialectT, beaver::InlineString<MaxLen>, Mode> visitor{};
             auto params = expr.accept(visitor);
             auto sql    = std::move(visitor).sql();
             return CompiledStaticQuery{std::move(sql), std::move(params)};
@@ -45,7 +45,7 @@ namespace menagerie::db {
         template <ParamMode Mode = StaticDefault, std::size_t MaxLen = 1024, IsQuery Expr>
             requires(Mode != ParamMode::Sink)
         [[nodiscard]] constexpr auto compile_static(Expression<Expr>&& expr) const {
-            SqlGeneratorVisitor<DialectT, beavers::InlineString<MaxLen>, Mode> visitor{};
+            SqlGeneratorVisitor<DialectT, beaver::InlineString<MaxLen>, Mode> visitor{};
             auto params = std::move(expr).accept(visitor);
             auto sql    = std::move(visitor).sql();
             return CompiledStaticQuery{std::move(sql), std::move(params)};

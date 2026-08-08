@@ -14,7 +14,7 @@ namespace menagerie::db::postgres {
      * CapabilityProvider on its own. Destroying it without commit() runs the same
      * connection-holder cleanup path an abandoned Transaction would.
      */
-    class AutoTransaction : public beavers::NonCopyable {
+    class AutoTransaction : public beaver::NonCopyable {
     public:
         /**
          * @brief Set cleanup SQL to run when this transaction releases the slot
@@ -27,18 +27,18 @@ namespace menagerie::db::postgres {
         }
 
         /// Sends COMMIT, moving the underlying transaction ACTIVE -> COMMITTED.
-        [[nodiscard]] beavers::Outcome<void, ErrorContext> commit();
+        [[nodiscard]] beaver::Outcome<void, ErrorContext> commit();
 
         /// Borrows a synchronous executor bound to this transaction's connection.
-        [[nodiscard]] beavers::Outcome<SyncExecutor, ErrorContext> with_sync() const;
+        [[nodiscard]] beaver::Outcome<SyncExecutor, ErrorContext> with_sync() const;
         /**
          * @brief Borrows an asynchronous executor bound to this transaction's connection.
          * @param exec Boost.Asio executor the async operations complete on.
          */
-        [[nodiscard]] beavers::Outcome<AsyncExecutor, ErrorContext> with_async(boost::asio::any_io_executor exec) const;
+        [[nodiscard]] beaver::Outcome<AsyncExecutor, ErrorContext> with_async(boost::asio::any_io_executor exec) const;
 
         /// Creates a nested savepoint named `name` within this transaction.
-        [[nodiscard]] beavers::Outcome<Savepoint, ErrorContext> savepoint(std::string name) const;
+        [[nodiscard]] beaver::Outcome<Savepoint, ErrorContext> savepoint(std::string name) const;
 
         /// Current lifecycle state of the underlying transaction.
         [[nodiscard]] TransactionStatus status() const noexcept;

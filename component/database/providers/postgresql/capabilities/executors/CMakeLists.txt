@@ -14,7 +14,7 @@ target_link_libraries(${DATABASE_POSTGRESQL}.Capabilities.Executor.Shared INTERF
         ${DATABASE_POSTGRESQL}.Errors
         ${DATABASE_POSTGRESQL}.Result
         ${DATABASE_POSTGRESQL}.Params
-        Menagerie::Common::Beavers
+        Menagerie::Common::Beaver
 )
 
 ##############################################################################

@@ -20,7 +20,7 @@ namespace menagerie::multithread {
     /// Destruction order: work_guard reset -> io.stop() -> jthread dtors join. All posted
     /// tasks must finish (or be cancelled) before whatever they reference is destroyed;
     /// declare that state earlier in the owning scope so this dtor runs first.
-    class AsioBackend : beavers::Immutable {
+    class AsioBackend : beaver::Immutable {
     public:
         /// @param n_threads runner threads to spawn.
         /// @param pin       pin each runner to a core when true.

@@ -49,7 +49,7 @@ target_include_directories(${MULTITHREAD}.ResourcePool.Sync
 target_link_libraries(${MULTITHREAD}.ResourcePool.Sync
         INTERFACE
         Threads::Threads
-        Menagerie::Common::Beavers
+        Menagerie::Common::Beaver
         ${MULTITHREAD}.EventCount
         ${MULTITHREAD}.Utils
 )
@@ -71,7 +71,7 @@ target_link_libraries(${MULTITHREAD}.ResourcePool.Async
         Threads::Threads
         Boost::asio
         Boost::system
-        Menagerie::Common::Beavers
+        Menagerie::Common::Beaver
         ${MULTITHREAD}.EventCount
         ${MULTITHREAD}.Utils
 )
@@ -129,7 +129,7 @@ target_include_directories(${MULTITHREAD}.ThreadPool PUBLIC
 )
 
 target_link_libraries(${MULTITHREAD}.ThreadPool PUBLIC
-        Menagerie::Common::Beavers
+        Menagerie::Common::Beaver
         ${MULTITHREAD}.ThreadSafeResource
 )
 ##############################################################################

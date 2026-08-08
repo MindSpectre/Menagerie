@@ -1,7 +1,7 @@
 #pragma once
 
 #include <cstddef>
-#include <menagerie/beavers>
+#include <menagerie/beaver>
 #include <optional>
 #include <span>
 #include <string>
@@ -37,7 +37,7 @@ namespace menagerie::http {
             // string_view/literals here, and std::string's ctor from
             // string_view is explicit - aggregate COPY-init would reject it.
             /// Constructs `bytes` in place from `str` (literal, string_view, or std::string).
-            template <beavers::IsStringLike StringTp>
+            template <beaver::IsStringLike StringTp>
             explicit OwnedBufferPayload(StringTp&& str)
                 : bytes(std::forward<StringTp>(str)) {
             }
@@ -70,7 +70,7 @@ namespace menagerie::http {
      * writes a body by driving read_chunk(), or, for non-streaming bodies, by
      * writing buffered_view() in one shot.
      */
-    class Body : beavers::NonCopyable {
+    class Body : beaver::NonCopyable {
     public:
         Body() noexcept;                   ///< Constructs an EmptyBody.
         Body(Body&&) noexcept;             ///< Moves the active payload via the vtable.
@@ -87,7 +87,7 @@ namespace menagerie::http {
         /// in the SBO slot - no by-value relay moves. The only possible throw
         /// is an unrecoverable bad_alloc from that string's construction
         /// (UNRECOVERABLE_NOEXCEPT - terminate by default).
-        template <beavers::IsStringLike StringTp = std::string>
+        template <beaver::IsStringLike StringTp = std::string>
         static Body owned(StringTp&& bytes) UNRECOVERABLE_NOEXCEPT {
             return Body{emplace_t{}, std::in_place_type<detail::OwnedBufferPayload>, std::forward<StringTp>(bytes)};
         }

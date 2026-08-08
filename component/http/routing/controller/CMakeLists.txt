@@ -14,7 +14,7 @@ target_link_libraries(${Http}.Routing.Controller
         # collapse_outcome instantiates ADL to_http_response calls in consumer
         # TUs — the built-in definitions must travel with this target:
         ${Http}.Types.ErrorResponses
-        Menagerie::Common::Beavers
+        Menagerie::Common::Beaver
         Menagerie::Common::Spider
         Menagerie::Common::Crow
         PRIVATE

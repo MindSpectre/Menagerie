@@ -1,7 +1,7 @@
 #pragma once
 
 #include <cstdint>
-#include <menagerie/beavers>
+#include <menagerie/beaver>
 #include <string>
 #include <string_view>
 
@@ -48,9 +48,9 @@ namespace menagerie::serialization {
     }  // namespace detail
 
     /// @brief One member's serialization descriptor: Ptr is the member pointer,
-    /// Name a beavers::FixedString JSON key, Policy the serialize/deserialize
+    /// Name a beaver::FixedString JSON key, Policy the serialize/deserialize
     /// direction. owner_type / value_type are recovered from Ptr's type.
-    template <auto Ptr, beavers::FixedString Name, FieldPolicy Policy = FieldPolicy::Normal>
+    template <auto Ptr, beaver::FixedString Name, FieldPolicy Policy = FieldPolicy::Normal>
     struct Field {
         static constexpr auto ptr    = Ptr;     ///< The described member's pointer.
         static constexpr auto name   = Name;    ///< The described member's serialized key.

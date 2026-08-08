@@ -1,26 +1,26 @@
-set(BEAVERS ${COMMON}.Beavers)
+set(BEAVER ${COMMON}.Beaver)
 
 ##############################################################################
 # Outcome class for convenient handling
 ##############################################################################
-add_library(${BEAVERS}.Outcome INTERFACE
+add_library(${BEAVER}.Outcome INTERFACE
         outcome/outcome.hpp
 )
-target_include_directories(${BEAVERS}.Outcome INTERFACE
+target_include_directories(${BEAVER}.Outcome INTERFACE
         outcome/
 )
-target_link_libraries(${BEAVERS}.Outcome INTERFACE
-        ${BEAVERS}.MetaProgramming
+target_link_libraries(${BEAVER}.Outcome INTERFACE
+        ${BEAVER}.MetaProgramming
 )
 ##############################################################################
 
 ##############################################################################
 # Custom string library
 ##############################################################################
-add_library(${BEAVERS}.Strings INTERFACE
+add_library(${BEAVER}.Strings INTERFACE
         strings/strings.hpp
 )
-target_include_directories(${BEAVERS}.Strings INTERFACE
+target_include_directories(${BEAVER}.Strings INTERFACE
         strings/
 )
 ##############################################################################
@@ -28,12 +28,12 @@ target_include_directories(${BEAVERS}.Strings INTERFACE
 ##############################################################################
 # Traits for classes
 ##############################################################################
-add_library(${BEAVERS}.MetaProgramming INTERFACE
+add_library(${BEAVER}.MetaProgramming INTERFACE
         meta_programming/class_traits.hpp
         meta_programming/templates.hpp
         meta_programming/concepts.hpp
 )
-target_include_directories(${BEAVERS}.MetaProgramming INTERFACE
+target_include_directories(${BEAVER}.MetaProgramming INTERFACE
         meta_programming/
 )
 ##############################################################################
@@ -41,35 +41,35 @@ target_include_directories(${BEAVERS}.MetaProgramming INTERFACE
 ##############################################################################
 # Traits for classes
 ##############################################################################
-add_library(${BEAVERS}.Utilities INTERFACE
+add_library(${BEAVER}.Utilities INTERFACE
         utilities/macros.hpp
         utilities/utils.hpp
         utilities/types.hpp
         utilities/hash.hpp
         utilities/convert.hpp
 )
-target_include_directories(${BEAVERS}.Utilities INTERFACE
+target_include_directories(${BEAVER}.Utilities INTERFACE
         utilities/
 )
-target_link_libraries(${BEAVERS}.Utilities INTERFACE
-        ${BEAVERS}.MetaProgramming
+target_link_libraries(${BEAVER}.Utilities INTERFACE
+        ${BEAVER}.MetaProgramming
 )
 ##############################################################################
 
 ##############################################################################
 # Gears exported library
 ##############################################################################
-add_combined_library(${BEAVERS}
+add_combined_library(${BEAVER}
         DIRECTORIES
         export
         SOURCES
-        export/menagerie/beavers
+        export/menagerie/beaver
         LIBRARIES
-        ${BEAVERS}.Outcome
-        ${BEAVERS}.MetaProgramming
-        ${BEAVERS}.Utilities
-        ${BEAVERS}.Strings
+        ${BEAVER}.Outcome
+        ${BEAVER}.MetaProgramming
+        ${BEAVER}.Utilities
+        ${BEAVER}.Strings
 )
 
-add_library(Menagerie::Common::Beavers ALIAS ${BEAVERS})
+add_library(Menagerie::Common::Beaver ALIAS ${BEAVER})
 ##############################################################################

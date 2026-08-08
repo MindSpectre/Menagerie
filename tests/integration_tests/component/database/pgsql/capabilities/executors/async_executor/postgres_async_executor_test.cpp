@@ -20,11 +20,11 @@ protected:
         // Get connection parameters from environment or use defaults (matching docker-compose.test.yml)
         const auto credentials =
             ConnectionCredentials::Builder{}
-                .host(menagerie::beavers::value_or(std::getenv("POSTGRES_HOST"), "localhost"))
-                .port(menagerie::beavers::value_or(std::getenv("POSTGRES_PORT"), "5433"))
-                .dbname(menagerie::beavers::value_or(std::getenv("POSTGRES_DB"), "test_db"))
-                .user(menagerie::beavers::value_or(std::getenv("POSTGRES_USER"), "test_user"))
-                .password(menagerie::beavers::value_or(std::getenv("POSTGRES_PASSWORD"), "test_password"))
+                .host(menagerie::beaver::value_or(std::getenv("POSTGRES_HOST"), "localhost"))
+                .port(menagerie::beaver::value_or(std::getenv("POSTGRES_PORT"), "5433"))
+                .dbname(menagerie::beaver::value_or(std::getenv("POSTGRES_DB"), "test_db"))
+                .user(menagerie::beaver::value_or(std::getenv("POSTGRES_USER"), "test_user"))
+                .password(menagerie::beaver::value_or(std::getenv("POSTGRES_PASSWORD"), "test_password"))
                 .finalize();
 
         // Connect to database
@@ -783,8 +783,8 @@ TEST_F(AsyncExecutorTest, SequentialOperations) {
 
 TEST_F(AsyncExecutorTest, MultipleQueriesInSingleCoroutine) {
     const auto results = run_async(
-        [this]() -> boost::asio::awaitable<std::vector<menagerie::beavers::Outcome<ResultBlock, ErrorContext>>> {
-            std::vector<menagerie::beavers::Outcome<ResultBlock, ErrorContext>> results_;
+        [this]() -> boost::asio::awaitable<std::vector<menagerie::beaver::Outcome<ResultBlock, ErrorContext>>> {
+            std::vector<menagerie::beaver::Outcome<ResultBlock, ErrorContext>> results_;
             results_.push_back(co_await executor_->execute("INSERT INTO test_users (name) VALUES ('A')"));
             results_.push_back(co_await executor_->execute("INSERT INTO test_users (name) VALUES ('B')"));
             results_.push_back(co_await executor_->execute("SELECT COUNT(*) FROM test_users"));

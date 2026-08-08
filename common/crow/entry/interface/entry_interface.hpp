@@ -1,7 +1,7 @@
 #pragma once
 
 #include <cinttypes>
-#include <menagerie/beavers>
+#include <menagerie/beaver>
 #include <menagerie/chrono>
 #include <source_location>
 #include <thread>
@@ -24,10 +24,10 @@ namespace menagerie::crow {
     /// compact for per-event copies in the hot path while fitting common
     /// class names (e.g. "PostgresAsyncExecutor" = 21 chars).
     ///
-    /// Overflow behavior (see beavers::InlineString::assign):
+    /// Overflow behavior (see beaver::InlineString::assign):
     /// - consteval context (literal via CROW_COMPONENT_PREFIX): compile error
     /// - runtime context (set_prefix / dynamic source): silently truncates
-    using PrefixNameStorage = beavers::InlineString<31>;
+    using PrefixNameStorage = beaver::InlineString<31>;
 
     /// Implementation details of the entry model: the Meta* mixins EntryBase composes
     /// from, and the machinery make_entry() (entry_factory.hpp) uses to build only the

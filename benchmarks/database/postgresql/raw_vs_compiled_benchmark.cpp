@@ -4,7 +4,7 @@
 #include <functional>
 #include <iomanip>
 #include <iostream>
-#include <menagerie/beavers>
+#include <menagerie/beaver>
 #include <menagerie/chrono>
 #include <menagerie/postgresql>
 #include <numeric>

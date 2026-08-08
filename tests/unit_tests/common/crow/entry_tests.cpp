@@ -1,5 +1,5 @@
 #include <limits>
-#include <menagerie/beavers>
+#include <menagerie/beaver>
 #include <menagerie/crow>
 
 #include <gtest/gtest.h>
@@ -11,7 +11,7 @@ class ServiceTest {
 public:
     void do_something() const {
         std::cout << "Doing something" << std::endl;
-        menagerie::beavers::force_non_static(this);
+        menagerie::beaver::force_non_static(this);
     }
 
     constexpr static std::string_view name = "ServiceTest";

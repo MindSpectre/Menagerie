@@ -1,18 +1,18 @@
 #pragma once
 
-#include <menagerie/beavers>
+#include <menagerie/beaver>
 
 namespace menagerie::chrono {
     template <typename... Args, typename Callable>
         requires std::invocable<Callable, Args...>
     auto Timer::execute_polite_vanish(const std::chrono::milliseconds timeout, Callable&& fn, Args&&... args) {
         // Extract the token reference from arguments
-        static_assert(beavers::has_arg_type<std::shared_ptr<CancellationToken>, Args...>(),
+        static_assert(beaver::has_arg_type<std::shared_ptr<CancellationToken>, Args...>(),
                       "No task properties found in arguments");
 
         // Extract the token reference using the generic get_arg function
         const std::shared_ptr<CancellationToken>& ext_tok =
-            beavers::get_arg<std::shared_ptr<CancellationToken>&>(args...);
+            beaver::get_arg<std::shared_ptr<CancellationToken>&>(args...);
         auto owned_ext_tok = ext_tok;  // copy to avoid aliasing
 
         using result_t = std::invoke_result_t<Callable, Args...>;

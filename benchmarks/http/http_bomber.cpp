@@ -34,7 +34,7 @@
 #include <iomanip>
 #include <iostream>
 #include <memory>
-#include <menagerie/beavers>
+#include <menagerie/beaver>
 #include <new>
 #include <numeric>
 #include <span>
@@ -50,7 +50,7 @@ using tcp     = net::ip::tcp;
 
 namespace {
 
-    using namespace menagerie::beavers::literals;
+    using namespace menagerie::beaver::literals;
 
     // ── Configuration ────────────────────────────────────────────────────────
     struct Options {

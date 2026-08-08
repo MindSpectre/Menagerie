@@ -10,7 +10,7 @@
 #include <cstdint>
 #include <functional>
 #include <memory>
-#include <menagerie/beavers>
+#include <menagerie/beaver>
 #include <new>
 #include <optional>
 #include <stdexcept>
@@ -64,7 +64,7 @@ namespace menagerie::multithread {
      * @tparam MaxSize  the inline capacity cap; @c n_pinned + @c n_free must not exceed it.
      */
     template <typename T, std::size_t MaxSize>
-    class ResourcePool : beavers::Immutable {
+    class ResourcePool : beaver::Immutable {
         static_assert(MaxSize > 0, "ResourcePool MaxSize must be non-zero");
         static_assert(std::move_constructible<T> || std::copy_constructible<T>,
                       "ResourcePool<T>: T must be move- or copy-constructible "

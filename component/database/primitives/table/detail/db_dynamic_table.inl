@@ -5,7 +5,7 @@
 namespace menagerie::db {
 
     // FIELD MANAGEMENT
-    template <typename T, beavers::IsStringLike StringTp1, beavers::IsStringLike StringTp2>
+    template <typename T, beaver::IsStringLike StringTp1, beaver::IsStringLike StringTp2>
     DynamicTable& DynamicTable::add_field(StringTp1&& name, StringTp2&& db_type) {
         auto& field = fields_.emplace_back();
 
@@ -25,7 +25,7 @@ namespace menagerie::db {
         return *this;
     }
 
-    template <beavers::IsStringLike StringTp1, beavers::IsStringLike StringTp2>
+    template <beaver::IsStringLike StringTp1, beaver::IsStringLike StringTp2>
     DynamicTable&
     DynamicTable::add_field(StringTp1&& name, StringTp2&& db_type, [[maybe_unused]] const std::type_index cpp_type) {
         auto& field = fields_.emplace_back();

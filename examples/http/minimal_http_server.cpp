@@ -17,14 +17,14 @@
 #include <cstddef>
 #include <iostream>
 #include <memory>
-#include <menagerie/beavers>
+#include <menagerie/beaver>
 #include <menagerie/http>
 #include <string>
 #include <utility>
 
 namespace {
 
-    using namespace menagerie::beavers::literals;
+    using namespace menagerie::beaver::literals;
 
     namespace http = menagerie::http;
 
@@ -54,7 +54,7 @@ namespace {
         static http::AsyncOutcome<http::Response, http::BodyLimitExceeded> echo(http::RequestContext ctx) {
             auto body = co_await ctx.body().read_to_string(64_kb);
             if (body.is_error()) {
-                co_return menagerie::beavers::err(body.error<http::BodyLimitExceeded>());
+                co_return menagerie::beaver::err(body.error<http::BodyLimitExceeded>());
             }
             co_return ctx.ok(std::move(body).value());
         }
@@ -71,7 +71,7 @@ namespace {
     }
 
     /// Report whichever config error alternative the Outcome holds.
-    [[nodiscard]] int report_config_error(const menagerie::beavers::Outcome<http::ServerConfig,
+    [[nodiscard]] int report_config_error(const menagerie::beaver::Outcome<http::ServerConfig,
                                                                             http::ConfigFileError,
                                                                             http::ConfigParseError,
                                                                             http::ConfigSchemaError>& loaded) {

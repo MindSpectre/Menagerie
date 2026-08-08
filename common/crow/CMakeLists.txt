@@ -20,7 +20,7 @@ target_link_libraries(${CROW}.Entry PUBLIC
         JsonCpp::JsonCpp
         Threads::Threads
         Menagerie::Common::Spider
-        Menagerie::Common::Beavers
+        Menagerie::Common::Beaver
         Menagerie::Common::Chrono
 )
 ##############################################################################

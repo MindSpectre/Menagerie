@@ -2,7 +2,7 @@
 
 #include <filesystem>
 #include <fstream>
-#include <menagerie/beavers>
+#include <menagerie/beaver>
 #include <mutex>
 #include <new>
 
@@ -11,7 +11,7 @@
 
 namespace menagerie::crow {
 
-    using namespace beavers::literals;
+    using namespace beaver::literals;
 
     /**
      * @brief File sink with automatic rotation

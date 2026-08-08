@@ -1,6 +1,6 @@
 #include "body.hpp"
 
-#include <menagerie/beavers>
+#include <menagerie/beaver>
 #include <sstream>
 
 #include <url_decode.hpp>
@@ -10,15 +10,15 @@ namespace menagerie::http {
     namespace {
         struct EmptyPayload {
             [[nodiscard]] boost::asio::awaitable<std::optional<std::span<const std::byte>>, Strand> read_chunk() const {
-                beavers::force_non_static(this);
+                beaver::force_non_static(this);
                 co_return std::nullopt;
             }
             [[nodiscard]] std::optional<std::size_t> size_hint() const {
-                beavers::force_non_static(this);
+                beaver::force_non_static(this);
                 return 0;
             }
             [[nodiscard]] std::optional<std::string_view> buffered_view() const {
-                beavers::force_non_static(this);
+                beaver::force_non_static(this);
                 return std::string_view{};
             }
         };
@@ -91,7 +91,7 @@ namespace menagerie::http {
 
     // -- Buffered helpers --
     namespace {
-        boost::asio::awaitable<beavers::Outcome<std::string, BodyLimitExceeded>, Strand>
+        boost::asio::awaitable<beaver::Outcome<std::string, BodyLimitExceeded>, Strand>
         drain(Body& body, const std::size_t limit) {
             std::string out;
             while (true) {
@@ -99,7 +99,7 @@ namespace menagerie::http {
                 if (!chunk)
                     break;
                 if (out.size() + chunk->size() > limit)
-                    co_return beavers::err(BodyLimitExceeded{limit});
+                    co_return beaver::err(BodyLimitExceeded{limit});
                 out.append(reinterpret_cast<const char*>(chunk->data()), chunk->size());
             }
             co_return out;
@@ -113,12 +113,12 @@ namespace menagerie::http {
     AsyncOutcome<Json::Value, JsonParseError, BodyLimitExceeded> Body::read_json(std::size_t limit) {
         auto d = co_await drain(*this, limit);
         if (!d.is_success())
-            co_return beavers::err(d.error<BodyLimitExceeded>());
+            co_return beaver::err(d.error<BodyLimitExceeded>());
         Json::Value root;
         std::string err;
         Json::CharReaderBuilder builder;
         if (std::istringstream stream{std::move(d).value()}; !Json::parseFromStream(builder, stream, &root, &err))
-            co_return beavers::err(JsonParseError{std::move(err)});
+            co_return beaver::err(JsonParseError{std::move(err)});
         co_return root;
     }
 
@@ -126,7 +126,7 @@ namespace menagerie::http {
     Body::read_form(std::size_t limit) {
         auto d = co_await drain(*this, limit);
         if (!d.is_success())
-            co_return beavers::err(d.error<BodyLimitExceeded>());
+            co_return beaver::err(d.error<BodyLimitExceeded>());
         const std::string body = std::move(d).value();
         std::unordered_map<std::string, std::string> out;
         std::size_t i = 0;
@@ -137,11 +137,11 @@ namespace menagerie::http {
             std::string_view rk = eq == std::string_view::npos ? pair : pair.substr(0, eq);
             std::string_view rv = eq == std::string_view::npos ? std::string_view{} : pair.substr(eq + 1);
             if (rk.empty())
-                co_return beavers::err(FormParseError{"empty key"});
+                co_return beaver::err(FormParseError{"empty key"});
             auto k = url_decode(rk);
             auto v = url_decode(rv);
             if (!k || !v)
-                co_return beavers::err(FormParseError{"invalid percent-escape"});
+                co_return beaver::err(FormParseError{"invalid percent-escape"});
             out[*std::move(k)] = *std::move(v);
             if (amp == std::string::npos)
                 break;
@@ -153,17 +153,17 @@ namespace menagerie::http {
     AsyncOutcome<std::vector<MultipartField>, MultipartParseError, BodyLimitExceeded>
     Body::read_multipart(std::size_t limit, std::string_view boundary) {
         if (boundary.empty())
-            co_return beavers::err(MultipartParseError{"empty boundary"});
+            co_return beaver::err(MultipartParseError{"empty boundary"});
         auto d = co_await drain(*this, limit);
         if (!d.is_success())
-            co_return beavers::err(d.error<BodyLimitExceeded>());
+            co_return beaver::err(d.error<BodyLimitExceeded>());
         const std::string body  = std::move(d).value();
         const std::string delim = "--" + std::string{boundary};
         std::vector<MultipartField> out;
 
         std::size_t pos = body.find(delim);
         if (pos == std::string::npos)
-            co_return beavers::err(MultipartParseError{"no boundary found"});
+            co_return beaver::err(MultipartParseError{"no boundary found"});
         pos += delim.size();
         while (pos < body.size()) {
             if (pos + 2 <= body.size() && body[pos] == '-' && body[pos + 1] == '-')
@@ -172,12 +172,12 @@ namespace menagerie::http {
                 pos += 2;
             std::size_t header_end = body.find("\r\n\r\n", pos);
             if (header_end == std::string::npos)
-                co_return beavers::err(MultipartParseError{"unterminated headers"});
+                co_return beaver::err(MultipartParseError{"unterminated headers"});
             std::string_view header_block{body.data() + pos, header_end - pos};
             std::size_t body_start = header_end + 4;
             std::size_t next       = body.find("\r\n" + delim, body_start);
             if (next == std::string::npos)
-                co_return beavers::err(MultipartParseError{"unterminated part"});
+                co_return beaver::err(MultipartParseError{"unterminated part"});
             std::string_view part_body{body.data() + body_start, next - body_start};
 
             MultipartField field;

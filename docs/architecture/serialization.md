@@ -12,7 +12,7 @@ through `formats/json/`. Everything is reached through `#include <menagerie/seri
 ## Key types
 
 - **`Field<Ptr, Name, Policy = FieldPolicy::Normal>`** -- one
-  member's serialization descriptor: `ptr` is the member pointer, `name` a `beavers::FixedString` JSON key,
+  member's serialization descriptor: `ptr` is the member pointer, `name` a `beaver::FixedString` JSON key,
   and `owner_type` / `value_type` are recovered from `Ptr`'s type via `member_pointer_traits`.
 - **`FieldPolicy`** -- `Normal` (serialize + deserialize),
   `Secret` (deserialize only -- e.g. passwords, so a re-serialized config never echoes the value back out),

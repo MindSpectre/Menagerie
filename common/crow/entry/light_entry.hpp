@@ -32,7 +32,7 @@ namespace menagerie::crow {
         /// Always throws: LightEntry carries no timestamp to order by.
         /// @throw std::logic_error unconditionally.
         static bool comp(const LightEntry& lhs, const LightEntry& rhs) {
-            beavers::unused_value(lhs, rhs);
+            beaver::unused_value(lhs, rhs);
             static_assert(true, "Can not be sorted");
             throw std::logic_error("Can not be sorted");
         }
@@ -41,6 +41,6 @@ namespace menagerie::crow {
     /// Meta* mixins at all.
     template <>
     struct detail::entry_traits<LightEntry> {
-        using wants = beavers::type_list<>;  ///< Empty: LightEntry composes no mixins.
+        using wants = beaver::type_list<>;  ///< Empty: LightEntry composes no mixins.
     };
 }  // namespace menagerie::crow

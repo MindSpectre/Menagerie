@@ -1,6 +1,6 @@
 #pragma once
 #include <charconv>
-#include <menagerie/beavers>
+#include <menagerie/beaver>
 
 namespace menagerie::db::postgres {
 
@@ -72,11 +72,11 @@ namespace menagerie::db::postgres {
     template <Appendable StringT, std::floating_point FloatT>
     constexpr void PostgresDialect::format_floating(StringT& query, const FloatT val) {
         if consteval {
-            query += beavers::constexpr_to_string(val);  // TODO:C++26: to_chars for floating is not marked as constexpr
+            query += beaver::constexpr_to_string(val);  // TODO:C++26: to_chars for floating is not marked as constexpr
         } else {
             char buf[32];
             auto [end, ec] = std::to_chars(buf, buf + sizeof(buf), val);
-            beavers::unused_value(ec);  // ignore errors
+            beaver::unused_value(ec);  // ignore errors
             std::string_view view{buf, static_cast<std::size_t>(end - buf)};
             query += view;
         }
@@ -86,7 +86,7 @@ namespace menagerie::db::postgres {
     constexpr void PostgresDialect::format_integral(StringT& query, const IntT val) {
         char buf[24];
         auto [end, ec] = std::to_chars(buf, buf + sizeof(buf), val);
-        beavers::unused_value(ec);  // ignore errors
+        beaver::unused_value(ec);  // ignore errors
         std::string_view view{buf, static_cast<std::size_t>(end - buf)};
         query += view;
     }
@@ -128,7 +128,7 @@ namespace menagerie::db::postgres {
                                      std::is_same_v<T, std::span<const std::uint8_t>>) {
                     format_binary(query, val);
                 } else {
-                    beavers::unreachable_c<T>();
+                    beaver::unreachable_c<T>();
                 }
             },
             value);

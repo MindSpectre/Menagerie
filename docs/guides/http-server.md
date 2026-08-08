@@ -70,7 +70,7 @@ private:
     static http::AsyncOutcome<http::Response, http::BodyLimitExceeded> echo(http::RequestContext ctx) {
         auto body = co_await ctx.body().read_to_string(64 * 1024);
         if (body.is_error()) {
-            co_return menagerie::beavers::err(body.error<http::BodyLimitExceeded>());
+            co_return menagerie::beaver::err(body.error<http::BodyLimitExceeded>());
         }
         co_return ctx.ok(std::move(body).value());
     }
@@ -274,7 +274,7 @@ A handler never has to build the error response itself:
 static http::AsyncOutcome<http::Response, http::NotFoundError> get_thing(http::RequestContext ctx) {
     const auto id = ctx.path_param<std::string>("id").value_or("");
     if (id.empty()) {
-        co_return menagerie::beavers::err(http::NotFoundError{"thing", id});
+        co_return menagerie::beaver::err(http::NotFoundError{"thing", id});
     }
     co_return ctx.ok("thing:" + id);
 }

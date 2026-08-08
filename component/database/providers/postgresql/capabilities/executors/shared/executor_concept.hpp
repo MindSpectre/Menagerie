@@ -1,6 +1,6 @@
 #pragma once
 
-#include <menagerie/beavers>
+#include <menagerie/beaver>
 
 #include <compiled_query/compiled_dynamic_query.hpp>
 #include <compiled_query/compiled_static_query.hpp>
@@ -18,7 +18,7 @@ namespace menagerie::db::postgres {
                                   const FieldValue& field_value,
                                   const std::tuple<FieldValue>& tuple_args,
                                   const CompiledDynamicQuery& dynamic_query,
-                                  const CompiledStaticQuery<beavers::InlineString<128>>& static_query) {
+                                  const CompiledStaticQuery<beaver::InlineString<128>>& static_query) {
         { exec.execute(query) };
         { exec.execute(query, params) };
         { exec.execute(query, field_value) };

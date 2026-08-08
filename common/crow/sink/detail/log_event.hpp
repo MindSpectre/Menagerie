@@ -47,7 +47,7 @@ namespace menagerie::crow {
 
         // Use entry_traits to extract only what EntryT wants
         using want_types = detail::entry_traits<EntryT>::wants;
-        auto args        = beavers::make_arg_tuple<want_types, decltype(available)>::from(std::move(available));
+        auto args        = beaver::make_arg_tuple<want_types, decltype(available)>::from(std::move(available));
 
         // Construct entry with level, message, and tailored metadata
         return std::apply(

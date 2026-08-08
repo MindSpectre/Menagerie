@@ -47,7 +47,7 @@ int main() {
                 .threshold(menagerie::crow::LogLevel::Debug)
                 .file("crow_contention_8t.log")
                 .add_time_to_filename(false)
-                .max_file_size(menagerie::beavers::literals::operator""_mb(500))
+                .max_file_size(menagerie::beaver::literals::operator""_mb(500))
                 .flush_each_entry(false)
                 .rotate_file(false)
                 .finalize();
@@ -73,7 +73,7 @@ int main() {
                 .threshold(menagerie::crow::LogLevel::Debug)
                 .file("crow_baseline_1t.log")
                 .add_time_to_filename(false)
-                .max_file_size(menagerie::beavers::literals::operator""_mb(500))
+                .max_file_size(menagerie::beaver::literals::operator""_mb(500))
                 .flush_each_entry(false)
                 .rotate_file(false)
                 .finalize();
@@ -129,7 +129,7 @@ int main() {
                     .threshold(menagerie::crow::LogLevel::Debug)
                     .file(path)
                     .add_time_to_filename(false)
-                    .max_file_size(menagerie::beavers::literals::operator""_mb(500))
+                    .max_file_size(menagerie::beaver::literals::operator""_mb(500))
                     .flush_each_entry(false)
                     .rotate_file(false)
                     .finalize());
@@ -156,7 +156,7 @@ int main() {
                 .threshold(menagerie::crow::LogLevel::Debug)
                 .file("crow_e2e_8t.log")
                 .add_time_to_filename(false)
-                .max_file_size(menagerie::beavers::literals::operator""_mb(500))
+                .max_file_size(menagerie::beaver::literals::operator""_mb(500))
                 .flush_each_entry(false)
                 .rotate_file(false)
                 .finalize());
@@ -189,7 +189,7 @@ int main() {
                     .threshold(menagerie::crow::LogLevel::Debug)
                     .file(path)
                     .add_time_to_filename(false)
-                    .max_file_size(menagerie::beavers::literals::operator""_mb(500))
+                    .max_file_size(menagerie::beaver::literals::operator""_mb(500))
                     .flush_each_entry(false)
                     .rotate_file(false)
                     .finalize());

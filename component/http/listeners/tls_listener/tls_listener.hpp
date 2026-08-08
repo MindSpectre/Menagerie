@@ -58,7 +58,7 @@ namespace menagerie::http {
     public:
         /// Delegates to the full ctor with the default 8 KB request arena size.
         template <typename VectorExecutorTp,
-                  beavers::IsStringLike StringTp,
+                  beaver::IsStringLike StringTp,
                   typename TlsConfigTp,
                   IsHttpDriver... DriversTp>
             requires std::is_same_v<std::remove_cvref_t<VectorExecutorTp>, std::vector<Executor>> &&
@@ -82,7 +82,7 @@ namespace menagerie::http {
         /// literals/string_views construct host_ in place - better than
         /// forcing callers through a std::string temporary.
         template <typename VectorExecutorTp,
-                  beavers::IsStringLike StringTp,
+                  beaver::IsStringLike StringTp,
                   typename TlsConfigTp,
                   IsHttpDriver... DriversTp>
             requires std::is_same_v<std::remove_cvref_t<VectorExecutorTp>, std::vector<Executor>> &&

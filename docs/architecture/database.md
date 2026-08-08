@@ -6,7 +6,7 @@ into parameterized SQL text without knowing which database engine will run it. A
 engine-facing half: today that is `providers/postgresql/` only, built whenever `BUILD_POSTGRESQL` is on (the
 default). The dividing line is deliberate: everything above the provider layer can be type-checked and, for
 schemas known at compile time, evaluated at compile time; everything in the provider layer talks to libpq,
-manages real sockets, and returns `beavers::Outcome<T, ErrorContext>` instead of throwing on the ordinary failure
+manages real sockets, and returns `beaver::Outcome<T, ErrorContext>` instead of throwing on the ordinary failure
 paths (pool exhaustion, a bad connection, a constraint violation). Two independent connection-pooling strategies
 live side by side in the PostgreSQL provider -- a lock-free ring-buffer pool for the fail-fast path and a classic
 mutex-plus-FIFO pool for strict waiter fairness -- both exposed through the same small `CapabilityProvider`
@@ -38,11 +38,11 @@ surface so executor and transaction code does not need to know which pool it is 
   integers, float/double, owning and view string/binary forms); `Field` is a schema-validated value holder;
   `Column`/`TypedColumn<CppType>` name a column, optionally table-qualified and aliased; `Record` is a
   schema-backed row keyed by a `shared_ptr<const DynamicTable>`. Two table flavors exist side by side:
-  `StaticTable<TableName, FieldSchemas...>` takes its name as a compile-time `beavers::FixedString` NTTP and its
+  `StaticTable<TableName, FieldSchemas...>` takes its name as a compile-time `beaver::FixedString` NTTP and its
   fields as `StaticFieldSchema<CppType, Name, Constraints...>` template parameters -- no heap allocation for the
   schema itself, and `column<"name">()` is a compile-time name lookup that returns a `TypedColumn<CppType>` with
   the value type auto-deduced -- while `DynamicTable` registers fields at runtime through `add_field(...)` and
-  resolves them by name through `get_field_schema(...)`. Depends only on `Features` and common Beavers utilities.
+  resolves them by name through `get_field_schema(...)`. Depends only on `Features` and common Beaver utilities.
 - **`query/`**: the expression tree
   (`query/expressions/`) and its compiler (`query/compiler/`); see Query building below for how the two fit
   together. Depends on `primitives` (columns and tables are expression operands) and on `base.Dialect` /
@@ -70,7 +70,7 @@ operands that are not already expression nodes), and comparison operators on col
 
 `QueryCompiler<DialectT, DefaultMode>` (`query/compiler/query_compiler.hpp`) turns a tree into SQL through
 `SqlGeneratorVisitor`, in one of two modes selected by `ParamMode`: `compile_static(...)` is the constexpr path --
-it writes into a fixed-capacity `beavers::InlineString<MaxLen>`, allocates nothing on the heap, and can run at
+it writes into a fixed-capacity `beaver::InlineString<MaxLen>`, allocates nothing on the heap, and can run at
 compile time when the expression is itself `constexpr` -- while `compile_dynamic(...)` is the runtime path,
 allocating a `std::pmr::monotonic_buffer_resource` arena and writing into a `std::pmr::string`. `ParamMode` itself
 has three values: `Inline` (literal values are formatted directly into the SQL text through the dialect's

@@ -75,7 +75,7 @@ if (absl_FOUND)
             absl::log_sink
             absl::log_initialize
             absl::log_globals
-            Menagerie::Common::Beavers
+            Menagerie::Common::Beaver
             Menagerie::Common::Chameleon
     )
 else ()

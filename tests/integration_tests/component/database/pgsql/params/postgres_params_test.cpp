@@ -6,7 +6,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <memory_resource>
-#include <menagerie/beavers>
+#include <menagerie/beaver>
 
 #include <gtest/gtest.h>
 #include <netinet/in.h>
@@ -24,11 +24,11 @@ class PostgresParamsTest : public ::testing::Test {
 protected:
     void SetUp() override {
         // Get connection parameters from environment or use defaults
-        const std::string host     = menagerie::beavers::value_or(std::getenv("POSTGRES_HOST"), "localhost");
-        const std::string port     = menagerie::beavers::value_or(std::getenv("POSTGRES_PORT"), "5433");
-        const std::string dbname   = menagerie::beavers::value_or(std::getenv("POSTGRES_DB"), "test_db");
-        const std::string user     = menagerie::beavers::value_or(std::getenv("POSTGRES_USER"), "test_user");
-        const std::string password = menagerie::beavers::value_or(std::getenv("POSTGRES_PASSWORD"), "test_password");
+        const std::string host     = menagerie::beaver::value_or(std::getenv("POSTGRES_HOST"), "localhost");
+        const std::string port     = menagerie::beaver::value_or(std::getenv("POSTGRES_PORT"), "5433");
+        const std::string dbname   = menagerie::beaver::value_or(std::getenv("POSTGRES_DB"), "test_db");
+        const std::string user     = menagerie::beaver::value_or(std::getenv("POSTGRES_USER"), "test_user");
+        const std::string password = menagerie::beaver::value_or(std::getenv("POSTGRES_PASSWORD"), "test_password");
 
         // Create connection string
         const std::string conn_info =

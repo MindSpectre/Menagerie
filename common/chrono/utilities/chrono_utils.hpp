@@ -2,7 +2,7 @@
 
 #include <algorithm>
 #include <chrono>
-#include <menagerie/beavers>
+#include <menagerie/beaver>
 #include <thread>
 
 #include <boost/asio/awaitable.hpp>
@@ -18,7 +18,7 @@ namespace menagerie::chrono {
      * can jump backwards under NTP. Returning a bare count suits callers that pack the
      * value into an atomic word rather than carrying a duration around.
      */
-    template <beavers::IsDuration DurationClass = std::chrono::milliseconds>
+    template <beaver::IsDuration DurationClass = std::chrono::milliseconds>
     [[nodiscard]] std::uint64_t steady_since_epoch() noexcept {
         return static_cast<std::uint64_t>(
             std::chrono::duration_cast<DurationClass>(std::chrono::steady_clock::now().time_since_epoch()).count());
@@ -36,14 +36,14 @@ namespace menagerie::chrono {
     }
 
     /// Blocks the calling thread for duration (std::this_thread::sleep_for).
-    template <beavers::IsDuration DurationClass>
+    template <beaver::IsDuration DurationClass>
     void sleep_for(const DurationClass duration) {
         std::this_thread::sleep_for(duration);
     }
 
     /// Suspends the calling coroutine for duration, using the awaiting coroutine's
     /// executor (boost::asio::steady_timer under the hood).
-    template <beavers::IsDuration DurationClass>
+    template <beaver::IsDuration DurationClass>
     boost::asio::awaitable<void> async_sleep_for(const DurationClass duration) {
         auto executor = co_await boost::asio::this_coro::executor;
         boost::asio::steady_timer timer(executor);
@@ -53,7 +53,7 @@ namespace menagerie::chrono {
 
     /// @overload
     /// Runs the timer on executor instead of the awaiting coroutine's own executor.
-    template <beavers::IsDuration DurationClass>
+    template <beaver::IsDuration DurationClass>
     boost::asio::awaitable<void> async_sleep_for(const boost::asio::any_io_executor& executor,
                                                  const DurationClass duration) {
         boost::asio::steady_timer timer(executor);

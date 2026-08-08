@@ -3,7 +3,7 @@
 #include <concepts>
 #include <functional>
 #include <memory>
-#include <menagerie/beavers>
+#include <menagerie/beaver>
 #include <menagerie/crow>
 #include <menagerie/spider>
 #include <span>
@@ -48,7 +48,7 @@ namespace menagerie::http {
         };
         /// Specialization for a handler returning AsyncOutcome<Response, Es...>.
         template <typename... Es>
-        struct RouteHandlerTraits<boost::asio::awaitable<beavers::Outcome<Response, Es...>, Strand>> {
+        struct RouteHandlerTraits<boost::asio::awaitable<beaver::Outcome<Response, Es...>, Strand>> {
             static constexpr bool valid =
                 (HasToHttpResponse<Es> && ...);  ///< Valid only when every Es has an ADL to_http_response.
             static constexpr bool has_outcome =
@@ -147,140 +147,140 @@ namespace menagerie::http {
 
         // --GET--
         /// Registers a GET route at `path` calling member function `m`.
-        template <beavers::IsStringLike StringTp, std::derived_from<HttpController> ControllerTp>
+        template <beaver::IsStringLike StringTp, std::derived_from<HttpController> ControllerTp>
         void Get(StringTp&& path, AsyncResponse (ControllerTp::*m)(RequestContext)) {
             member_route(HttpMethod::get, std::forward<StringTp>(path), m);
         }
 
         /// Registers a GET route at `path` calling member function `m`,
         /// collapsing its typed-error Outcome result.
-        template <beavers::IsStringLike StringTp, std::derived_from<HttpController> ControllerT, typename... Es>
+        template <beaver::IsStringLike StringTp, std::derived_from<HttpController> ControllerT, typename... Es>
         void Get(StringTp&& path, AsyncOutcome<Response, Es...> (ControllerT::*m)(RequestContext)) {
             member_outcome_route(HttpMethod::get, std::forward<StringTp>(path), m);
         }
 
         /// Registers a GET route at `path` calling free function/lambda `f`.
-        template <beavers::IsStringLike StringTp, IsRouteHandler FuncTp>
+        template <beaver::IsStringLike StringTp, IsRouteHandler FuncTp>
         void Get(StringTp&& path, FuncTp&& f) {
             callable_route(HttpMethod::get, std::forward<StringTp>(path), std::forward<FuncTp>(f));
         }
 
         // --POST--
         /// Registers a POST route at `path` calling member function `m`.
-        template <beavers::IsStringLike StringTp, std::derived_from<HttpController> ControllerTp>
+        template <beaver::IsStringLike StringTp, std::derived_from<HttpController> ControllerTp>
         void Post(StringTp&& path, AsyncResponse (ControllerTp::*m)(RequestContext)) {
             member_route(HttpMethod::post, std::forward<StringTp>(path), m);
         }
 
         /// Registers a POST route at `path` calling member function `m`,
         /// collapsing its typed-error Outcome result.
-        template <beavers::IsStringLike StringTp, std::derived_from<HttpController> ControllerT, typename... Es>
+        template <beaver::IsStringLike StringTp, std::derived_from<HttpController> ControllerT, typename... Es>
         void Post(StringTp&& path, AsyncOutcome<Response, Es...> (ControllerT::*m)(RequestContext)) {
             member_outcome_route(HttpMethod::post, std::forward<StringTp>(path), m);
         }
 
         /// Registers a POST route at `path` calling free function/lambda `f`.
-        template <beavers::IsStringLike StringTp, IsRouteHandler FuncTp>
+        template <beaver::IsStringLike StringTp, IsRouteHandler FuncTp>
         void Post(StringTp&& path, FuncTp&& f) {
             callable_route(HttpMethod::post, std::forward<StringTp>(path), std::forward<FuncTp>(f));
         }
 
         // --PUT--
         /// Registers a PUT route at `path` calling member function `m`.
-        template <beavers::IsStringLike StringTp, std::derived_from<HttpController> ControllerTp>
+        template <beaver::IsStringLike StringTp, std::derived_from<HttpController> ControllerTp>
         void Put(StringTp&& path, AsyncResponse (ControllerTp::*m)(RequestContext)) {
             member_route(HttpMethod::put, std::forward<StringTp>(path), m);
         }
 
         /// Registers a PUT route at `path` calling member function `m`,
         /// collapsing its typed-error Outcome result.
-        template <beavers::IsStringLike StringTp, std::derived_from<HttpController> ControllerT, typename... Es>
+        template <beaver::IsStringLike StringTp, std::derived_from<HttpController> ControllerT, typename... Es>
         void Put(StringTp&& path, AsyncOutcome<Response, Es...> (ControllerT::*m)(RequestContext)) {
             member_outcome_route(HttpMethod::put, std::forward<StringTp>(path), m);
         }
 
         /// Registers a PUT route at `path` calling free function/lambda `f`.
-        template <beavers::IsStringLike StringTp, IsRouteHandler FuncTp>
+        template <beaver::IsStringLike StringTp, IsRouteHandler FuncTp>
         void Put(StringTp&& path, FuncTp&& f) {
             callable_route(HttpMethod::put, std::forward<StringTp>(path), std::forward<FuncTp>(f));
         }
 
         // --PATCH--
         /// Registers a PATCH route at `path` calling member function `m`.
-        template <beavers::IsStringLike StringTp, std::derived_from<HttpController> ControllerTp>
+        template <beaver::IsStringLike StringTp, std::derived_from<HttpController> ControllerTp>
         void Patch(StringTp&& path, AsyncResponse (ControllerTp::*m)(RequestContext)) {
             member_route(HttpMethod::patch, std::forward<StringTp>(path), m);
         }
 
         /// Registers a PATCH route at `path` calling member function `m`,
         /// collapsing its typed-error Outcome result.
-        template <beavers::IsStringLike StringTp, std::derived_from<HttpController> ControllerT, typename... Es>
+        template <beaver::IsStringLike StringTp, std::derived_from<HttpController> ControllerT, typename... Es>
         void Patch(StringTp&& path, AsyncOutcome<Response, Es...> (ControllerT::*m)(RequestContext)) {
             member_outcome_route(HttpMethod::patch, std::forward<StringTp>(path), m);
         }
 
         /// Registers a PATCH route at `path` calling free function/lambda `f`.
-        template <beavers::IsStringLike StringTp, IsRouteHandler FuncTp>
+        template <beaver::IsStringLike StringTp, IsRouteHandler FuncTp>
         void Patch(StringTp&& path, FuncTp&& f) {
             callable_route(HttpMethod::patch, std::forward<StringTp>(path), std::forward<FuncTp>(f));
         }
 
         // --DELETE--
         /// Registers a DELETE route at `path` calling member function `m`.
-        template <beavers::IsStringLike StringTp, std::derived_from<HttpController> ControllerTp>
+        template <beaver::IsStringLike StringTp, std::derived_from<HttpController> ControllerTp>
         void Delete(StringTp&& path, AsyncResponse (ControllerTp::*m)(RequestContext)) {
             member_route(HttpMethod::del, std::forward<StringTp>(path), m);
         }
 
         /// Registers a DELETE route at `path` calling member function `m`,
         /// collapsing its typed-error Outcome result.
-        template <beavers::IsStringLike StringTp, std::derived_from<HttpController> ControllerT, typename... Es>
+        template <beaver::IsStringLike StringTp, std::derived_from<HttpController> ControllerT, typename... Es>
         void Delete(StringTp&& path, AsyncOutcome<Response, Es...> (ControllerT::*m)(RequestContext)) {
             member_outcome_route(HttpMethod::del, std::forward<StringTp>(path), m);
         }
 
         /// Registers a DELETE route at `path` calling free function/lambda `f`.
-        template <beavers::IsStringLike StringTp, IsRouteHandler FuncTp>
+        template <beaver::IsStringLike StringTp, IsRouteHandler FuncTp>
         void Delete(StringTp&& path, FuncTp&& f) {
             callable_route(HttpMethod::del, std::forward<StringTp>(path), std::forward<FuncTp>(f));
         }
 
         // --HEAD--
         /// Registers a HEAD route at `path` calling member function `m`.
-        template <beavers::IsStringLike StringTp, std::derived_from<HttpController> ControllerTp>
+        template <beaver::IsStringLike StringTp, std::derived_from<HttpController> ControllerTp>
         void Head(StringTp&& path, AsyncResponse (ControllerTp::*m)(RequestContext)) {
             member_route(HttpMethod::head, std::forward<StringTp>(path), m);
         }
 
         /// Registers a HEAD route at `path` calling member function `m`,
         /// collapsing its typed-error Outcome result.
-        template <beavers::IsStringLike StringTp, std::derived_from<HttpController> ControllerT, typename... Es>
+        template <beaver::IsStringLike StringTp, std::derived_from<HttpController> ControllerT, typename... Es>
         void Head(StringTp&& path, AsyncOutcome<Response, Es...> (ControllerT::*m)(RequestContext)) {
             member_outcome_route(HttpMethod::head, std::forward<StringTp>(path), m);
         }
 
         /// Registers a HEAD route at `path` calling free function/lambda `f`.
-        template <beavers::IsStringLike StringTp, IsRouteHandler FuncTp>
+        template <beaver::IsStringLike StringTp, IsRouteHandler FuncTp>
         void Head(StringTp&& path, FuncTp&& f) {
             callable_route(HttpMethod::head, std::forward<StringTp>(path), std::forward<FuncTp>(f));
         }
 
         // --OPTIONS--
         /// Registers an OPTIONS route at `path` calling member function `m`.
-        template <beavers::IsStringLike StringTp, std::derived_from<HttpController> ControllerTp>
+        template <beaver::IsStringLike StringTp, std::derived_from<HttpController> ControllerTp>
         void Options(StringTp&& path, AsyncResponse (ControllerTp::*m)(RequestContext)) {
             member_route(HttpMethod::options, std::forward<StringTp>(path), m);
         }
 
         /// Registers an OPTIONS route at `path` calling member function `m`,
         /// collapsing its typed-error Outcome result.
-        template <beavers::IsStringLike StringTp, std::derived_from<HttpController> ControllerT, typename... Es>
+        template <beaver::IsStringLike StringTp, std::derived_from<HttpController> ControllerT, typename... Es>
         void Options(StringTp&& path, AsyncOutcome<Response, Es...> (ControllerT::*m)(RequestContext)) {
             member_outcome_route(HttpMethod::options, std::forward<StringTp>(path), m);
         }
 
         /// Registers an OPTIONS route at `path` calling free function/lambda `f`.
-        template <beavers::IsStringLike StringTp, IsRouteHandler FuncTp>
+        template <beaver::IsStringLike StringTp, IsRouteHandler FuncTp>
         void Options(StringTp&& path, FuncTp&& f) {
             callable_route(HttpMethod::options, std::forward<StringTp>(path), std::forward<FuncTp>(f));
         }
@@ -297,7 +297,7 @@ namespace menagerie::http {
             BakeFn bake;
         };
 
-        template <beavers::IsStringLike StringTp, typename BakeFnTp>
+        template <beaver::IsStringLike StringTp, typename BakeFnTp>
         void push_route(const HttpMethod method, StringTp&& path, BakeFnTp&& bake) {
             if (baked_)
                 throw std::logic_error{"HttpController: route registration after bake"};
@@ -317,7 +317,7 @@ namespace menagerie::http {
             return typed;
         }
 
-        template <beavers::IsStringLike StringTp, std::derived_from<HttpController> ControllerT>
+        template <beaver::IsStringLike StringTp, std::derived_from<HttpController> ControllerT>
         void member_route(const HttpMethod method, StringTp&& path, AsyncResponse (ControllerT::*m)(RequestContext)) {
             push_route(method,
                        std::forward<StringTp>(path),
@@ -335,7 +335,7 @@ namespace menagerie::http {
                        });
         }
 
-        template <beavers::IsStringLike StringTp, std::derived_from<HttpController> ControllerT, typename... Es>
+        template <beaver::IsStringLike StringTp, std::derived_from<HttpController> ControllerT, typename... Es>
             requires(detail::HasToHttpResponse<Es> && ...)
         void member_outcome_route(const HttpMethod method,
                                   StringTp&& path,
@@ -353,7 +353,7 @@ namespace menagerie::http {
                        });
         }
 
-        template <beavers::IsStringLike StringTp, IsRouteHandler HandlerFunctionT>
+        template <beaver::IsStringLike StringTp, IsRouteHandler HandlerFunctionT>
         void callable_route(const HttpMethod method, StringTp&& path, HandlerFunctionT&& f) {
             using Fn     = std::decay_t<HandlerFunctionT>;
             using Traits = detail::RouteHandlerTraits<std::invoke_result_t<Fn&, RequestContext>>;

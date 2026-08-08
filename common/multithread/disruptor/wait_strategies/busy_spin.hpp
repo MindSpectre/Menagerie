@@ -1,6 +1,6 @@
 #pragma once
 
-#include <menagerie/beavers>
+#include <menagerie/beaver>
 
 #include <pause.hpp>
 
@@ -42,7 +42,7 @@ namespace menagerie::multithread {
         /// Spins in a tight loop (with a pause hint) until `cursor` reaches `sequence`;
         /// never yields or blocks.
         [[nodiscard]] std::int64_t wait_for(const std::int64_t sequence, const Sequence& cursor) const {
-            beavers::force_non_static(this);
+            beaver::force_non_static(this);
             std::int64_t available_sequence;
 
             // Tight spin loop - no pauses, no yields
@@ -59,13 +59,13 @@ namespace menagerie::multithread {
         /// No-op: spinning waiters observe the published value directly via the
         /// acquire load.
         void signal() const noexcept {
-            beavers::force_non_static(this);
+            beaver::force_non_static(this);
             // No-op: Spinning threads will see the update via acquire load
         }
 
         /// No-op: there is nothing parked to wake.
         void signal_all() const noexcept {
-            beavers::force_non_static(this);
+            beaver::force_non_static(this);
             // No-op: Nothing to wake up
         }
     };

@@ -5,7 +5,7 @@
 #include <condition_variable>
 #include <future>
 #include <list>
-#include <menagerie/beavers>
+#include <menagerie/beaver>
 #include <mutex>
 #include <queue>
 #include <thread>
@@ -29,7 +29,7 @@ namespace menagerie::multithread {
      * worker is idle. Unlike the other primitives in this library, ThreadPool
      * has an out-of-line `.cpp` rather than being header-only.
      */
-    class ThreadPool : beavers::Immutable {
+    class ThreadPool : beaver::Immutable {
     public:
         using TaskPriority = uint32_t;  ///< Higher values run first in the task priority queue.
 
