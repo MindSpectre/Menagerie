@@ -12,7 +12,7 @@ add_subdirectory(multithread)
 
 add_subdirectory(render-chameleon)
 
-add_subdirectory(crow)
+add_subdirectory(logger-crow)
 
 add_subdirectory(3rdparty)
 

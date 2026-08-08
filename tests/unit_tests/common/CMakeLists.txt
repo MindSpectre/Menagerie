@@ -69,20 +69,20 @@ target_link_libraries(${UNIT_TESTING_TARGET}.Chameleon
 # Test crow
 ##############################################################################
 add_unit_test(${UNIT_TESTING_TARGET}.Crow
-        crow/logger_provider_test.cpp
-        crow/entry_tests.cpp
-        crow/main.cpp
-        crow/logger/file_sink_test.cpp
-        crow/logger/console_sink_test.cpp
-        crow/logger/logger_ordering_test.cpp
-        crow/logger/sink_status_test.cpp
-        crow/logger/sink_health_test.cpp
-        crow/logger/file_naming_test.cpp
-        crow/logger/rotation_test.cpp
-        crow/logger/logger_registry_test.cpp
-        crow/logger/logger_gate_test.cpp
-        crow/prefix_filter_test.cpp
-        crow/prefix_integration_test.cpp
+        logger-crow/logger_provider_test.cpp
+        logger-crow/entry_tests.cpp
+        logger-crow/main.cpp
+        logger-crow/logger/file_sink_test.cpp
+        logger-crow/logger/console_sink_test.cpp
+        logger-crow/logger/logger_ordering_test.cpp
+        logger-crow/logger/sink_status_test.cpp
+        logger-crow/logger/sink_health_test.cpp
+        logger-crow/logger/file_naming_test.cpp
+        logger-crow/logger/rotation_test.cpp
+        logger-crow/logger/logger_registry_test.cpp
+        logger-crow/logger/logger_gate_test.cpp
+        logger-crow/prefix_filter_test.cpp
+        logger-crow/prefix_integration_test.cpp
 )
 target_link_libraries(${UNIT_TESTING_TARGET}.Crow
         PRIVATE
