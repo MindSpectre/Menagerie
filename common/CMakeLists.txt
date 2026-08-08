@@ -2,7 +2,7 @@ set(COMMON ${PROJECT_NAME}.Common)
 
 ###############################################
 
-add_subdirectory(beaver)
+add_subdirectory(core-beaver)
 
 add_subdirectory(serialization)
 

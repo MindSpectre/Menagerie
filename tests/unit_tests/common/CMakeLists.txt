@@ -122,7 +122,7 @@ target_link_libraries(${UNIT_TESTING_TARGET}.Algorithms
 # Test Beaver Result (Outcome)
 ##############################################################################
 add_unit_test(${UNIT_TESTING_TARGET}.Beaver.Outcome
-        beaver/test_outcome.cpp
+        core-beaver/test_outcome.cpp
 )
 target_link_libraries(${UNIT_TESTING_TARGET}.Beaver.Outcome
         PRIVATE
@@ -135,7 +135,7 @@ target_link_libraries(${UNIT_TESTING_TARGET}.Beaver.Outcome
 # Test Beaver InlineString
 ##############################################################################
 add_unit_test(${UNIT_TESTING_TARGET}.Beaver.Strings.InlineString
-        beaver/test_inline_string.cpp
+        core-beaver/test_inline_string.cpp
 )
 target_link_libraries(${UNIT_TESTING_TARGET}.Beaver.Strings.InlineString
         PRIVATE
