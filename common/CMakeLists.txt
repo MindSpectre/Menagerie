@@ -6,7 +6,7 @@ add_subdirectory(core-beaver)
 
 add_subdirectory(serialization)
 
-add_subdirectory(crypto)
+add_subdirectory(crypto-pufferfish)
 
 add_subdirectory(multithread)
 

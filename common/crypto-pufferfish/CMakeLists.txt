@@ -1,9 +1,9 @@
-set(CRYPTO ${COMMON}.Crypto)
+set(PUFFERFISH ${COMMON}.Pufferfish)
 
 ##############################################################################
 # Hash Utilities: SHA256
 ##############################################################################
-add_library(${CRYPTO}.Encrypt STATIC
+add_library(${PUFFERFISH}.Encrypt STATIC
         encrypt/hashers/hasher.cpp
         encrypt/hashers/pbkdf2.hpp
         encrypt/hashers/sha_256.hpp
@@ -12,12 +12,12 @@ add_library(${CRYPTO}.Encrypt STATIC
         encrypt/salt/salt_generator.cpp
 )
 
-target_include_directories(${CRYPTO}.Encrypt PUBLIC
+target_include_directories(${PUFFERFISH}.Encrypt PUBLIC
         encrypt/salt
         encrypt/hashers
 )
 
-target_link_libraries(${CRYPTO}.Encrypt
+target_link_libraries(${PUFFERFISH}.Encrypt
         PUBLIC
         Menagerie::Common::Beaver
         PRIVATE
@@ -28,31 +28,31 @@ target_link_libraries(${CRYPTO}.Encrypt
 
 
 ##############################################################################
-# Crypto utilities
+# Pufferfish utilities
 ##############################################################################
-add_library(${CRYPTO}.Utilities INTERFACE
+add_library(${PUFFERFISH}.Utilities INTERFACE
         utilities/security_utils.hpp
         utilities/compile_time_utils.hpp
 )
 
-target_include_directories(${CRYPTO}.Utilities
+target_include_directories(${PUFFERFISH}.Utilities
         INTERFACE
         utilities/
 )
 ##############################################################################
 
 ##############################################################################
-# Crypto exported library
+# Pufferfish exported library
 ##############################################################################
-add_combined_library(${CRYPTO}
+add_combined_library(${PUFFERFISH}
         DIRECTORIES
         export
         SOURCES
-        export/menagerie/crypto
+        export/menagerie/pufferfish
         LIBRARIES
-        ${CRYPTO}.Utilities
-        ${CRYPTO}.Encrypt
+        ${PUFFERFISH}.Utilities
+        ${PUFFERFISH}.Encrypt
 )
 
-add_library(Menagerie::Common::Crypto ALIAS ${CRYPTO})
+add_library(Menagerie::Common::Pufferfish ALIAS ${PUFFERFISH})
 ##############################################################################
