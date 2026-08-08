@@ -10,7 +10,7 @@ add_subdirectory(crypto-pufferfish)
 
 add_subdirectory(multithread)
 
-add_subdirectory(chameleon)
+add_subdirectory(render-chameleon)
 
 add_subdirectory(crow)
 

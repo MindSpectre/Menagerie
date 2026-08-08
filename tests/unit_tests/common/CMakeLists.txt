@@ -50,13 +50,13 @@ target_link_libraries(${UNIT_TESTING_TARGET}.Disruptor
 # Test Chameleon (unit)
 ##############################################################################
 add_unit_test(${UNIT_TESTING_TARGET}.Chameleon
-        chameleon/main.cpp
-        chameleon/colors_test.cpp
-        chameleon/separators_test.cpp
-        chameleon/table_test.cpp
-        chameleon/section_test.cpp
-        chameleon/box_test.cpp
-        chameleon/composition_test.cpp
+        render-chameleon/main.cpp
+        render-chameleon/colors_test.cpp
+        render-chameleon/separators_test.cpp
+        render-chameleon/table_test.cpp
+        render-chameleon/section_test.cpp
+        render-chameleon/box_test.cpp
+        render-chameleon/composition_test.cpp
 )
 target_link_libraries(${UNIT_TESTING_TARGET}.Chameleon
         PRIVATE
