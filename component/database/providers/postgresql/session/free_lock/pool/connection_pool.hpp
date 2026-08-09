@@ -112,7 +112,7 @@ namespace menagerie::db::postgres {
         std::size_t mask_;
 
         std::vector<std::shared_ptr<SlotHolder>> slots_;
-        multithread::Sequence hint_cursor_{0};
+        starling::Sequence hint_cursor_{0};
 
         std::atomic_bool shutdown_{false};
     };

@@ -1,13 +1,13 @@
 #include <chrono>
 #include <cstddef>
-#include <menagerie/multithread>
+#include <menagerie/starling>
 
 #include "async/async_bench_main.hpp"
 #include "common/bench_scenarios.hpp"
 #include "common/mock_resource.hpp"
 
 using namespace bench::pool;
-using menagerie::multithread::AsyncResourcePool;
+using menagerie::starling::AsyncResourcePool;
 
 using PoolT = AsyncResourcePool<MockResource, 1024>;
 

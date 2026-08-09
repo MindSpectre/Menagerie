@@ -6,7 +6,7 @@
 #include <format>
 #include <functional>
 #include <memory>
-#include <menagerie/multithread>
+#include <menagerie/starling>
 #include <mutex>
 #include <optional>
 #include <sstream>
@@ -257,7 +257,7 @@ namespace menagerie::crow {
         void set_error_callback(std::function<void(const SinkFailure&)> callback);
 
     private:
-        multithread::Disruptor<LogEvent, multithread::MultiProducerSequencer, multithread::AnyWaitStrategy> disruptor_;
+        starling::Disruptor<LogEvent, starling::MultiProducerSequencer, starling::AnyWaitStrategy> disruptor_;
         std::optional<boost::asio::thread_pool> owned_pool_;
         boost::asio::any_io_executor executor_;
         std::jthread consumer_thread_;
@@ -409,8 +409,8 @@ namespace menagerie::crow {
         /**
          * @brief Create wait strategy based on config
          */
-        static multithread::AnyWaitStrategy create_wait_strategy(const LoggerConfig::WaitStrategy strategy) {
-            using namespace multithread;
+        static starling::AnyWaitStrategy create_wait_strategy(const LoggerConfig::WaitStrategy strategy) {
+            using namespace starling;
 
             switch (strategy) {
                 case LoggerConfig::WaitStrategy::BusySpin:

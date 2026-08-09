@@ -57,7 +57,7 @@ target_include_directories(${CHRONO}.Timer PUBLIC
 )
 target_link_libraries(${CHRONO}.Timer PUBLIC
         Menagerie::Common::Beaver
-        Menagerie::Common::Multithread
+        Menagerie::Common::Starling
 )
 ##############################################################################
 

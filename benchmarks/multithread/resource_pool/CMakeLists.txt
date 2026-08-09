@@ -43,7 +43,7 @@ target_include_directories(${BENCHMARKS_RESOURCEPOOL}.Common
 target_link_libraries(${BENCHMARKS_RESOURCEPOOL}.Common
         INTERFACE
         benchmark::benchmark
-        Menagerie::Common::Multithread
+        Menagerie::Common::Starling
         Menagerie::Common::Chrono
         Menagerie::Common::Chameleon
         Boost::headers

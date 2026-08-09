@@ -5,7 +5,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <menagerie/chrono>
-#include <menagerie/multithread>
+#include <menagerie/starling>
 #include <thread>
 #include <vector>
 
@@ -66,7 +66,7 @@ namespace bench::pool {
         // Sharded io pool: CORE_COUNT single-threaded io_contexts. Declared AFTER
         // collectors so it destructs FIRST (joins its threads) while the collectors and
         // pool are still alive.
-        menagerie::multithread::ShardedAsioBackend backend{
+        menagerie::starling::ShardedAsioBackend backend{
             static_cast<std::size_t>(CORE_COUNT), pin, static_cast<std::size_t>(CORE_COUNT)};
 
         const bool is_burst   = sc.kind == ScenarioKind::Burst || sc.kind == ScenarioKind::HeavyBurst;

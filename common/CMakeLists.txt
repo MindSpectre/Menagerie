@@ -8,7 +8,7 @@ add_subdirectory(serialization-pangolin)
 
 add_subdirectory(crypto-pufferfish)
 
-add_subdirectory(multithread)
+add_subdirectory(concurrency-starling)
 
 add_subdirectory(render-chameleon)
 

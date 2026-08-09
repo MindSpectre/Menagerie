@@ -4,7 +4,7 @@
 #include <chrono>
 #include <cstddef>
 #include <memory>
-#include <menagerie/multithread>  // menagerie::multithread::pin_current_thread_to_core
+#include <menagerie/starling>  // menagerie::starling::pin_current_thread_to_core
 #include <thread>
 #include <vector>
 
@@ -54,7 +54,7 @@ namespace bench::pool {
                 clients_[w]->binary(true);  // tiny binary frame as the work payload
             }
             sink_thread_ = std::jthread{[this, sink_core] {
-                menagerie::multithread::pin_current_thread_to_core(sink_core);
+                menagerie::starling::pin_current_thread_to_core(sink_core);
                 sink_ioc_.run();
             }};
         }

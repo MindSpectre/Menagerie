@@ -4,7 +4,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <menagerie/chrono>
-#include <menagerie/multithread>
+#include <menagerie/starling>
 
 namespace bench::pool {
     using TscClock = menagerie::chrono::TscClock;
@@ -27,7 +27,7 @@ namespace bench::pool {
             }
             const std::uint64_t deadline = TscClock::now() + TscClock::to_cycles(d);
             while (TscClock::now() < deadline) {
-                menagerie::multithread::pause_arc_agnostic();
+                menagerie::starling::pause_arc_agnostic();
             }
         }
     };

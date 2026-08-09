@@ -15,7 +15,7 @@
 #include <cstdint>
 #include <future>
 #include <memory>
-#include <menagerie/multithread>
+#include <menagerie/starling>
 #include <span>
 #include <string>
 #include <thread>
@@ -32,7 +32,7 @@
 namespace bench::pool {
 
     inline Result run_sync(const std::string& name, const std::size_t n_consumers, const FlagshipConfig& cfg) {
-        using PoolT = menagerie::multithread::ResourcePool<MockResource, 1024>;
+        using PoolT = menagerie::starling::ResourcePool<MockResource, 1024>;
         print_config(cfg, name);
         PoolT pool{cfg.pool_size, [](const std::size_t i) noexcept { return MockResource{i}; }};
 
@@ -40,7 +40,7 @@ namespace bench::pool {
         disruptors.reserve(n_consumers);
         for (std::size_t i = 0; i < n_consumers; ++i) {
             disruptors.push_back(
-                std::make_unique<Disruptor>(cfg.disruptor_buf, menagerie::multithread::BusySpinWaitStrategy{}));
+                std::make_unique<Disruptor>(cfg.disruptor_buf, menagerie::starling::BusySpinWaitStrategy{}));
         }
 
         std::vector<LatencyCollector> collectors(n_consumers);
@@ -75,7 +75,7 @@ namespace bench::pool {
             ws_ioc_threads.reserve(n_consumers);
             for (std::size_t j = 0; j < n_consumers; ++j) {
                 ws_ioc_threads.emplace_back([&ws_ioc, n_consumers, j] {
-                    menagerie::multithread::pin_current_thread_to_core(static_cast<int>(n_consumers) + 2 +
+                    menagerie::starling::pin_current_thread_to_core(static_cast<int>(n_consumers) + 2 +
                                                                        static_cast<int>(j));
                     ws_ioc.run();
                 });
@@ -88,7 +88,7 @@ namespace bench::pool {
         consumers.reserve(n_consumers);
         for (std::size_t i = 0; i < n_consumers; ++i) {
             consumers.emplace_back([&, i] {
-                menagerie::multithread::pin_current_thread_to_core(static_cast<int>(i % cfg.shards));
+                menagerie::starling::pin_current_thread_to_core(static_cast<int>(i % cfg.shards));
                 Disruptor& d          = *disruptors[i];
                 std::int64_t next_seq = 0;
                 while (true) {
@@ -129,7 +129,7 @@ namespace bench::pool {
         }
 
         // Producer (this thread): the configured arrival, round-robined across disruptors.
-        menagerie::multithread::pin_current_thread_to_core(static_cast<int>(cfg.shards));
+        menagerie::starling::pin_current_thread_to_core(static_cast<int>(cfg.shards));
         const auto t0 = std::chrono::steady_clock::now();
         run_producer(cfg.arrival, std::span<const std::unique_ptr<Disruptor>>{disruptors}, produced, producer_done);
         consumers.clear();  // jthread dtors join

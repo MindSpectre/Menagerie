@@ -2,7 +2,7 @@
 #include <iostream>
 #include <menagerie/chameleon>
 #include <menagerie/chrono>
-#include <menagerie/multithread>
+#include <menagerie/starling>
 
 #include "common/bench_latency.hpp"
 #include "flagship_config.hpp"
@@ -15,8 +15,8 @@ namespace bench::pool {
     struct BurstEvent {
         std::uint64_t t_produced{0};
     };
-    using Disruptor = menagerie::multithread::
-        Disruptor<BurstEvent, menagerie::multithread::SingleProducerSequencer, menagerie::multithread::AnyWaitStrategy>;
+    using Disruptor = menagerie::starling::
+        Disruptor<BurstEvent, menagerie::starling::SingleProducerSequencer, menagerie::starling::AnyWaitStrategy>;
 
     // Channel-mode hand-off payload: producer timestamp + the reader's hand-off timestamp.
     struct WorkItem {

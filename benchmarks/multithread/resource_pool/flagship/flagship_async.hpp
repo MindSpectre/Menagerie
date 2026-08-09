@@ -19,7 +19,7 @@
 #include <iostream>
 #include <memory>
 #include <menagerie/chameleon>
-#include <menagerie/multithread>  // AsyncResourcePool, ShardedAsioBackend, BusySpinWaitStrategy
+#include <menagerie/starling>  // AsyncResourcePool, ShardedAsioBackend, BusySpinWaitStrategy
 #include <span>
 #include <string>
 #include <thread>
@@ -49,7 +49,7 @@ namespace bench::pool {
         disruptors.reserve(n_disruptors);
         for (std::size_t i = 0; i < n_disruptors; ++i) {
             disruptors.push_back(
-                std::make_unique<Disruptor>(cfg.disruptor_buf, menagerie::multithread::BusySpinWaitStrategy{}));
+                std::make_unique<Disruptor>(cfg.disruptor_buf, menagerie::starling::BusySpinWaitStrategy{}));
         }
         std::vector<LatencyCollector> collectors(cfg.shards);
         std::vector<LatencyCollector> disp_wait(cfg.shards);   // produced -> dispatched (disruptor wait)
@@ -77,7 +77,7 @@ namespace bench::pool {
 
         const auto t0 = std::chrono::steady_clock::now();
         {
-            menagerie::multithread::ShardedAsioBackend backend{cfg.shards, /*pin=*/true, cfg.shards};
+            menagerie::starling::ShardedAsioBackend backend{cfg.shards, /*pin=*/true, cfg.shards};
             // Channel hand-off queues (one per shard). Declared AFTER backend so they destruct
             // BEFORE it (a channel holds an executor → must die before the io_context), gated by
             // live_coros==0. Unused outside Channel mode.
@@ -144,7 +144,7 @@ namespace bench::pool {
 
             // Producer thread (separate from the io threads).
             std::jthread producer{[&] {
-                menagerie::multithread::pin_current_thread_to_core(static_cast<int>(cfg.shards));  // off the workers
+                menagerie::starling::pin_current_thread_to_core(static_cast<int>(cfg.shards));  // off the workers
                 run_producer(
                     cfg.arrival, std::span<const std::unique_ptr<Disruptor>>{disruptors}, produced, producer_done);
             }};

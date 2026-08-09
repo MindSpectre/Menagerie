@@ -8,7 +8,7 @@
 #include <chrono>
 #include <cstddef>
 #include <memory>
-#include <menagerie/multithread>  // AsyncResourcePool
+#include <menagerie/starling>  // AsyncResourcePool
 #include <vector>
 
 #include <boost/asio/any_io_executor.hpp>
@@ -25,7 +25,7 @@
 
 namespace bench::pool {
 
-    using AsyncPoolT = menagerie::multithread::AsyncResourcePool<MockResource, 1024>;
+    using AsyncPoolT = menagerie::starling::AsyncResourcePool<MockResource, 1024>;
 
     /// State every dispatch worker references — a value bundle of references. Cheap to copy
     /// per spawn; the referenced objects all live in run_async's scope and outlive every

@@ -6,7 +6,7 @@ add_executable(${BENCHMARKS}.Multithread.Disruptor
 )
 target_link_libraries(${BENCHMARKS}.Multithread.Disruptor
         PRIVATE
-        Menagerie::Common::Multithread
+        Menagerie::Common::Starling
         Menagerie::Common::Chameleon
         Threads::Threads
 )

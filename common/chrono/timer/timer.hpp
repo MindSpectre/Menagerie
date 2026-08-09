@@ -2,7 +2,7 @@
 #include <chrono>
 #include <concepts>
 #include <future>
-#include <menagerie/multithread>
+#include <menagerie/starling>
 #include <thread>
 #include <utility>
 
@@ -24,12 +24,12 @@ namespace menagerie::chrono {
     class Timer : beaver::NonCopyable {
     public:
         /// Builds an owned ThreadPool from config.
-        explicit Timer(const multithread::ThreadPoolConfig& config) {
-            pool_ = std::make_shared<multithread::ThreadPool>(config);
+        explicit Timer(const starling::ThreadPoolConfig& config) {
+            pool_ = std::make_shared<starling::ThreadPool>(config);
         }
 
         /// Runs tasks on an existing, possibly shared, pool.
-        explicit Timer(std::shared_ptr<multithread::ThreadPool> pool)
+        explicit Timer(std::shared_ptr<starling::ThreadPool> pool)
             : pool_(std::move(pool)) {
         }
 
@@ -68,7 +68,7 @@ namespace menagerie::chrono {
                                   Args&&... args);
 
     private:
-        std::shared_ptr<multithread::ThreadPool> pool_;
+        std::shared_ptr<starling::ThreadPool> pool_;
 
         // helper - default spawns a jthread; replace with thread-pool later
         template <typename F>

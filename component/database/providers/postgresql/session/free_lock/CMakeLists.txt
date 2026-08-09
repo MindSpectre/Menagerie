@@ -24,7 +24,7 @@ target_link_libraries(${DATABASE_POSTGRESQL}.Session.FreeLock
         ${DATABASE}.Base.Errors
         Menagerie::Common::Beaver
         Menagerie::Common::Pangolin
-        Menagerie::Common::Multithread
+        Menagerie::Common::Starling
         PostgreSQL::PostgreSQL
 )
 ##############################################################################

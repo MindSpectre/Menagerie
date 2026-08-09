@@ -17,11 +17,11 @@ target_link_libraries(${UNIT_TESTING_TARGET}.Stopwatch
 # Test Thread Pool
 ##############################################################################
 add_unit_test(${UNIT_TESTING_TARGET}.ThreadPool
-        multithread/thread_pool/test_thread_pool.cpp
+        concurrency-starling/thread_pool/test_thread_pool.cpp
 )
 target_link_libraries(${UNIT_TESTING_TARGET}.ThreadPool
         PRIVATE
-        Menagerie::Common::Multithread
+        Menagerie::Common::Starling
         Menagerie::Common::Rabbit
         Menagerie::Common::Chrono
         ${TEST_LIBS}
@@ -33,11 +33,11 @@ target_link_libraries(${UNIT_TESTING_TARGET}.ThreadPool
 # Test Thread Pool
 ##############################################################################
 add_unit_test(${UNIT_TESTING_TARGET}.Disruptor
-        multithread/disruptor/test_disruptor.cpp
+        concurrency-starling/disruptor/test_disruptor.cpp
 )
 target_link_libraries(${UNIT_TESTING_TARGET}.Disruptor
         PRIVATE
-        Menagerie::Common::Multithread
+        Menagerie::Common::Starling
         Menagerie::Common::Rabbit
         Menagerie::Common::Chrono
         ${TEST_LIBS}
@@ -148,11 +148,11 @@ target_link_libraries(${UNIT_TESTING_TARGET}.Beaver.Strings.InlineString
 # Test EventCount
 ##############################################################################
 add_unit_test(${UNIT_TESTING_TARGET}.EventCount
-        multithread/event_count/test_event_count.cpp
+        concurrency-starling/event_count/test_event_count.cpp
 )
 target_link_libraries(${UNIT_TESTING_TARGET}.EventCount
         PRIVATE
-        Menagerie::Common::Multithread
+        Menagerie::Common::Starling
         ${TEST_LIBS}
 )
 ##############################################################################
@@ -161,7 +161,7 @@ target_link_libraries(${UNIT_TESTING_TARGET}.EventCount
 # Test EventCount - forced condition_variable fallback path
 ##############################################################################
 add_unit_test(${UNIT_TESTING_TARGET}.EventCount.Fallback
-        multithread/event_count/test_event_count.cpp
+        concurrency-starling/event_count/test_event_count.cpp
 )
 target_compile_definitions(${UNIT_TESTING_TARGET}.EventCount.Fallback
         PRIVATE
@@ -169,7 +169,7 @@ target_compile_definitions(${UNIT_TESTING_TARGET}.EventCount.Fallback
 )
 target_link_libraries(${UNIT_TESTING_TARGET}.EventCount.Fallback
         PRIVATE
-        Menagerie::Common::Multithread
+        Menagerie::Common::Starling
         ${TEST_LIBS}
 )
 ##############################################################################
@@ -178,11 +178,11 @@ target_link_libraries(${UNIT_TESTING_TARGET}.EventCount.Fallback
 # Test ResourcePool
 ##############################################################################
 add_unit_test(${UNIT_TESTING_TARGET}.ResourcePool
-        multithread/resource_pool/test_resource_pool.cpp
+        concurrency-starling/resource_pool/test_resource_pool.cpp
 )
 target_link_libraries(${UNIT_TESTING_TARGET}.ResourcePool
         PRIVATE
-        Menagerie::Common::Multithread
+        Menagerie::Common::Starling
         ${TEST_LIBS}
 )
 ##############################################################################
@@ -191,11 +191,11 @@ target_link_libraries(${UNIT_TESTING_TARGET}.ResourcePool
 # Test AsyncResourcePool
 ##############################################################################
 add_unit_test(${UNIT_TESTING_TARGET}.AsyncResourcePool
-        multithread/resource_pool/test_async_resource_pool.cpp
+        concurrency-starling/resource_pool/test_async_resource_pool.cpp
 )
 target_link_libraries(${UNIT_TESTING_TARGET}.AsyncResourcePool
         PRIVATE
-        Menagerie::Common::Multithread
+        Menagerie::Common::Starling
         ${TEST_LIBS}
 )
 ##############################################################################

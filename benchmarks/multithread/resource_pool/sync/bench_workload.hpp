@@ -5,7 +5,7 @@
 #include <chrono>
 #include <cstddef>
 #include <menagerie/chrono>
-#include <menagerie/multithread>
+#include <menagerie/starling>
 #include <thread>
 #include <vector>
 
@@ -22,7 +22,7 @@ namespace bench::pool {
         inline void busy_wait_for(const std::uint64_t cycles, std::atomic<bool>& stop) noexcept {
             const std::uint64_t end = TscClock::now() + cycles;
             while (TscClock::now() < end && !stop.load(std::memory_order_acquire)) {
-                menagerie::multithread::pause_arc_agnostic();
+                menagerie::starling::pause_arc_agnostic();
             }
         }
 
@@ -110,7 +110,7 @@ namespace bench::pool {
                             r->work_for(sc.work_duration);
                         }
                     }
-                    menagerie::multithread::pause_arc_agnostic();
+                    menagerie::starling::pause_arc_agnostic();
                 }
                 const std::uint64_t t1 = TscClock::now();
                 collector.record(TscClock::to_duration((t1 - t0) / BATCH));
@@ -166,7 +166,7 @@ namespace bench::pool {
         for (std::size_t i = 0; i < workers; ++i) {
             ws.emplace_back([&, i] {
                 if (pin) {
-                    menagerie::multithread::pin_current_thread_to_core(static_cast<int>(i % CORE_COUNT));
+                    menagerie::starling::pin_current_thread_to_core(static_cast<int>(i % CORE_COUNT));
                 }
                 while (true) {
                     go_gate.arrive_and_wait();
@@ -229,7 +229,7 @@ namespace bench::pool {
             c.reserve(1u << 16);
         }
 
-        menagerie::multithread::AsioBackend backend{n_workers, pin, static_cast<std::size_t>(CORE_COUNT)};
+        menagerie::starling::AsioBackend backend{n_workers, pin, static_cast<std::size_t>(CORE_COUNT)};
 
         auto task = [&] {
             auto& col              = registry.my();
@@ -247,7 +247,7 @@ namespace bench::pool {
 
         std::jthread producer([&] {
             if (pin) {
-                menagerie::multithread::pin_current_thread_to_core(0);
+                menagerie::starling::pin_current_thread_to_core(0);
             }
             if (sc.kind == ScenarioKind::AsioPostSteady) {
                 while (!stop.load(std::memory_order_acquire)) {

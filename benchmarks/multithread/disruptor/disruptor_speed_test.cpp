@@ -4,11 +4,11 @@
 #include <format>
 #include <iostream>
 #include <menagerie/chameleon>
-#include <menagerie/multithread>
+#include <menagerie/starling>
 #include <string>
 #include <vector>
 
-using namespace menagerie::multithread;
+using namespace menagerie::starling;
 
 /*==============================================================================
  * MULTI-PRODUCER -> 1 CONSUMER, one-at-a-time (8 producers, contended CAS-free claim)
