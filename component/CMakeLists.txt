@@ -5,7 +5,7 @@ set(COMPONENT ${PROJECT_NAME}.Component)
 ##############################################################################
 if (BUILD_DATABASE)
     message("Database core will be built")
-    add_subdirectory(database-reef)
+    add_subdirectory(database-savanna)
 endif ()
 ##############################################################################
 
@@ -14,6 +14,6 @@ endif ()
 ##############################################################################
 if (BUILD_HTTP)
     message("Http handler will be built")
-    add_subdirectory(http-estuary)
+    add_subdirectory(http-albatross)
 endif ()
 ##############################################################################

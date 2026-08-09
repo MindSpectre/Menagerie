@@ -10,8 +10,8 @@ built through CMake presets, with dependencies resolved via vcpkg.
 
 | Namespace | Directory | Description | Docs |
 | --- | --- | --- | --- |
-| `estuary` | `component/http-estuary/` | Server-side HTTP/1.1 stack over TCP and TLS; HTTP/2 and HTTP/3 exist as compiling scaffolds. | [docs/architecture/estuary.md](docs/architecture/estuary.md) |
-| `reef` | `component/database-reef/` | Layered PostgreSQL client with a provider-agnostic, compile-time-checkable query core. | [docs/architecture/reef.md](docs/architecture/reef.md) |
+| `albatross` | `component/http-albatross/` | Server-side HTTP/1.1 stack over TCP and TLS; HTTP/2 and HTTP/3 exist as compiling scaffolds. | [docs/architecture/albatross.md](docs/architecture/albatross.md) |
+| `savanna` | `component/database-savanna/` | Layered PostgreSQL client with a provider-agnostic, compile-time-checkable query core. | [docs/architecture/savanna.md](docs/architecture/savanna.md) |
 | `starling` | `common/concurrency-starling/` | Concurrency primitives: resource pools, a futex-based park/notify primitive, a lock-free ring buffer, a growable thread pool. | [docs/architecture/starling.md](docs/architecture/starling.md) |
 | `beaver` | `common/core-beaver/` | Foundation layer: a typed result type, fixed-capacity strings, class-trait mixins, meta-programming utilities. | [docs/architecture/beaver.md](docs/architecture/beaver.md) |
 | `crow` | `common/logger-crow/` | Asynchronous logging stack: a Disruptor-backed ring buffer dispatching to console and file sinks. | [docs/architecture/crow.md](docs/architecture/crow.md) |
@@ -28,8 +28,16 @@ built through CMake presets, with dependencies resolved via vcpkg.
 Every module directory is `<role>-<creature>`: the role word says what it does, the
 creature is the namespace. Directories sort by function, so `ls common/` reads as a
 table of contents, while code keeps the short, greppable token -- `crow::Logger`, not
-`logger::Logger`. Components are habitats rather than creatures (`database-reef/`,
-`http-estuary/`), marking them as compositions built out of the `common/` libraries.
+`logger::Logger`. A habitat stands in for the creature in one case only: a module that
+fronts interchangeable providers behind a provider-agnostic core, which is why the
+PostgreSQL client is `database-savanna/` -- a savanna hosts many species, and Postgres is one
+provider rather than the whole component. Providers are then the creatures living in it:
+`providers/postgresql-elephant/` is `menagerie::savanna::elephant`.
+
+The theme stops at the module boundary. Anything naming an external standard or product
+keeps its own name, because those are already unique and universally recognized -- hence
+`Providers::PostgreSQL`, `PostgresDialect`, `Http11Driver`, and the `postgres_*.hpp`
+sources are untouched by any of the above.
 
 If you prefer conventional names in your own code, define
 `MENAGERIE_CONVENTIONAL_ALIASES` and each umbrella header additionally exposes the role
@@ -54,12 +62,12 @@ and `menagerie::http` next to `boost::beast::http`, so an unqualified `chrono::`
 
 ## Quick example
 
-A minimal HTTP server, trimmed from `examples/http-estuary/minimal_http_server.cpp`:
+A minimal HTTP server, trimmed from `examples/http-albatross/minimal_http_server.cpp`:
 
 ```cpp
-#include <menagerie/estuary>
+#include <menagerie/albatross>
 
-namespace http = menagerie::estuary;
+namespace http = menagerie::albatross;
 
 class GreeterController final : public http::HttpController {
 public:

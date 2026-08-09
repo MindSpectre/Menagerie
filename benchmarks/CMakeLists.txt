@@ -6,10 +6,10 @@ add_subdirectory(concurrency-starling)
 
 if (BUILD_HTTP)
     message("Benchmarks for Http will be built")
-    add_subdirectory(http-estuary)
+    add_subdirectory(http-albatross)
 endif ()
 
 if (BUILD_DATABASE)
     message("Benchmarks for Database will be built")
-    add_subdirectory(database-reef)
+    add_subdirectory(database-savanna)
 endif ()

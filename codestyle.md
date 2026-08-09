@@ -46,7 +46,7 @@ server.on_request([]([[maybe_unused]] const Request& req) {
 | Variables            | snake_case                | `table_name`, `result_count`  |
 | Member variables     | snake_case + trailing `_` | `table_name_`, `distinct_`    |
 | Template type params | PascalCase                | `T`, `ValueType`, `ColumnsTp` |
-| Namespaces           | lowercase                 | `menagerie::reef::postgres`     |
+| Namespaces           | lowercase                 | `menagerie::savanna::elephant`     |
 | Enum values          | PascalCase                | `LogLevel::Warning`           |
 | Macros               | SCREAMING_SNAKE           | `ENABLE_LOGGING`              |
 | Files                | snake_case                | `query_compiler.hpp`          |
@@ -493,9 +493,9 @@ same namespace context:
 
 ```cpp
 // db_field.hpp
-namespace menagerie::reef {
+namespace menagerie::savanna {
     // ... class declarations ...
-}  // namespace menagerie::reef
+}  // namespace menagerie::savanna
 
 #include "detail/db_field.inl"
 ```
@@ -583,7 +583,7 @@ Use the C++17 one-line nested form. Never nest with separate braces.
 
 ```cpp
 namespace menagerie::crow { ... }            // Good
-namespace menagerie::reef::postgres { ... }      // Good
+namespace menagerie::savanna::elephant { ... }      // Good
 
 // Avoid:
 // namespace menagerie { namespace crow { ... } }

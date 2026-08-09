@@ -25,9 +25,9 @@ add_subdirectory(codesandbox)
 ##############################################################################
 if (BUILD_HTTP)
     message("Http tests will be built")
-    add_subdirectory(shared/component/http-estuary)
-    add_subdirectory(unit_tests/component/http-estuary)
-    add_subdirectory(integration_tests/component/http-estuary)
+    add_subdirectory(shared/component/http-albatross)
+    add_subdirectory(unit_tests/component/http-albatross)
+    add_subdirectory(integration_tests/component/http-albatross)
 endif ()
 ##############################################################################
 
@@ -36,8 +36,8 @@ endif ()
 ##############################################################################
 if (BUILD_DATABASE)
     message("Database tests will be built")
-    add_subdirectory(unit_tests/component/database-reef)
-    add_subdirectory(integration_tests/component/database-reef)
+    add_subdirectory(unit_tests/component/database-savanna)
+    add_subdirectory(integration_tests/component/database-savanna)
 endif ()
 ##############################################################################
 
