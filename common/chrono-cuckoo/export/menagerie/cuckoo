@@ -7,3 +7,10 @@
 #include "printing_stopwatch.hpp"
 #include "stopwatch.hpp"
 #include "timer.hpp"
+
+#ifdef MENAGERIE_CONVENTIONAL_ALIASES
+namespace menagerie {
+    /// Opt-in conventional spelling: `menagerie::chrono` resolves to `menagerie::cuckoo`.
+    namespace chrono = cuckoo;
+}  // namespace menagerie
+#endif

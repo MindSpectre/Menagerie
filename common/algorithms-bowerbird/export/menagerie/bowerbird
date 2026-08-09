@@ -1,3 +1,10 @@
 #pragma once
 
 #include "sliding_window_sorter.hpp"
+
+#ifdef MENAGERIE_CONVENTIONAL_ALIASES
+namespace menagerie {
+    /// Opt-in conventional spelling: `menagerie::algorithms` resolves to `menagerie::bowerbird`.
+    namespace algorithms = bowerbird;
+}  // namespace menagerie
+#endif

@@ -8,3 +8,10 @@
 #include "factory/entry_factory.hpp"
 #include "detailed_entry.hpp"
 #include "light_entry.hpp"
+
+#ifdef MENAGERIE_CONVENTIONAL_ALIASES
+namespace menagerie {
+    /// Opt-in conventional spelling: `menagerie::logger` resolves to `menagerie::crow`.
+    namespace logger = crow;
+}  // namespace menagerie
+#endif

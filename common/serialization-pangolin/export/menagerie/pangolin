@@ -4,3 +4,10 @@
 #include "serial_concepts.hpp"
 #include "config_interface.hpp"
 #include "json/json.hpp"
+
+#ifdef MENAGERIE_CONVENTIONAL_ALIASES
+namespace menagerie {
+    /// Opt-in conventional spelling: `menagerie::serialization` resolves to `menagerie::pangolin`.
+    namespace serialization = pangolin;
+}  // namespace menagerie
+#endif

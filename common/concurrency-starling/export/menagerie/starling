@@ -10,3 +10,10 @@
 #include "sharded_asio_backend.hpp"
 #include "pause.hpp"
 #include "thread_pinning.hpp"
+
+#ifdef MENAGERIE_CONVENTIONAL_ALIASES
+namespace menagerie {
+    /// Opt-in conventional spelling: `menagerie::concurrency` resolves to `menagerie::starling`.
+    namespace concurrency = starling;
+}  // namespace menagerie
+#endif

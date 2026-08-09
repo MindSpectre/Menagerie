@@ -10,3 +10,10 @@
 #include "convert.hpp"
 #include "outcome.hpp"
 #include "strings.hpp"
+
+#ifdef MENAGERIE_CONVENTIONAL_ALIASES
+namespace menagerie {
+    /// Opt-in conventional spelling: `menagerie::core` resolves to `menagerie::beaver`.
+    namespace core = beaver;
+}  // namespace menagerie
+#endif

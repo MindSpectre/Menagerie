@@ -3,3 +3,10 @@
 #include "generators/number_generator.hpp"
 #include "generators/time_generator.hpp"
 #include "random_utils.hpp"
+
+#ifdef MENAGERIE_CONVENTIONAL_ALIASES
+namespace menagerie {
+    /// Opt-in conventional spelling: `menagerie::math` resolves to `menagerie::rabbit`.
+    namespace math = rabbit;
+}  // namespace menagerie
+#endif

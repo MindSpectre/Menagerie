@@ -1,3 +1,10 @@
 #pragma once
 
 #include "spider.hpp"
+
+#ifdef MENAGERIE_CONVENTIONAL_ALIASES
+namespace menagerie {
+    /// Opt-in conventional spelling: `menagerie::locator` resolves to `menagerie::spider`.
+    namespace locator = spider;
+}  // namespace menagerie
+#endif

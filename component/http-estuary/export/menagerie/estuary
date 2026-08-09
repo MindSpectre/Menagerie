@@ -61,3 +61,10 @@
 #include <run_standalone.hpp>
 #include <server.hpp>
 #include <server_observer.hpp>
+
+#ifdef MENAGERIE_CONVENTIONAL_ALIASES
+namespace menagerie {
+    /// Opt-in conventional spelling: `menagerie::http` resolves to `menagerie::estuary`.
+    namespace http = estuary;
+}  // namespace menagerie
+#endif
