@@ -4,7 +4,7 @@ This guide walks through building an HTTP server with `menagerie::estuary`, from
 server to routing, configuration, error handling, and shutdown. By the end you will have a server that
 listens on a TCP port, dispatches to controller methods through a route table, converts typed errors to
 HTTP responses automatically, and shuts down cleanly on SIGINT/SIGTERM. Every snippet below is either
-excerpted verbatim from `examples/http/minimal_http_server.cpp` and the HTTP test suite under `tests/`,
+excerpted verbatim from `examples/http-estuary/minimal_http_server.cpp` and the HTTP test suite under `tests/`,
 or was compiled with `clang++ -fsyntax-only` against the real headers before being written down here -
 nothing here is invented API.
 
@@ -13,12 +13,12 @@ For the internals (request lifecycle, memory model, threading model), see
 
 ## Minimal server
 
-The full working example lives at `examples/http/minimal_http_server.cpp`. Build and run it:
+The full working example lives at `examples/http-estuary/minimal_http_server.cpp`. Build and run it:
 
 ```bash
 $ cmake --preset debug -DBUILD_EXAMPLES=ON
-$ cmake --build --preset debug --target Menagerie.Examples.Http.MinimalServer
-$ ./build/debug/examples/http/Menagerie.Examples.Http.MinimalServer examples/http/server.json
+$ cmake --build --preset debug --target Menagerie.Examples.Estuary.MinimalServer
+$ ./build/debug/examples/http-estuary/Menagerie.Examples.Estuary.MinimalServer examples/http-estuary/server.json
 ```
 
 Then curl it:

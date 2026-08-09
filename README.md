@@ -54,7 +54,7 @@ and `menagerie::http` next to `boost::beast::http`, so an unqualified `chrono::`
 
 ## Quick example
 
-A minimal HTTP server, trimmed from `examples/http/minimal_http_server.cpp`:
+A minimal HTTP server, trimmed from `examples/http-estuary/minimal_http_server.cpp`:
 
 ```cpp
 #include <menagerie/estuary>

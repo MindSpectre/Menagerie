@@ -302,7 +302,7 @@ private default constructor, a fluent `Builder`, a `fields()` tuple for the (de)
   notably `tcp+[http2]` (h2c is unsupported) - throws `std::invalid_argument`. Programmatic
   `add_tcp_listener`/`add_tls_listener`/`add_quic_listener` calls compose freely with config-driven ones; an
   empty `listeners` array is a no-op, which is how
-  `examples/http/minimal_http_server.cpp` falls back to a
+  `examples/http-estuary/minimal_http_server.cpp` falls back to a
   programmatic listener when no config file is given:
 
 ```json
@@ -427,7 +427,7 @@ copying a capturing `std::function` per layer per request would allocate on the 
 `to_http_response` overload discoverable by ADL next to the type. A missing overload is a compile error naming
 the offending type, not a runtime surprise.
 
-**A worked example.** `examples/http/minimal_http_server.cpp`
+**A worked example.** `examples/http-estuary/minimal_http_server.cpp`
 shows all of the above together: a `GreeterController` with a path-parameter handler
 (`ctx.path_param_or<std::string>("name", ...)`), a plain JSON handler, and a typed-error handler that turns a
 `BodyLimitExceeded` Outcome error into a 413 without the handler ever building an error response itself; a
