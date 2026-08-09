@@ -4,7 +4,7 @@
 
 #include "base_random_generator.hpp"
 
-namespace menagerie::math::random {
+namespace menagerie::rabbit::random {
 
     /// @brief Generates random durations and dates using the shared
     /// std::mt19937 state.
@@ -57,4 +57,4 @@ namespace menagerie::math::random {
             std::chrono::year{1925}, std::chrono::month{7}, std::chrono::day{25}};
     };
 
-}  // namespace menagerie::math::random
+}  // namespace menagerie::rabbit::random

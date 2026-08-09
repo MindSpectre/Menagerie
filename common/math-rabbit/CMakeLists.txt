@@ -1,9 +1,9 @@
-set(MATH ${COMMON}.Math)
+set(RABBIT ${COMMON}.Rabbit)
 
 ##############################################################################
-# Math utilities
+# Rabbit utilities
 ##############################################################################
-add_library(${MATH}.Random STATIC
+add_library(${RABBIT}.Random STATIC
         random/random.cpp
         random/generators/number_generator.hpp
         random/generators/time_generator.hpp
@@ -11,23 +11,23 @@ add_library(${MATH}.Random STATIC
         random/base_random_generator.hpp
 )
 
-target_include_directories(${MATH}.Random PUBLIC
+target_include_directories(${RABBIT}.Random PUBLIC
         random/utils
         random/
 )
 ##############################################################################
 
 ##############################################################################
-# Math exported library
+# Rabbit exported library
 ##############################################################################
-add_combined_library(${MATH}
+add_combined_library(${RABBIT}
         DIRECTORIES
         export
         SOURCES
-        export/menagerie/math
+        export/menagerie/rabbit
         LIBRARIES
-        ${MATH}.Random
+        ${RABBIT}.Random
 )
 
-add_library(Menagerie::Common::Math ALIAS ${MATH})
+add_library(Menagerie::Common::Rabbit ALIAS ${RABBIT})
 ##############################################################################

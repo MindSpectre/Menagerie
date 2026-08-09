@@ -22,7 +22,7 @@ add_unit_test(${UNIT_TESTING_TARGET}.ThreadPool
 target_link_libraries(${UNIT_TESTING_TARGET}.ThreadPool
         PRIVATE
         Menagerie::Common::Multithread
-        Menagerie::Common::Math
+        Menagerie::Common::Rabbit
         Menagerie::Common::Chrono
         ${TEST_LIBS}
 
@@ -38,7 +38,7 @@ add_unit_test(${UNIT_TESTING_TARGET}.Disruptor
 target_link_libraries(${UNIT_TESTING_TARGET}.Disruptor
         PRIVATE
         Menagerie::Common::Multithread
-        Menagerie::Common::Math
+        Menagerie::Common::Rabbit
         Menagerie::Common::Chrono
         ${TEST_LIBS}
 

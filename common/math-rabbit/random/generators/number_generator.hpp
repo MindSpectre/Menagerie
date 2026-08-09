@@ -1,6 +1,6 @@
 #pragma once
 #include "base_random_generator.hpp"
-namespace menagerie::math::random {
+namespace menagerie::rabbit::random {
     /// @brief Generates random integers using the shared std::mt19937 state.
     class NumberGenerator final : BaseRandomGenerator {
     public:
@@ -22,4 +22,4 @@ namespace menagerie::math::random {
         }
     };
 
-}  // namespace menagerie::math::random
+}  // namespace menagerie::rabbit::random

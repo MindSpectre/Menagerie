@@ -9,7 +9,7 @@ target_link_libraries(${BENCHMARKS}.Scroll.FileBenchmark
         PRIVATE
         Menagerie::Common::Crow
         Menagerie::Common::Spider
-        Menagerie::Common::Math
+        Menagerie::Common::Rabbit
         Menagerie::Common::Chameleon
 )
 
@@ -27,7 +27,7 @@ target_link_libraries(${BENCHMARKS}.Crow.GateBenchmark
         PRIVATE
         Menagerie::Common::Crow
         Menagerie::Common::Spider
-        Menagerie::Common::Math
+        Menagerie::Common::Rabbit
         Menagerie::Common::Chameleon
 )
 
@@ -51,7 +51,7 @@ if (EXISTS "${PROJECT_SOURCE_DIR}/common/crow/sink/detail/sink_status.hpp")
             PRIVATE
             Menagerie::Common::Crow
             Menagerie::Common::Spider
-            Menagerie::Common::Math
+            Menagerie::Common::Rabbit
             Menagerie::Common::Chameleon
     )
 else ()

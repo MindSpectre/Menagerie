@@ -9,7 +9,7 @@
 #include <span>
 #include <sstream>
 
-namespace menagerie::math::random {
+namespace menagerie::rabbit::random {
 
     /// Keeps each element of arr with independent 50% probability, applying
     /// transformation to kept elements.
@@ -99,4 +99,4 @@ namespace menagerie::math::random {
 
         return ss.str();
     }
-}  // namespace menagerie::math::random
+}  // namespace menagerie::rabbit::random

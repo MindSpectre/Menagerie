@@ -3,7 +3,7 @@
 #include <random>
 
 /// Random-value toolkit built on std::mt19937.
-namespace menagerie::math::random {
+namespace menagerie::rabbit::random {
     /// @brief Owns and seeds the shared std::mt19937 state used by
     /// NumberGenerator and RandomTimeGenerator.
     ///
@@ -27,4 +27,4 @@ namespace menagerie::math::random {
     protected:
         mutable std::mt19937 generator_;  ///< Shared Mersenne Twister state, mutable so const generate_* calls can still advance it.
     };
-}  // namespace menagerie::math::random
+}  // namespace menagerie::rabbit::random

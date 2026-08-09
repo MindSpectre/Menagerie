@@ -1,7 +1,7 @@
 #include "generators/number_generator.hpp"
 #include "generators/time_generator.hpp"
 
-namespace menagerie::math::random {
+namespace menagerie::rabbit::random {
     std::chrono::milliseconds RandomTimeGenerator::generate_milliseconds(const uint32_t target_ms,
                                                                          const int8_t deviation) const {
         if (deviation < 0 || deviation > 100) {
@@ -72,4 +72,4 @@ namespace menagerie::math::random {
         std::uniform_int_distribution distrib(min, max);
         return distrib(generator_);
     }
-}  // namespace menagerie::math::random
+}  // namespace menagerie::rabbit::random

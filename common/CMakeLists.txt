@@ -18,7 +18,7 @@ add_subdirectory(3rdparty)
 
 add_subdirectory(chrono)
 
-add_subdirectory(math)
+add_subdirectory(math-rabbit)
 
 add_subdirectory(locator-spider)
 

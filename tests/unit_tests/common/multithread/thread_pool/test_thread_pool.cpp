@@ -1,7 +1,7 @@
 #include <barrier>
 #include <chrono>
 #include <menagerie/chrono>
-#include <menagerie/math>
+#include <menagerie/rabbit>
 #include <menagerie/multithread>
 #include <vector>
 
@@ -438,7 +438,7 @@ TEST_F(ThreadPoolTest, StressTestRapidTasks) {
     sw.start();
 
     for (int i = 0; i < TASK_COUNT; ++i) {
-        menagerie::math::random::RandomTimeGenerator rnd;
+        menagerie::rabbit::random::RandomTimeGenerator rnd;
         futures.push_back(pool.enqueue([&counter, &rnd, &sw] {
             ++counter;
             // Small random work

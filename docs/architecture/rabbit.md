@@ -1,10 +1,10 @@
-# Math Library
+# Rabbit Library
 
-The math library (`common/math/`) is a small random-value toolkit built on `std::mt19937`: a shared base that
+The rabbit library (`common/math-rabbit/`) is a small random-value toolkit built on `std::mt19937`: a shared base that
 owns and seeds the generator, a `NumberGenerator` for random integers, a `RandomTimeGenerator` for random
 durations and dates, and a set of free functions for picking from or subsetting a collection. It has no
-dependencies on any other Menagerie library. Everything is reached through `#include <menagerie/math>`
-(`export/menagerie/math`).
+dependencies on any other Menagerie library. Everything is reached through `#include <menagerie/rabbit>`
+(`export/menagerie/rabbit`).
 
 ## Key types
 
@@ -27,11 +27,11 @@ dependencies on any other Menagerie library. Everything is reached through `#inc
 ## Usage
 
 ```cpp
-#include <menagerie/math>
+#include <menagerie/rabbit>
 
 #include <thread>
 
-using namespace menagerie::math::random;
+using namespace menagerie::rabbit::random;
 
 RandomTimeGenerator rnd;
 const auto delay = rnd.generate_milliseconds(50, 30);  // ~50ms +/- 30%
