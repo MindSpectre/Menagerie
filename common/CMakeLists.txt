@@ -22,4 +22,4 @@ add_subdirectory(math)
 
 add_subdirectory(locator-spider)
 
-add_subdirectory(algorithms)
+add_subdirectory(algorithms-bowerbird)

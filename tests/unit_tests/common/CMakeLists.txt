@@ -106,14 +106,14 @@ target_link_libraries(${UNIT_TESTING_TARGET}.Spider
 ##############################################################################
 
 ##############################################################################
-# Test Algorithms
+# Test Bowerbird
 ##############################################################################
-add_unit_test(${UNIT_TESTING_TARGET}.Algorithms
-        algorithms/test_sliding_window_sorter.cpp
+add_unit_test(${UNIT_TESTING_TARGET}.Bowerbird
+        algorithms-bowerbird/test_sliding_window_sorter.cpp
 )
-target_link_libraries(${UNIT_TESTING_TARGET}.Algorithms
+target_link_libraries(${UNIT_TESTING_TARGET}.Bowerbird
         PRIVATE
-        Menagerie::Common::Algorithms
+        Menagerie::Common::Bowerbird
         ${TEST_LIBS}
 )
 ##############################################################################

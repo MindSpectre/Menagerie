@@ -1,27 +1,27 @@
-set(ALGORITHMS ${COMMON}.Algorithms)
+set(BOWERBIRD ${COMMON}.Bowerbird)
 
 ##############################################################################
 # Sorter based on sliding window approach
 ##############################################################################
-add_library(${ALGORITHMS}.SlidingWindowSorter INTERFACE
+add_library(${BOWERBIRD}.SlidingWindowSorter INTERFACE
         sliding_window_sorter/sliding_window_sorter.hpp
 )
-target_include_directories(${ALGORITHMS}.SlidingWindowSorter INTERFACE
+target_include_directories(${BOWERBIRD}.SlidingWindowSorter INTERFACE
         sliding_window_sorter/
 )
 ##############################################################################
 
 ##############################################################################
-# Algorithms exported library
+# Bowerbird exported library
 ##############################################################################
-add_combined_library(${ALGORITHMS}
+add_combined_library(${BOWERBIRD}
         DIRECTORIES
         export
         SOURCES
-        export/menagerie/algorithms
+        export/menagerie/bowerbird
         LIBRARIES
-        ${ALGORITHMS}.SlidingWindowSorter
+        ${BOWERBIRD}.SlidingWindowSorter
 )
 
-add_library(Menagerie::Common::Algorithms ALIAS ${ALGORITHMS})
+add_library(Menagerie::Common::Bowerbird ALIAS ${BOWERBIRD})
 ##############################################################################

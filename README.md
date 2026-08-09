@@ -21,7 +21,7 @@ built through CMake presets, with dependencies resolved via vcpkg.
 | `spider` | Thread-safe service locator with configurable per-registration instance lifetimes. | [docs/architecture/spider.md](docs/architecture/spider.md) |
 | `crypto` | OpenSSL wrapper for password/data hashing: HMAC-SHA256, PBKDF2-HMAC-SHA256, secure salt generation. | [docs/architecture/crypto.md](docs/architecture/crypto.md) |
 | `math` | Random-value toolkit built on `std::mt19937`: integers, durations/dates, collection sampling. | [docs/architecture/math.md](docs/architecture/math.md) |
-| `algorithms` | Bounded-memory streaming sort over batched data (`SlidingWindowSorter`). | [docs/architecture/algorithms.md](docs/architecture/algorithms.md) |
+| `bowerbird` | Bounded-memory streaming sort over batched data (`SlidingWindowSorter`). | [docs/architecture/bowerbird.md](docs/architecture/bowerbird.md) |
 
 ## Quick example
 

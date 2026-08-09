@@ -1,6 +1,6 @@
 #include <algorithm>
 #include <chrono>
-#include <menagerie/algorithms>
+#include <menagerie/bowerbird>
 #include <random>
 #include <string>
 #include <thread>
@@ -9,7 +9,7 @@
 
 #include <gtest/gtest.h>
 
-using namespace menagerie::algorithms;  // Updated namespace
+using namespace menagerie::bowerbird;
 
 // Test data structures
 struct TestData {

@@ -6,7 +6,7 @@
 
 /// Bounded-memory streaming sort: SlidingWindowSorter keeps a running sorted
 /// window over data arriving in batches.
-namespace menagerie::algorithms {
+namespace menagerie::bowerbird {
     /// @brief Default comparator: uses T::comp(a, b) if the type provides a static
     /// comp, otherwise falls back to operator<.
     template <typename T>
@@ -285,4 +285,4 @@ namespace menagerie::algorithms {
             }
         }
     };
-}  // namespace menagerie::algorithms
+}  // namespace menagerie::bowerbird

@@ -1,10 +1,10 @@
-# Algorithms Library
+# Bowerbird Library
 
-The algorithms library (`common/algorithms/`) is a single header-only algorithm: `SlidingWindowSorter<T>`, a
+The bowerbird library (`common/algorithms-bowerbird/`) is a single header-only algorithm: `SlidingWindowSorter<T>`, a
 bounded-memory streaming sort that keeps a running sorted window over data arriving in batches and flushes the
 oldest entries to a consumer callback once the window fills up. It has no dependencies on any other Menagerie
-library. Everything is reached through the umbrella `#include <menagerie/algorithms>`
-(`export/menagerie/algorithms`).
+library. Everything is reached through the umbrella `#include <menagerie/bowerbird>`
+(`export/menagerie/bowerbird`).
 
 ## Key types
 
@@ -24,9 +24,9 @@ library. Everything is reached through the umbrella `#include <menagerie/algorit
 ## Usage
 
 ```cpp
-#include <menagerie/algorithms>
+#include <menagerie/bowerbird>
 
-using namespace menagerie::algorithms;
+using namespace menagerie::bowerbird;
 
 SlidingWindowConfig<int> config;
 config.window_size = 1024;
