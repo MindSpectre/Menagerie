@@ -1,6 +1,6 @@
 # Spider Library
 
-The spider library (`common/spider/`) is Menagerie's thread-safe service locator: register a factory or an
+The spider library (`common/locator-spider/`) is Menagerie's thread-safe service locator: register a factory or an
 existing instance under a type (optionally tagged with a numeric ID for several instances of the same type),
 and `get<T>()` lazily constructs it once and hands back a `std::shared_ptr`. A configurable lifetime policy
 per registration controls whether an instance is reused forever, can be explicitly reset, or is reclaimed
@@ -63,7 +63,7 @@ public:
 ```
 
 `spider.register_singleton<DatabaseService>(...)` / `spider.get<DatabaseService>()` mirror
-`tests/unit_tests/common/spider/test_spider.cpp`;
+`tests/unit_tests/common/locator-spider/test_spider.cpp`;
 `SPIDER_WEB(spider::Resettable)` is the actual declaration in
 `component/http-estuary/routing/controller/controller.hpp`,
 and `SPIDER_WEB(spider::Immortal)` the one in

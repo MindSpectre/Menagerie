@@ -1,6 +1,6 @@
 # Beaver Library
 
-The beaver library (`common/beaver/`) is Menagerie's foundation layer: a header-only grab bag of the
+The beaver library (`common/core-beaver/`) is Menagerie's foundation layer: a header-only grab bag of the
 primitives every other component builds on top of -- a typed result type, fixed-capacity strings, class-trait
 mixins, meta-programming concepts and templates, byte-order conversion, transparent string hashing, and a
 handful of compile-time-friendly utility functions. It has no dependencies on any other Menagerie library.

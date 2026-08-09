@@ -41,7 +41,7 @@ target_link_libraries(${BENCHMARKS}.Crow.GateBenchmark
 # branch without it. The STATUS line is also the operator's proof they built
 # the side they think they did.
 ##############################################################################
-if (EXISTS "${PROJECT_SOURCE_DIR}/common/crow/sink/detail/sink_status.hpp")
+if (EXISTS "${PROJECT_SOURCE_DIR}/common/logger-crow/sink/detail/sink_status.hpp")
     message(STATUS "crow: sink-termination API detected — branch-only benchmarks enabled")
     add_executable(${BENCHMARKS}.Crow.TerminationBenchmark
             benchmark_harness.hpp

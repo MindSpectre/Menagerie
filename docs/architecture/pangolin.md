@@ -1,13 +1,13 @@
 # Pangolin Library
 
-The serialization library (`common/serialization/`) is Menagerie's field-descriptor serialization framework:
+The pangolin library (`common/serialization-pangolin/`) is Menagerie's field-descriptor serialization framework:
 declare a `Field<&T::member, "key", Policy>` for every member a type wants serialized, and
 `ConfigInterface<Derived, Formats...>` provides `serialize<Format>()` / `Derived::deserialize<Format>(...)`
 for free, without hand-writing per-field code. It underlies every Builder-pattern config type across the
 codebase -- `ServerConfig`, the PostgreSQL provider's `ConnectionConfig`, `ConsoleSinkConfig`, `FileSinkConfig`,
 and more all derive from `ConfigInterface`. The only shipped wire format today is JSON (via jsoncpp's `Json::Value`), added
 through `formats/json/`. Everything is reached through `#include <menagerie/pangolin>`
-(`export/menagerie/serialization`).
+(`export/menagerie/pangolin`).
 
 ## Key types
 
@@ -80,9 +80,9 @@ const auto back = RetryConfig::deserialize<Json::Value>(json);
 
 This shape (private default constructor, `friend class ConfigInterface`, a nested `Builder` with `this
 Self&&`-deduced setters) matches
-`common/crow/sink/console/config/console_sink_config.hpp`
+`common/logger-crow/sink/console/config/console_sink_config.hpp`
 and is exercised end-to-end in
-`tests/unit_tests/common/serialization/test_config_interface.cpp`.
+`tests/unit_tests/common/serialization-pangolin/test_config_interface.cpp`.
 
 ## Design notes
 

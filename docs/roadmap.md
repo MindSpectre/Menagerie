@@ -48,6 +48,6 @@ onto Redis commands. MySQL and SQLite remain unplanned until after Redis.
 
 ## Standing items
 
-- Crypto: `common/crypto/` has no tests and no call sites - needs coverage before
+- Pufferfish: `common/crypto-pufferfish/` has no tests and no call sites - needs coverage before
   anything depends on it.
 - Integrations under research: Consul, OpenTelemetry, OpenAPI, generic watchdog.

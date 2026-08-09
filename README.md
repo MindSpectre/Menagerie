@@ -17,7 +17,7 @@ built through CMake presets, with dependencies resolved via vcpkg.
 | `crow` | Asynchronous logging stack: a Disruptor-backed ring buffer dispatching to console and file sinks. | [docs/architecture/crow.md](docs/architecture/crow.md) |
 | `chameleon` | Terminal text-formatting toolkit: ANSI colors, box-drawing glyphs, and Box/Section/Table renderers. | [docs/architecture/chameleon.md](docs/architecture/chameleon.md) |
 | `cuckoo` | Timing toolkit: wall-clock formatting, HTTP-date rendering, a hardware tick counter, stopwatches, deadline-bound execution. | [docs/architecture/cuckoo.md](docs/architecture/cuckoo.md) |
-| `serialization` | Field-descriptor serialization framework behind every Builder-pattern config type in the codebase. | [docs/architecture/serialization.md](docs/architecture/serialization.md) |
+| `pangolin` | Field-descriptor serialization framework behind every Builder-pattern config type in the codebase. | [docs/architecture/pangolin.md](docs/architecture/pangolin.md) |
 | `spider` | Thread-safe service locator with configurable per-registration instance lifetimes. | [docs/architecture/spider.md](docs/architecture/spider.md) |
 | `pufferfish` | OpenSSL wrapper for password/data hashing: HMAC-SHA256, PBKDF2-HMAC-SHA256, secure salt generation. | [docs/architecture/pufferfish.md](docs/architecture/pufferfish.md) |
 | `rabbit` | Random-value toolkit built on `std::mt19937`: integers, durations/dates, collection sampling. | [docs/architecture/rabbit.md](docs/architecture/rabbit.md) |

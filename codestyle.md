@@ -558,7 +558,7 @@ Each top-level module under `common/` (and each component under `component/`) sh
 for every public header of the module:
 
 ```cpp
-// common/beaver/export/menagerie/beaver
+// common/core-beaver/export/menagerie/beaver
 #pragma once
 
 #include "beavers_class_traits.hpp"
@@ -707,7 +707,7 @@ need `#ifdef` guards:
 
 ### Logging
 
-The `common/crow` module defines three families of logging macros (`LOG_*`,
+The `common/logger-crow` module defines three families of logging macros (`LOG_*`,
 `COMPONENT_LOG_*`, `LOG_DIRECT_*`), each with its own precondition on the call site. See
-`common/crow/provider/include/log_macros.hpp` for the full set and the class-scope setup required by
+`common/logger-crow/provider/macros/log_macros.hpp` for the full set and the class-scope setup required by
 `CROW_COMPONENT_PREFIX`.
