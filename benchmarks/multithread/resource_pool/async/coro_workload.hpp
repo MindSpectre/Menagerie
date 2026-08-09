@@ -4,7 +4,7 @@
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
-#include <menagerie/chrono>
+#include <menagerie/cuckoo>
 #include <menagerie/starling>
 #include <thread>
 #include <vector>
@@ -22,7 +22,7 @@
 #include "common/bench_scenarios.hpp"
 
 namespace bench::pool {
-    using TscClock = menagerie::chrono::TscClock;
+    using TscClock = menagerie::cuckoo::TscClock;
 
     /// Free-region scenarios that map to a continuous coroutine workload. The two
     /// AsioPost* scenarios from the sync suite are sync-on-asio specific and have no

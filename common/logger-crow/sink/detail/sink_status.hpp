@@ -2,7 +2,7 @@
 
 #include <chrono>
 #include <cstdint>
-#include <menagerie/chrono>
+#include <menagerie/cuckoo>
 
 // Resolves through the entry/ include directory that ${CROW}.Sink inherits from
 // ${CROW}.Entry — the same form entry_interface.hpp uses.
@@ -41,7 +41,7 @@ namespace menagerie::crow {
         /// Threshold no level clears; the Logger's gate holds it while no sinks are registered.
         inline constexpr std::uint8_t drop_all_threshold = 0x7F;
 
-        /// Recovery retry schedule, fed to menagerie::chrono::exponential_backoff.
+        /// Recovery retry schedule, fed to menagerie::cuckoo::exponential_backoff.
         inline constexpr std::chrono::milliseconds backoff_base{1000};
         inline constexpr std::chrono::milliseconds backoff_cap{60000};
 
@@ -61,13 +61,13 @@ namespace menagerie::crow {
 
         /// Milliseconds on the steady clock: the time base for retry deadlines.
         [[nodiscard]] inline std::uint64_t steady_now_ms() noexcept {
-            return menagerie::chrono::steady_since_epoch<std::chrono::milliseconds>();
+            return menagerie::cuckoo::steady_since_epoch<std::chrono::milliseconds>();
         }
 
         /// Delay before the next recovery attempt: the first retry is immediate, then 1s
         /// doubling per consecutive failure from there (1s, 2s, 4s, ..., 32s), capped at 60s.
         ///
-        /// The doubling itself is chrono::exponential_backoff, whose attempt parameter is
+        /// The doubling itself is cuckoo::exponential_backoff, whose attempt parameter is
         /// 0-based -- hence the -1, which shifts the schedule so that the *second* failure
         /// is the one that waits a base interval.
         [[nodiscard]] constexpr std::uint64_t backoff_ms(const std::uint32_t consecutive_failures) noexcept {
@@ -75,7 +75,7 @@ namespace menagerie::crow {
                 return 0;  // first retry may happen immediately; backoff starts after it fails
             }
             return static_cast<std::uint64_t>(
-                menagerie::chrono::exponential_backoff(consecutive_failures - 1, backoff_base, backoff_cap).count());
+                menagerie::cuckoo::exponential_backoff(consecutive_failures - 1, backoff_base, backoff_cap).count());
         }
     }  // namespace detail
 

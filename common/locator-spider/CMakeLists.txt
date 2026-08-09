@@ -27,7 +27,7 @@ target_link_libraries(${SPIDER}.Core
         PUBLIC
         ${SPIDER}.Policies
         PRIVATE
-        Menagerie::Common::Chrono
+        Menagerie::Common::Cuckoo
 )
 ##############################################################################
 

@@ -4,7 +4,7 @@
 #include <barrier>
 #include <chrono>
 #include <cstddef>
-#include <menagerie/chrono>
+#include <menagerie/cuckoo>
 #include <menagerie/starling>
 #include <thread>
 #include <vector>
@@ -15,7 +15,7 @@
 #include "common/bench_scenarios.hpp"
 
 namespace bench::pool {
-    using TscClock = menagerie::chrono::TscClock;
+    using TscClock = menagerie::cuckoo::TscClock;
 
     namespace detail {
 

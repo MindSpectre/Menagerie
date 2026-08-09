@@ -3,12 +3,12 @@
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
-#include <menagerie/chrono>
+#include <menagerie/cuckoo>
 #include <string>
 #include <string_view>
 
 namespace bench::pool {
-    using TscClock = menagerie::chrono::TscClock;
+    using TscClock = menagerie::cuckoo::TscClock;
 
     /// Strip `--pin=0|1` out of argv (Google Benchmark doesn't know about it),
     /// return the parsed value. argc is mutated in place.

@@ -54,7 +54,7 @@ namespace menagerie::crow::detail {
     /// Path carrying a fresh timestamp: "app.log" -> "app_2026-07-29T10:00:00.log".
     [[nodiscard]] inline std::filesystem::path timestamped_path(const FileSinkConfig& config) {
         const std::filesystem::path& configured = config.file();
-        const std::string time                  = chrono::LocalClock::current_time(config.time_format_in_file_name());
+        const std::string time                  = cuckoo::LocalClock::current_time(config.time_format_in_file_name());
         return configured.parent_path() / (configured.stem().string() + "_" + time + configured.extension().string());
     }
 

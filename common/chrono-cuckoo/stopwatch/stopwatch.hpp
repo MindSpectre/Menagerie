@@ -4,7 +4,7 @@
 #include <utility>
 #include <vector>
 
-namespace menagerie::chrono {
+namespace menagerie::cuckoo {
 
     /**
      * @brief Flag-collecting stopwatch: start() opens a run, add_flag() records a
@@ -105,4 +105,4 @@ namespace menagerie::chrono {
         std::vector<time_point> flags_;
     };
 
-}  // namespace menagerie::chrono
+}  // namespace menagerie::cuckoo

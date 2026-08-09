@@ -12,7 +12,7 @@
     #error "TscClock supports x86 and AArch64 only — add the arch's cycle-counter read to now()"
 #endif
 
-namespace menagerie::chrono {
+namespace menagerie::cuckoo {
 
     /// Monotonic hardware tick counter for fine-grained latency sampling, where
     /// `steady_clock`'s ~20-40 ns call overhead would dominate the measurement.
@@ -86,4 +86,4 @@ namespace menagerie::chrono {
         }
     };
 
-}  // namespace menagerie::chrono
+}  // namespace menagerie::cuckoo

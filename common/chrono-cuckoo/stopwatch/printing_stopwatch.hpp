@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-namespace menagerie::chrono {
+namespace menagerie::cuckoo {
     /**
      * @brief Named-flag stopwatch that prints its report to std::cout on print()/finish()
      *        and automatically in its destructor.
@@ -209,4 +209,4 @@ namespace menagerie::chrono {
         std::chrono::time_point<std::chrono::high_resolution_clock> start_time_;
         std::vector<Flag> flags_;
     };
-}  // namespace menagerie::chrono
+}  // namespace menagerie::cuckoo

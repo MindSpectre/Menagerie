@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <chrono>
 #include <exception>
-#include <menagerie/chrono>
+#include <menagerie/cuckoo>
 #include <stdexcept>
 
 #include <boost/asio/bind_cancellation_slot.hpp>
@@ -195,7 +195,7 @@ namespace menagerie::http {
             if (const auto s = state_.load(std::memory_order_acquire); s == State::stopped || s == State::build) {
                 co_return;
             }
-            co_await chrono::async_sleep_for(execs_.front(), delay);
+            co_await cuckoo::async_sleep_for(execs_.front(), delay);
             delay = std::min<std::chrono::milliseconds>(delay * 2, MAX_POLL_TICK);
         }
     }
@@ -220,7 +220,7 @@ namespace menagerie::http {
             // on every exit path, so from here new connections are provably
             // REFUSED, not backlogged.
             while (live_accept_loops_.load(std::memory_order_acquire) > 0) {
-                co_await chrono::async_sleep_for(execs_.front(), POLL_TICK);
+                co_await cuckoo::async_sleep_for(execs_.front(), POLL_TICK);
             }
 
             // Phase 2: drain in-flight requests up to drain_timeout (shared
@@ -242,7 +242,7 @@ namespace menagerie::http {
                                     << " connection(s) force-cancelled — waiting for unwind";
             }
             while (total_in_flight() > 0) {
-                co_await chrono::async_sleep_for(execs_.front(), POLL_TICK);
+                co_await cuckoo::async_sleep_for(execs_.front(), POLL_TICK);
             }
 
             // Phase 3: async shutdown observers - awaited ON the still-driven

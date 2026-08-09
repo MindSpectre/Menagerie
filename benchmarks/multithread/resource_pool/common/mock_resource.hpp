@@ -3,11 +3,11 @@
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
-#include <menagerie/chrono>
+#include <menagerie/cuckoo>
 #include <menagerie/starling>
 
 namespace bench::pool {
-    using TscClock = menagerie::chrono::TscClock;
+    using TscClock = menagerie::cuckoo::TscClock;
 
     /// Cheap holder for the pool. work_for() is an rdtsc-spin busy-wait that
     /// the compiler cannot elide (rdtsc is an intrinsic with side effects),

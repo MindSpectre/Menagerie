@@ -8,6 +8,6 @@ target_include_directories(${Http}.Types.HttpDate PUBLIC
 )
 # Renderer lives in chrono; only the .cpp needs it, so link PRIVATE.
 target_link_libraries(${Http}.Types.HttpDate PRIVATE
-        Menagerie::Common::Chrono
+        Menagerie::Common::Cuckoo
 )
 ##############################################################################

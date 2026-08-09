@@ -14,7 +14,7 @@ target_link_libraries(${Http}.Listeners.Tcp INTERFACE
         ${Http}.Types.Executor
         ${Http}.Drivers.Concept
         ${Http}.Routing.Router
-        Menagerie::Common::Chrono
+        Menagerie::Common::Cuckoo
         Boost::beast
         Boost::asio
 )

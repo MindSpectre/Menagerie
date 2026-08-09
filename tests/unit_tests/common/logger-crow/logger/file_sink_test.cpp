@@ -232,7 +232,7 @@ void multithread_write(menagerie::crow::Logger* logger,
     std::chrono::milliseconds process_time{1};
     menagerie::beaver::unused_value(process_time);
     threads.reserve(t_num);
-    menagerie::chrono::PrintingStopwatch<> twp;
+    menagerie::cuckoo::PrintingStopwatch<> twp;
     twp.start();
     for (std::size_t i = 0; i < t_num; ++i) {
         threads.emplace_back([&] {

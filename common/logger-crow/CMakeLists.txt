@@ -21,7 +21,7 @@ target_link_libraries(${CROW}.Entry PUBLIC
         Threads::Threads
         Menagerie::Common::Spider
         Menagerie::Common::Beaver
-        Menagerie::Common::Chrono
+        Menagerie::Common::Cuckoo
 )
 ##############################################################################
 

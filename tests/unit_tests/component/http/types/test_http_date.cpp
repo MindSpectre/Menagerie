@@ -1,6 +1,6 @@
 #include <array>
 #include <ctime>
-#include <menagerie/chrono>
+#include <menagerie/cuckoo>
 #include <span>
 #include <string_view>
 
@@ -8,8 +8,8 @@
 #include <http_date.hpp>
 namespace {
 
-    using menagerie::chrono::format_imf_fixdate;
-    using menagerie::chrono::IMF_FIXDATE_LEN;
+    using menagerie::cuckoo::format_imf_fixdate;
+    using menagerie::cuckoo::IMF_FIXDATE_LEN;
     using menagerie::http::imf_fixdate_now;
 
     std::string_view render(const std::time_t t, std::array<char, IMF_FIXDATE_LEN + 1>& buf) {

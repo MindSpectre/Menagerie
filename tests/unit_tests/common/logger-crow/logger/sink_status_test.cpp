@@ -36,7 +36,7 @@ TEST(SinkStatusTest, PackRoundTripsAllFields) {
 }
 
 // Compile-time proof that the schedule still folds: backoff_ms delegates to
-// chrono::exponential_backoff, and a non-constexpr regression there would silently
+// cuckoo::exponential_backoff, and a non-constexpr regression there would silently
 // move this arithmetic to runtime on a path the janitor walks per sweep.
 static_assert(menagerie::crow::detail::backoff_ms(0) == 0U);
 static_assert(menagerie::crow::detail::backoff_ms(1) == 1000U);

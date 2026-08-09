@@ -1,10 +1,10 @@
-# Chrono Library
+# Cuckoo Library
 
-The chrono library (`common/chrono/`) is Menagerie's timing toolkit: wall-clock formatting/parsing for two
+The cuckoo library (`common/chrono-cuckoo/`) is Menagerie's timing toolkit: wall-clock formatting/parsing for two
 locales (local time and UTC), a locale-independent HTTP-date renderer, a raw hardware tick counter for
 latency sampling below `steady_clock`'s call overhead, two stopwatch flavors for ad hoc interval measurement,
 and a deadline-bound function executor built on top of `ThreadPool`. Everything is reached through
-`#include <menagerie/chrono>` (`export/menagerie/chrono`).
+`#include <menagerie/cuckoo>` (`export/menagerie/cuckoo`).
 
 ## Key types
 
@@ -49,9 +49,9 @@ and a deadline-bound function executor built on top of `ThreadPool`. Everything 
 ## Usage
 
 ```cpp
-#include <menagerie/chrono>
+#include <menagerie/cuckoo>
 
-using namespace menagerie::chrono;
+using namespace menagerie::cuckoo;
 using namespace std::literals;
 
 Stopwatch<> stopwatch(20);
@@ -69,7 +69,7 @@ const auto now_iso = UTCClock::current_time(clock_formats::iso8601);
 ```
 
 `Stopwatch<>`, `sleep_for`, and `Stopwatch<>::measure` above mirror
-`tests/unit_tests/common/chrono/stopwatch/test_stopwatch.cpp`;
+`tests/unit_tests/common/chrono-cuckoo/stopwatch/test_stopwatch.cpp`;
 `format_imf_fixdate` / `IMF_FIXDATE_LEN` mirror
 `tests/unit_tests/component/http/types/test_http_date.cpp`.
 

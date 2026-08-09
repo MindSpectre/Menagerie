@@ -3,7 +3,7 @@
 #include <atomic>
 #include <menagerie/beaver>
 
-namespace menagerie::chrono {
+namespace menagerie::cuckoo {
     /// Cooperative-stop flag: Timer::execute_polite_vanish() flips it via cancel() on
     /// timeout, and the running callable is expected to poll stop_requested() and
     /// unwind. Cancelling does not forcibly stop anything by itself.
@@ -32,4 +32,4 @@ namespace menagerie::chrono {
     inline CancellationToken create_cancellation_token() {
         return CancellationToken{};
     }
-}  // namespace menagerie::chrono
+}  // namespace menagerie::cuckoo

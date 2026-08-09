@@ -59,7 +59,7 @@ add_unit_test(${UNIT_TESTING_TARGET}.Http.Types
 target_link_libraries(${UNIT_TESTING_TARGET}.Http.Types
         PRIVATE
         Menagerie.Component.Http.Types
-        Menagerie::Common::Chrono
+        Menagerie::Common::Cuckoo
         ${TEST_LIBS}
 )
 ##############################################################################

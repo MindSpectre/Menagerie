@@ -2,7 +2,7 @@
 
 #include <filesystem>
 #include <menagerie/beaver>
-#include <menagerie/chrono>
+#include <menagerie/cuckoo>
 #include <menagerie/pangolin>
 
 #include "detail/prefix_filter.hpp"
@@ -106,7 +106,7 @@ namespace menagerie::crow {
         LogLevel threshold_ = LogLevel::Debug;
         std::filesystem::path file_;
         bool add_time_to_filename_            = true;
-        std::string time_format_in_file_name_ = chrono::clock_formats::iso8601;
+        std::string time_format_in_file_name_ = cuckoo::clock_formats::iso8601;
 
         bool rotate_file_            = true;
         std::uint64_t max_file_size_ = beaver::literals::operator""_mb(100);

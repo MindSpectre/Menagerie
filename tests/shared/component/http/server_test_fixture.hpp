@@ -5,7 +5,7 @@
 #include <cstdint>
 #include <deque>
 #include <functional>
-#include <menagerie/chrono>
+#include <menagerie/cuckoo>
 #include <optional>
 #include <stdexcept>
 #include <thread>

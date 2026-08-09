@@ -2,13 +2,13 @@
 # Test Stopwatch benchmark
 ##############################################################################
 add_unit_test(${UNIT_TESTING_TARGET}.Stopwatch
-        chrono/stopwatch/test_printing_stopwatch.cpp
-        chrono/stopwatch/test_stopwatch.cpp
-        chrono/stopwatch/main.cpp
+        chrono-cuckoo/stopwatch/test_printing_stopwatch.cpp
+        chrono-cuckoo/stopwatch/test_stopwatch.cpp
+        chrono-cuckoo/stopwatch/main.cpp
 )
 target_link_libraries(${UNIT_TESTING_TARGET}.Stopwatch
         PRIVATE
-        Menagerie::Common::Chrono
+        Menagerie::Common::Cuckoo
         ${TEST_LIBS}
 )
 ##############################################################################
@@ -23,7 +23,7 @@ target_link_libraries(${UNIT_TESTING_TARGET}.ThreadPool
         PRIVATE
         Menagerie::Common::Starling
         Menagerie::Common::Rabbit
-        Menagerie::Common::Chrono
+        Menagerie::Common::Cuckoo
         ${TEST_LIBS}
 
 )
@@ -39,7 +39,7 @@ target_link_libraries(${UNIT_TESTING_TARGET}.Disruptor
         PRIVATE
         Menagerie::Common::Starling
         Menagerie::Common::Rabbit
-        Menagerie::Common::Chrono
+        Menagerie::Common::Cuckoo
         ${TEST_LIBS}
 
 )

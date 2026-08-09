@@ -10,7 +10,7 @@
 #include <chrono>
 #include <cstddef>
 #include <memory>
-#include <menagerie/chrono>
+#include <menagerie/cuckoo>
 #include <span>
 #include <thread>
 #include <variant>

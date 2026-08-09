@@ -1,6 +1,6 @@
 #include <barrier>
 #include <chrono>
-#include <menagerie/chrono>
+#include <menagerie/cuckoo>
 #include <menagerie/rabbit>
 #include <menagerie/starling>
 #include <vector>
@@ -431,7 +431,7 @@ TEST_F(ThreadPoolTest, StressTestRapidTasks) {
     std::atomic counter{0};
     constexpr int TASK_COUNT = 1000;
 
-    menagerie::chrono::Stopwatch sw;
+    menagerie::cuckoo::Stopwatch sw;
 
     std::vector<std::future<void>> futures;
     futures.reserve(TASK_COUNT);

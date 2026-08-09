@@ -16,7 +16,7 @@ add_subdirectory(logger-crow)
 
 add_subdirectory(3rdparty)
 
-add_subdirectory(chrono)
+add_subdirectory(chrono-cuckoo)
 
 add_subdirectory(math-rabbit)
 

@@ -39,7 +39,7 @@ add_integration_test(${INTEGRATION_TESTING_TARGET}.Http.Server
         LINK_LIBS
         Menagerie.Component.Http.Server
         ${SHARED_TESTING_TARGET}.Http
-        Menagerie::Common::Chrono
+        Menagerie::Common::Cuckoo
         Boost::beast
         OpenSSL::SSL
         OpenSSL::Crypto

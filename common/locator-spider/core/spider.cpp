@@ -1,12 +1,12 @@
 #include "spider.hpp"
 
 #include <iostream>
-#include <menagerie/chrono>
+#include <menagerie/cuckoo>
 
 namespace menagerie::spider {
     Spider::Spider() noexcept
         : janitor_([this] { sweep_loop(); }) {
-        std::cout << "[Spider] Constructed\t" << chrono::LocalClock::current_time(chrono::clock_formats::iso8601)
+        std::cout << "[Spider] Constructed\t" << cuckoo::LocalClock::current_time(cuckoo::clock_formats::iso8601)
                   << "\n";
         // Todo: replace with logger?
     }
@@ -15,7 +15,7 @@ namespace menagerie::spider {
         stop_.store(true, std::memory_order_relaxed);
         if (janitor_.joinable())
             janitor_.join();  // graceful
-        std::cout << "[Spider] Destructed\t" << chrono::LocalClock::current_time(chrono::clock_formats::iso8601)
+        std::cout << "[Spider] Destructed\t" << cuckoo::LocalClock::current_time(cuckoo::clock_formats::iso8601)
                   << "\n";
         // Todo: replace with logger?
     }

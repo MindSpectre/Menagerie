@@ -19,7 +19,7 @@ target_link_libraries(${Http}.Listeners.Tls
         ${Http}.Config.TlsConfig
         ${Http}.Drivers.Concept
         ${Http}.Routing.Router
-        Menagerie::Common::Chrono
+        Menagerie::Common::Cuckoo
         Boost::beast
         Boost::asio
         OpenSSL::SSL

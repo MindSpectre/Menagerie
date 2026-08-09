@@ -9,7 +9,7 @@
 #include <boost/asio/steady_timer.hpp>
 #include <boost/asio/use_awaitable.hpp>
 
-namespace menagerie::chrono {
+namespace menagerie::cuckoo {
     /**
      * @brief Time since the steady clock's epoch, as a plain integer count.
      *
@@ -60,4 +60,4 @@ namespace menagerie::chrono {
         timer.expires_after(duration);
         co_await timer.async_wait(boost::asio::use_awaitable);
     }
-}  // namespace menagerie::chrono
+}  // namespace menagerie::cuckoo

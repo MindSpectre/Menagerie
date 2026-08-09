@@ -3,7 +3,7 @@
 #include <chrono>
 #include <cstddef>
 #include <memory>
-#include <menagerie/chrono>
+#include <menagerie/cuckoo>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -147,7 +147,7 @@ namespace menagerie::http {
                         // 1ms, 2ms, 4ms, ... capped at 1024ms - same policy as
                         // TcpListener. attempt is 0-based; consecutive_errors is >2
                         // here, so consecutive_errors - 3 never underflows.
-                        backoff->expires_after(chrono::exponential_backoff(
+                        backoff->expires_after(cuckoo::exponential_backoff(
                             consecutive_errors - 3, std::chrono::milliseconds{1}, std::chrono::milliseconds{1024}));
                         boost::beast::error_code tec;
                         co_await backoff->async_wait(asio::redirect_error(asio::use_awaitable, tec));

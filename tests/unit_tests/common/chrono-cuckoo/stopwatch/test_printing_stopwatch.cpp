@@ -1,9 +1,9 @@
-#include <menagerie/chrono>
+#include <menagerie/cuckoo>
 #include <thread>
 
 #include <gtest/gtest.h>
 
-using namespace menagerie::chrono;
+using namespace menagerie::cuckoo;
 using namespace std::literals;
 
 namespace {

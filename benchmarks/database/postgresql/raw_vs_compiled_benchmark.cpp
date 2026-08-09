@@ -5,7 +5,7 @@
 #include <iomanip>
 #include <iostream>
 #include <menagerie/beaver>
-#include <menagerie/chrono>
+#include <menagerie/cuckoo>
 #include <menagerie/postgresql>
 #include <numeric>
 #include <string>
@@ -178,7 +178,7 @@ void run_raw_benchmarks(menagerie::db::postgres::SyncExecutor& executor) {
 
         // Benchmark
         for (std::size_t i = 0; i < BENCHMARK_ITERATIONS; ++i) {
-            auto elapsed = menagerie::chrono::Stopwatch<std::chrono::nanoseconds>::measure(
+            auto elapsed = menagerie::cuckoo::Stopwatch<std::chrono::nanoseconds>::measure(
                 [&] { (void)executor.execute(std::string(bench.raw_sql)); });
             timings.push_back(elapsed);
         }
@@ -266,7 +266,7 @@ void run_compiled_benchmarks(menagerie::db::postgres::SyncExecutor& executor,
 
         // Benchmark
         for (std::size_t i = 0; i < BENCHMARK_ITERATIONS; ++i) {
-            auto elapsed = menagerie::chrono::Stopwatch<std::chrono::nanoseconds>::measure([&] {
+            auto elapsed = menagerie::cuckoo::Stopwatch<std::chrono::nanoseconds>::measure([&] {
                 auto compiled = make_query();
                 (void)executor.execute(compiled);
             });

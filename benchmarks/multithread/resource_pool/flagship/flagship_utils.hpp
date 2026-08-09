@@ -1,14 +1,14 @@
 #pragma once
 #include <iostream>
 #include <menagerie/chameleon>
-#include <menagerie/chrono>
+#include <menagerie/cuckoo>
 #include <menagerie/starling>
 
 #include "common/bench_latency.hpp"
 #include "flagship_config.hpp"
 namespace bench::pool {
 
-    using TscClock      = menagerie::chrono::TscClock;
+    using TscClock      = menagerie::cuckoo::TscClock;
     namespace chameleon = menagerie::chameleon;
 
     // The disruptor payload: a producer timestamp (rdtsc).

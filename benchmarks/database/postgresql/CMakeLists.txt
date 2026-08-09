@@ -41,7 +41,7 @@ add_executable(${BENCHMARKS_POSTGRESQL}.RawVsCompiled
 )
 target_link_libraries(${BENCHMARKS_POSTGRESQL}.RawVsCompiled
         PRIVATE
-        Menagerie::Common::Chrono
+        Menagerie::Common::Cuckoo
         Menagerie::Component::Database::PostgreSQL
 )
 ##############################################################################

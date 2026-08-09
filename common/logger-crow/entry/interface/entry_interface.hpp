@@ -2,7 +2,7 @@
 
 #include <cinttypes>
 #include <menagerie/beaver>
-#include <menagerie/chrono>
+#include <menagerie/cuckoo>
 #include <source_location>
 #include <thread>
 
@@ -123,7 +123,7 @@ namespace menagerie::crow {
             std::chrono::time_point<std::chrono::system_clock> time_point;  ///< Construction-time timestamp.
 
             MetaTimePoint() noexcept
-                : time_point{chrono::Clock::now()} {
+                : time_point{cuckoo::Clock::now()} {
             }
         };
 

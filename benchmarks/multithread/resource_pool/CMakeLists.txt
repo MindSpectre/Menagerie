@@ -44,7 +44,7 @@ target_link_libraries(${BENCHMARKS_RESOURCEPOOL}.Common
         INTERFACE
         benchmark::benchmark
         Menagerie::Common::Starling
-        Menagerie::Common::Chrono
+        Menagerie::Common::Cuckoo
         Menagerie::Common::Chameleon
         Boost::headers
         Boost::system

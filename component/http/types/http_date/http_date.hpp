@@ -6,7 +6,7 @@ namespace menagerie::http {
 
     /// The current wall-clock second as an RFC 9110 IMF-fixdate, rebuilt at most
     /// once per second per thread (thread_local cache - no synchronization on the
-    /// response hot path). The rendering itself lives in `menagerie::chrono`
+    /// response hot path). The rendering itself lives in `menagerie::cuckoo`
     /// (`format_imf_fixdate`); this wrapper adds only the per-second caching that
     /// the Date-header hot path needs. The view points into thread-local storage:
     /// copy it before the next call on the same thread if it must outlive one.

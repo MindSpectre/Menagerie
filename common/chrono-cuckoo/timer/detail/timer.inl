@@ -2,7 +2,7 @@
 
 #include <menagerie/beaver>
 
-namespace menagerie::chrono {
+namespace menagerie::cuckoo {
     template <typename... Args, typename Callable>
         requires std::invocable<Callable, Args...>
     auto Timer::execute_polite_vanish(const std::chrono::milliseconds timeout, Callable&& fn, Args&&... args) {
@@ -73,4 +73,4 @@ namespace menagerie::chrono {
 
         return fut;
     }
-}  // namespace menagerie::chrono
+}  // namespace menagerie::cuckoo

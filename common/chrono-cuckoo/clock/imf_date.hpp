@@ -5,7 +5,7 @@
 #include <ctime>
 #include <span>
 
-namespace menagerie::chrono {
+namespace menagerie::cuckoo {
 
     /// "Sun, 06 Nov 1994 08:49:37 GMT" -- RFC 9110 section 5.6.7 IMF-fixdate is fixed-width.
     inline constexpr std::size_t IMF_FIXDATE_LEN = 29;
@@ -36,4 +36,4 @@ namespace menagerie::chrono {
         return n > 0 ? static_cast<std::size_t>(n) : 0;
     }
 
-}  // namespace menagerie::chrono
+}  // namespace menagerie::cuckoo

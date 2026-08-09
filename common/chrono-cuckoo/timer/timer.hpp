@@ -8,7 +8,7 @@
 
 #include "detail/cancellation_token.hpp"
 
-namespace menagerie::chrono {
+namespace menagerie::cuckoo {
     /**
      * @brief Runs a callable with a deadline on an owned ThreadPool, in one of two
      *        enforcement modes.
@@ -78,6 +78,6 @@ namespace menagerie::chrono {
 
         // type-trait: does first arg look like a cancellation token?
     };
-}  // namespace menagerie::chrono
+}  // namespace menagerie::cuckoo
 
 #include "detail/timer.inl"

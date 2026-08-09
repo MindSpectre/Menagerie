@@ -1,12 +1,12 @@
 #include <functional>
-#include <menagerie/chrono>
+#include <menagerie/cuckoo>
 #include <random>
 #include <thread>
 
 #include <gtest/gtest.h>
 
 
-using namespace menagerie::chrono;
+using namespace menagerie::cuckoo;
 using namespace std::literals;
 
 namespace {

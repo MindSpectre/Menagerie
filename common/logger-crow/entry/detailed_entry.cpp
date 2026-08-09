@@ -1,6 +1,6 @@
 #include "detailed_entry.hpp"
 
-#include <menagerie/chrono>
+#include <menagerie/cuckoo>
 
 namespace {
     void append_number(std::string& buf, const uint32_t value) {
@@ -15,7 +15,7 @@ namespace menagerie::crow {
         out.clear();
         out.reserve(160 + message_.size());
 
-        chrono::UTCClock::format_time_iso_ms(time_point, out);
+        cuckoo::UTCClock::format_time_iso_ms(time_point, out);
 
         out.push_back(' ');
         out.append(level_cstr());

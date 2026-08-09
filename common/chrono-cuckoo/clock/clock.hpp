@@ -8,7 +8,7 @@
 
 /// Menagerie's timing toolkit: wall-clock formatting/parsing, HTTP-date rendering, a
 /// raw hardware tick counter, stopwatches, and a deadline-bound function executor.
-namespace menagerie::chrono {
+namespace menagerie::cuckoo {
     namespace detail {
         /// Satisfied by string-like types with an `append(const char*, size_t)` method
         /// (e.g. std::string), used to append-in-place instead of allocating a new string.
@@ -164,4 +164,4 @@ namespace menagerie::chrono {
 
     using LocalClock = SpecClock<ClockType::Local>;  ///< Formats/parses using the process's local timezone.
     using UTCClock   = SpecClock<ClockType::UTC>;    ///< Formats/parses using UTC.
-}  // namespace menagerie::chrono
+}  // namespace menagerie::cuckoo
