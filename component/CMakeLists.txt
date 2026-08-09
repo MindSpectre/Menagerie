@@ -5,7 +5,7 @@ set(COMPONENT ${PROJECT_NAME}.Component)
 ##############################################################################
 if (BUILD_DATABASE)
     message("Database core will be built")
-    add_subdirectory(database)
+    add_subdirectory(database-reef)
 endif ()
 ##############################################################################
 

@@ -18,9 +18,9 @@
 
 namespace {
 
-    using menagerie::db::postgres::ConnectionConfig;
-    using menagerie::db::postgres::LockFreeSession;
-    using menagerie::db::postgres::PoolConfig;
+    using menagerie::reef::postgres::ConnectionConfig;
+    using menagerie::reef::postgres::LockFreeSession;
+    using menagerie::reef::postgres::PoolConfig;
 
     class LockFreeBackend {
     public:

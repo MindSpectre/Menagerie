@@ -14,7 +14,7 @@ add_executable(${BENCHMARKS_POSTGRESQL}.Scenarios.LockFreeSession
 target_link_libraries(${BENCHMARKS_POSTGRESQL}.Scenarios.LockFreeSession
         PRIVATE
         ${BENCHMARKS_POSTGRESQL}.Common
-        Menagerie::Component::Database::PostgreSQL
+        Menagerie::Component::Reef::PostgreSQL
 )
 
 # --- BlockingSession ---
@@ -24,7 +24,7 @@ add_executable(${BENCHMARKS_POSTGRESQL}.Scenarios.BlockingSession
 target_link_libraries(${BENCHMARKS_POSTGRESQL}.Scenarios.BlockingSession
         PRIVATE
         ${BENCHMARKS_POSTGRESQL}.Common
-        Menagerie::Component::Database::PostgreSQL
+        Menagerie::Component::Reef::PostgreSQL
 )
 
 # --- libpq control ---
@@ -53,5 +53,5 @@ add_executable(${BENCHMARKS_POSTGRESQL}.Scenarios.SyncExecutor
 target_link_libraries(${BENCHMARKS_POSTGRESQL}.Scenarios.SyncExecutor
         PRIVATE
         ${BENCHMARKS_POSTGRESQL}.Common
-        Menagerie::Component::Database::PostgreSQL
+        Menagerie::Component::Reef::PostgreSQL
 )

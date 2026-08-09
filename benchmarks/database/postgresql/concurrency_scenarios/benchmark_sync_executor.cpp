@@ -18,7 +18,7 @@
 
 namespace {
 
-    using menagerie::db::postgres::SyncExecutor;
+    using menagerie::reef::postgres::SyncExecutor;
 
     // thread_local owns a raw PGconn* and a SyncExecutor wrapping it.
     // PGconn lifetime is longer than SyncExecutor's; destruction order tears

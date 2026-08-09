@@ -66,7 +66,7 @@ namespace {
         return conn;
     }
 
-    void setup_tables(menagerie::db::postgres::SyncExecutor& executor) {
+    void setup_tables(menagerie::reef::postgres::SyncExecutor& executor) {
         // Drop and recreate tables for clean state
         (void)executor.execute("DROP TABLE IF EXISTS bench_users CASCADE");
 
@@ -160,7 +160,7 @@ std::vector<BenchmarkDef> get_benchmarks() {
     };
 }
 
-void run_raw_benchmarks(menagerie::db::postgres::SyncExecutor& executor) {
+void run_raw_benchmarks(menagerie::reef::postgres::SyncExecutor& executor) {
     auto benchmarks = get_benchmarks();
 
     std::cout << "Running RAW STRING benchmarks...\n\n";
@@ -195,11 +195,11 @@ void run_raw_benchmarks(menagerie::db::postgres::SyncExecutor& executor) {
     std::cout << std::string(50, '=') << "\n";
 }
 
-void run_compiled_benchmarks(menagerie::db::postgres::SyncExecutor& executor,
-                             menagerie::db::QueryCompiler<menagerie::db::postgres::PostgresDialect,
-                                                          menagerie::db::ParamMode::Inline>& compiler) {
-    using namespace menagerie::db;
-    using namespace menagerie::db::constraints;
+void run_compiled_benchmarks(menagerie::reef::postgres::SyncExecutor& executor,
+                             menagerie::reef::QueryCompiler<menagerie::reef::postgres::PostgresDialect,
+                                                          menagerie::reef::ParamMode::Inline>& compiler) {
+    using namespace menagerie::reef;
+    using namespace menagerie::reef::constraints;
 
     using BenchUsersTable = StaticTable<"bench_users",
                                         StaticFieldSchema<int, "id", PrimaryKey, NotNull>,
@@ -286,8 +286,8 @@ void run_compiled_benchmarks(menagerie::db::postgres::SyncExecutor& executor,
 }
 
 int main(int argc, char* argv[]) {
-    using namespace menagerie::db;
-    using namespace menagerie::db::postgres;
+    using namespace menagerie::reef;
+    using namespace menagerie::reef::postgres;
 
     BenchmarkMode mode = BenchmarkMode::Both;
 

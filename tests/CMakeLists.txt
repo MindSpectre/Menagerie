@@ -36,8 +36,8 @@ endif ()
 ##############################################################################
 if (BUILD_DATABASE)
     message("Database tests will be built")
-    add_subdirectory(unit_tests/component/database)
-    add_subdirectory(integration_tests/component/database)
+    add_subdirectory(unit_tests/component/database-reef)
+    add_subdirectory(integration_tests/component/database-reef)
 endif ()
 ##############################################################################
 
