@@ -15,7 +15,7 @@ target_link_libraries(${Http}.Config.LoadServerConfig
         ${Http}.Config.ServerConfig
         ${Http}.Types
         Menagerie::Common::Beaver
-        Menagerie::Common::Serialization
+        Menagerie::Common::Pangolin
         JsonCpp::JsonCpp
 )
 ##############################################################################

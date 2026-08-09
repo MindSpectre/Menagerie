@@ -10,7 +10,7 @@
 /// Field-descriptor serialization framework: declare a Field per member and
 /// ConfigInterface provides serialize()/deserialize() without hand-written
 /// per-field code.
-namespace menagerie::serialization {
+namespace menagerie::pangolin {
 
     /**
      * @brief CRTP base providing serialize<Format>() and static
@@ -67,7 +67,7 @@ namespace menagerie::serialization {
         template <typename Format, typename F>
         static void serialize_one_field(Format& out, const Derived& d, F) {
             if constexpr (F::policy != FieldPolicy::Secret && F::policy != FieldPolicy::Excluded) {
-                // FieldName (not a bare string) keeps menagerie::serialization
+                // FieldName (not a bare string) keeps menagerie::pangolin
                 // an associated namespace of this dependent call - the only
                 // route by which two-phase lookup reaches the format overloads
                 // (see field.hpp).
@@ -96,4 +96,4 @@ namespace menagerie::serialization {
         }
     };
 
-}  // namespace menagerie::serialization
+}  // namespace menagerie::pangolin

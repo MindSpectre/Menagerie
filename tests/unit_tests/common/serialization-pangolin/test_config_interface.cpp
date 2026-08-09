@@ -1,7 +1,7 @@
 #include <chrono>
 #include <cstddef>
 #include <map>
-#include <menagerie/serialization>
+#include <menagerie/pangolin>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -20,7 +20,7 @@
 
 namespace {
 
-    namespace ser = menagerie::serialization;
+    namespace ser = menagerie::pangolin;
 
     class InnerConfig final : public ser::ConfigInterface<InnerConfig, Json::Value> {
     public:

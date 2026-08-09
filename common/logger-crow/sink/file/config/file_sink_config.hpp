@@ -3,7 +3,7 @@
 #include <filesystem>
 #include <menagerie/beaver>
 #include <menagerie/chrono>
-#include <menagerie/serialization>
+#include <menagerie/pangolin>
 
 #include "detail/prefix_filter.hpp"
 #include "sink_interface.hpp"
@@ -12,7 +12,7 @@ namespace menagerie::crow {
 
     /// FileSink construction options: severity threshold, target file, timestamped
     /// naming, rotation, and prefix filtering. Build via FileSinkConfig::Builder.
-    class FileSinkConfig final : public serialization::ConfigInterface<FileSinkConfig, Json::Value> {
+    class FileSinkConfig final : public pangolin::ConfigInterface<FileSinkConfig, Json::Value> {
     public:
         /// Full constructor (escape hatch); prefer FileSinkConfig::Builder for named,
         /// optional-with-defaults construction.
@@ -82,18 +82,18 @@ namespace menagerie::crow {
             return prefix_filter_;
         }
 
-        /// Field list consumed by serialization::ConfigInterface for JSON (de)serialization.
+        /// Field list consumed by pangolin::ConfigInterface for JSON (de)serialization.
         static constexpr auto fields() {
             return std::tuple{
-                serialization::Field<&FileSinkConfig::threshold_, "threshold">{},
-                serialization::Field<&FileSinkConfig::file_, "file">{},
-                serialization::Field<&FileSinkConfig::add_time_to_filename_, "add_time_to_filename">{},
-                serialization::Field<&FileSinkConfig::time_format_in_file_name_, "time_format_in_file_name">{},
-                serialization::Field<&FileSinkConfig::rotate_file_, "rotate_file">{},
-                serialization::Field<&FileSinkConfig::max_file_size_, "max_file_size">{},
-                serialization::Field<&FileSinkConfig::flush_each_entry_, "flush_each_entry">{},
-                serialization::
-                    Field<&FileSinkConfig::prefix_filter_, "prefix_filter", serialization::FieldPolicy::Excluded>{},
+                pangolin::Field<&FileSinkConfig::threshold_, "threshold">{},
+                pangolin::Field<&FileSinkConfig::file_, "file">{},
+                pangolin::Field<&FileSinkConfig::add_time_to_filename_, "add_time_to_filename">{},
+                pangolin::Field<&FileSinkConfig::time_format_in_file_name_, "time_format_in_file_name">{},
+                pangolin::Field<&FileSinkConfig::rotate_file_, "rotate_file">{},
+                pangolin::Field<&FileSinkConfig::max_file_size_, "max_file_size">{},
+                pangolin::Field<&FileSinkConfig::flush_each_entry_, "flush_each_entry">{},
+                pangolin::
+                    Field<&FileSinkConfig::prefix_filter_, "prefix_filter", pangolin::FieldPolicy::Excluded>{},
             };
         }
 

@@ -41,7 +41,7 @@ nothing below `drivers` knows about a byte stream's protocol.
 - **`config/`**: the JSON-loadable configuration surface: `ServerConfig`,
   `ListenerConfig`, `TlsConfig`, `Timeouts`, and `load_server_config`/`dump_server_config`. Depends on `types`
   only (`Protocol`'s string codec, and a forward-declared `Response` for its own `to_http_response` overloads);
-  everything else is `serialization::ConfigInterface` plumbing shared with the rest of the project.
+  everything else is `pangolin::ConfigInterface` plumbing shared with the rest of the project.
 - **`server/`**: the orchestrator: `Server` (owns the route registry, the
   listeners, the observer list; drives setup, stop, and graceful shutdown), `ServerObserver`, `run_standalone`
   (owns an `io_context` + worker threads for the "HTTP owns the process" case), and `attach_default_listeners`
@@ -261,7 +261,7 @@ own strand so the emit is serialized with that connection's or listener's in-fli
 
 ## Configuration
 
-Every config type is `serialization::ConfigInterface<Self, Json::Value>` - the project-wide JSON pattern: a
+Every config type is `pangolin::ConfigInterface<Self, Json::Value>` - the project-wide JSON pattern: a
 private default constructor, a fluent `Builder`, a `fields()` tuple for the (de)serialization walk, and a
 `validate()` that both `Builder::finalize()` and `load_server_config` call.
 

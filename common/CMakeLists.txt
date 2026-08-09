@@ -4,7 +4,7 @@ set(COMMON ${PROJECT_NAME}.Common)
 
 add_subdirectory(core-beaver)
 
-add_subdirectory(serialization)
+add_subdirectory(serialization-pangolin)
 
 add_subdirectory(crypto-pufferfish)
 

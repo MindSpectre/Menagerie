@@ -3,7 +3,7 @@
 #include <concepts>
 #include <type_traits>
 
-namespace menagerie::serialization {
+namespace menagerie::pangolin {
 
     /// Detects a T::fields() static member; a nested ConfigInterface-derived
     /// member serializes as a nested object instead of a scalar when this holds.
@@ -24,4 +24,4 @@ namespace menagerie::serialization {
         { T::custom_deserialize(f) } -> std::same_as<T>;
     };
 
-}  // namespace menagerie::serialization
+}  // namespace menagerie::pangolin

@@ -201,14 +201,14 @@ target_link_libraries(${UNIT_TESTING_TARGET}.AsyncResourcePool
 ##############################################################################
 
 ##############################################################################
-# Test Serialization (ConfigInterface machinery + JSON field codecs)
+# Test Pangolin (ConfigInterface machinery + JSON field codecs)
 ##############################################################################
-add_unit_test(${UNIT_TESTING_TARGET}.Serialization
-        serialization/test_config_interface.cpp
+add_unit_test(${UNIT_TESTING_TARGET}.Pangolin
+        serialization-pangolin/test_config_interface.cpp
 )
-target_link_libraries(${UNIT_TESTING_TARGET}.Serialization
+target_link_libraries(${UNIT_TESTING_TARGET}.Pangolin
         PRIVATE
-        Menagerie::Common::Serialization
+        Menagerie::Common::Pangolin
         ${TEST_LIBS}
 )
 ##############################################################################

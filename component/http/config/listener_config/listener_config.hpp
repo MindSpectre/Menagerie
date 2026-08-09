@@ -2,7 +2,7 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <menagerie/serialization>
+#include <menagerie/pangolin>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -34,13 +34,13 @@ namespace menagerie::http {
     }
 
     /// Writes `v`'s wire string into `out[key]`.
-    inline void write_field(Json::Value& out, const serialization::FieldName key, const Protocol v) {
+    inline void write_field(Json::Value& out, const pangolin::FieldName key, const Protocol v) {
         out[key.str()] = std::string{to_string_view(v)};
     }
 
     /// @throw std::invalid_argument on an unknown protocol string - a silent
     /// fallback would turn a typo into serving the wrong protocol.
-    inline bool read_field(const Json::Value& in, const serialization::FieldName key, Protocol& v) {
+    inline bool read_field(const Json::Value& in, const pangolin::FieldName key, Protocol& v) {
         const std::string k = key.str();
         if (!in.isMember(k)) {
             return false;
@@ -74,7 +74,7 @@ namespace menagerie::http {
      * can actually serve is attach_default_listeners' concern instead - the
      * config layer stays driver-availability-agnostic.
      */
-    class ListenerConfig final : public serialization::ConfigInterface<ListenerConfig, Json::Value> {
+    class ListenerConfig final : public pangolin::ConfigInterface<ListenerConfig, Json::Value> {
     public:
         /// Transport the listener accepts connections on.
         enum class Transport : std::uint8_t { tcp, tls, quic };
@@ -148,11 +148,11 @@ namespace menagerie::http {
         /// Field descriptors consumed by the JSON (de)serialization machinery.
         static constexpr auto fields() {
             return std::tuple{
-                serialization::Field<&ListenerConfig::bind_address_, "bind">{},
-                serialization::Field<&ListenerConfig::port_, "port">{},
-                serialization::Field<&ListenerConfig::transport_, "transport">{},
-                serialization::Field<&ListenerConfig::protocols_, "protocols">{},
-                serialization::Field<&ListenerConfig::tls_, "tls">{},
+                pangolin::Field<&ListenerConfig::bind_address_, "bind">{},
+                pangolin::Field<&ListenerConfig::port_, "port">{},
+                pangolin::Field<&ListenerConfig::transport_, "transport">{},
+                pangolin::Field<&ListenerConfig::protocols_, "protocols">{},
+                pangolin::Field<&ListenerConfig::tls_, "tls">{},
             };
         }
 
@@ -185,13 +185,13 @@ namespace menagerie::http {
     }
 
     /// Writes `v`'s wire string into `out[key]`.
-    inline void write_field(Json::Value& out, const serialization::FieldName key, const ListenerConfig::Transport v) {
+    inline void write_field(Json::Value& out, const pangolin::FieldName key, const ListenerConfig::Transport v) {
         out[key.str()] = std::string{to_string_view(v)};
     }
 
     /// @throw std::invalid_argument on an unknown transport string - a silent
     /// fallback would turn a typo into binding the wrong transport.
-    inline bool read_field(const Json::Value& in, const serialization::FieldName key, ListenerConfig::Transport& v) {
+    inline bool read_field(const Json::Value& in, const pangolin::FieldName key, ListenerConfig::Transport& v) {
         const std::string k = key.str();
         if (!in.isMember(k)) {
             return false;

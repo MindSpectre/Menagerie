@@ -3,7 +3,7 @@
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
-#include <menagerie/serialization>
+#include <menagerie/pangolin>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -18,7 +18,7 @@ namespace menagerie::http {
 
     /**
      * @brief Server-level configuration, JSON-loadable via
-     *        serialization::ConfigInterface.
+     *        pangolin::ConfigInterface.
      *
      * `threads` is consumed only by run_standalone-style callers - the
      * injected-executor path takes its thread count from whoever drives the
@@ -27,7 +27,7 @@ namespace menagerie::http {
      * dependency. Builder-only construction: every default is valid, so
      * `ServerConfig::Builder{}.finalize()` is the canonical empty config.
      */
-    class ServerConfig final : public serialization::ConfigInterface<ServerConfig, Json::Value> {
+    class ServerConfig final : public pangolin::ConfigInterface<ServerConfig, Json::Value> {
     public:
         /// Request-path normalization applied before routing.
         enum class PathNormalization : std::uint8_t {
@@ -87,13 +87,13 @@ namespace menagerie::http {
         /// Field descriptors consumed by the JSON (de)serialization machinery.
         static constexpr auto fields() {
             return std::tuple{
-                serialization::Field<&ServerConfig::listeners_, "listeners">{},
-                serialization::Field<&ServerConfig::threads_, "threads">{},
-                serialization::Field<&ServerConfig::timeouts_, "timeouts">{},
-                serialization::Field<&ServerConfig::body_limit_, "body_limit">{},
-                serialization::Field<&ServerConfig::request_arena_size_, "request_arena_size">{},
-                serialization::Field<&ServerConfig::drain_timeout_, "drain_timeout_ms">{},
-                serialization::Field<&ServerConfig::path_normalization_, "path_normalization">{},
+                pangolin::Field<&ServerConfig::listeners_, "listeners">{},
+                pangolin::Field<&ServerConfig::threads_, "threads">{},
+                pangolin::Field<&ServerConfig::timeouts_, "timeouts">{},
+                pangolin::Field<&ServerConfig::body_limit_, "body_limit">{},
+                pangolin::Field<&ServerConfig::request_arena_size_, "request_arena_size">{},
+                pangolin::Field<&ServerConfig::drain_timeout_, "drain_timeout_ms">{},
+                pangolin::Field<&ServerConfig::path_normalization_, "path_normalization">{},
             };
         }
 
@@ -131,14 +131,14 @@ namespace menagerie::http {
 
     /// Writes `v`'s wire string into `out[key]`.
     inline void
-    write_field(Json::Value& out, const serialization::FieldName key, const ServerConfig::PathNormalization v) {
+    write_field(Json::Value& out, const pangolin::FieldName key, const ServerConfig::PathNormalization v) {
         out[key.str()] = std::string{to_string_view(v)};
     }
 
     /// @throw std::invalid_argument on an unknown path_normalization string -
     /// a silent fallback would turn a typo into the wrong normalization mode.
     inline bool
-    read_field(const Json::Value& in, const serialization::FieldName key, ServerConfig::PathNormalization& v) {
+    read_field(const Json::Value& in, const pangolin::FieldName key, ServerConfig::PathNormalization& v) {
         const std::string k = key.str();
         if (!in.isMember(k)) {
             return false;

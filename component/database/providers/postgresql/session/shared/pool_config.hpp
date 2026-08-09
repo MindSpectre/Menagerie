@@ -2,7 +2,7 @@
 
 #include <chrono>
 #include <cstddef>
-#include <menagerie/serialization>
+#include <menagerie/pangolin>
 #include <stdexcept>
 #include <string>
 
@@ -23,7 +23,7 @@ namespace menagerie::db::postgres {
      *       .connect_timeout(std::chrono::seconds{5})
      *       .finalize();
      */
-    class PoolConfig final : public serialization::ConfigInterface<PoolConfig, Json::Value> {
+    class PoolConfig final : public pangolin::ConfigInterface<PoolConfig, Json::Value> {
     public:
         // -------- ConfigInterface Implementation --------
 
@@ -93,13 +93,13 @@ namespace menagerie::db::postgres {
         /// Field descriptor tuple consumed by the serialization framework's auto-serialize support.
         static constexpr auto fields() {
             return std::tuple{
-                serialization::Field<&PoolConfig::capacity_, "capacity">{},
-                serialization::Field<&PoolConfig::min_connections_, "min_connections">{},
-                serialization::Field<&PoolConfig::connect_timeout_, "connect_timeout">{},
-                serialization::Field<&PoolConfig::idle_timeout_, "idle_timeout">{},
-                serialization::Field<&PoolConfig::health_check_interval_, "health_check_interval">{},
-                serialization::Field<&PoolConfig::max_lifetime_, "max_lifetime">{},
-                serialization::Field<&PoolConfig::cleanup_sql_, "cleanup_sql">{},
+                pangolin::Field<&PoolConfig::capacity_, "capacity">{},
+                pangolin::Field<&PoolConfig::min_connections_, "min_connections">{},
+                pangolin::Field<&PoolConfig::connect_timeout_, "connect_timeout">{},
+                pangolin::Field<&PoolConfig::idle_timeout_, "idle_timeout">{},
+                pangolin::Field<&PoolConfig::health_check_interval_, "health_check_interval">{},
+                pangolin::Field<&PoolConfig::max_lifetime_, "max_lifetime">{},
+                pangolin::Field<&PoolConfig::cleanup_sql_, "cleanup_sql">{},
             };
         }
 

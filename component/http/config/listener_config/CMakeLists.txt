@@ -10,6 +10,6 @@ target_include_directories(${Http}.Config.ListenerConfig INTERFACE
 target_link_libraries(${Http}.Config.ListenerConfig INTERFACE
         ${Http}.Config.TlsConfig
         ${Http}.Types.Enums
-        Menagerie::Common::Serialization
+        Menagerie::Common::Pangolin
 )
 ##############################################################################

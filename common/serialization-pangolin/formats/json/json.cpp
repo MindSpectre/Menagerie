@@ -1,6 +1,6 @@
 #include "json.hpp"
 
-namespace menagerie::serialization {
+namespace menagerie::pangolin {
 
     // ---- write_field implementations ----
 
@@ -138,4 +138,4 @@ namespace menagerie::serialization {
         return true;
     }
 
-}  // namespace menagerie::serialization
+}  // namespace menagerie::pangolin

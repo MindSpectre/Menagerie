@@ -2,7 +2,7 @@
 
 #include <cstdint>
 #include <menagerie/beaver>
-#include <menagerie/serialization>
+#include <menagerie/pangolin>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -12,14 +12,14 @@ namespace menagerie::http {
 
     /**
      * @brief TLS settings consumed by build_ssl_context, JSON-loadable via
-     *        serialization::ConfigInterface.
+     *        pangolin::ConfigInterface.
      *
      * min_version encodes as a string ("tls12" | "tls13"); key_passphrase is
      * FieldPolicy::Secret - read from JSON, never written by dump. The full
      * constructor is a no-validation escape hatch (scaffold tests build empty
      * configs on purpose); Builder::finalize() and deserialize() validate.
      */
-    class TlsConfig final : public serialization::ConfigInterface<TlsConfig, Json::Value> {
+    class TlsConfig final : public pangolin::ConfigInterface<TlsConfig, Json::Value> {
     public:
         /// TLS protocol-version floor to negotiate.
         enum class MinVersion : std::uint8_t { tls12, tls13 };
@@ -98,15 +98,15 @@ namespace menagerie::http {
         /// Field descriptors consumed by the JSON (de)serialization machinery.
         static constexpr auto fields() {
             return std::tuple{
-                serialization::Field<&TlsConfig::cert_file_, "cert_file">{},
-                serialization::Field<&TlsConfig::key_file_, "key_file">{},
-                serialization::
-                    Field<&TlsConfig::key_passphrase_, "key_passphrase", serialization::FieldPolicy::Secret>{},
-                serialization::Field<&TlsConfig::dh_params_file_, "dh_params_file">{},
-                serialization::Field<&TlsConfig::ca_file_, "ca_file">{},
-                serialization::Field<&TlsConfig::min_version_, "min_version">{},
-                serialization::Field<&TlsConfig::session_cache_, "session_cache">{},
-                serialization::Field<&TlsConfig::require_client_cert_, "require_client_cert">{},
+                pangolin::Field<&TlsConfig::cert_file_, "cert_file">{},
+                pangolin::Field<&TlsConfig::key_file_, "key_file">{},
+                pangolin::
+                    Field<&TlsConfig::key_passphrase_, "key_passphrase", pangolin::FieldPolicy::Secret>{},
+                pangolin::Field<&TlsConfig::dh_params_file_, "dh_params_file">{},
+                pangolin::Field<&TlsConfig::ca_file_, "ca_file">{},
+                pangolin::Field<&TlsConfig::min_version_, "min_version">{},
+                pangolin::Field<&TlsConfig::session_cache_, "session_cache">{},
+                pangolin::Field<&TlsConfig::require_client_cert_, "require_client_cert">{},
             };
         }
 
@@ -143,13 +143,13 @@ namespace menagerie::http {
     }
 
     /// Writes `v`'s wire string into `out[key]`.
-    inline void write_field(Json::Value& out, const serialization::FieldName key, const TlsConfig::MinVersion v) {
+    inline void write_field(Json::Value& out, const pangolin::FieldName key, const TlsConfig::MinVersion v) {
         out[key.str()] = std::string{to_string_view(v)};
     }
 
     /// @throw std::invalid_argument on an unknown string - a silent default
     /// would turn a typo into weaker TLS.
-    inline bool read_field(const Json::Value& in, const serialization::FieldName key, TlsConfig::MinVersion& v) {
+    inline bool read_field(const Json::Value& in, const pangolin::FieldName key, TlsConfig::MinVersion& v) {
         const std::string k = key.str();
         if (!in.isMember(k)) {
             return false;

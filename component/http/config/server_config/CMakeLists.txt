@@ -10,6 +10,6 @@ target_include_directories(${Http}.Config.ServerConfig INTERFACE
 target_link_libraries(${Http}.Config.ServerConfig INTERFACE
         ${Http}.Config.ListenerConfig
         ${Http}.Config.Timeouts
-        Menagerie::Common::Serialization
+        Menagerie::Common::Pangolin
 )
 ##############################################################################

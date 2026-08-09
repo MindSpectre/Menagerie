@@ -1,17 +1,17 @@
-set(SERIALIZATION ${COMMON}.Serialization)
+set(PANGOLIN ${COMMON}.Pangolin)
 
 ##############################################################################
 # Field descriptor and concepts (header-only)
 ##############################################################################
-add_library(${SERIALIZATION}.Config INTERFACE
+add_library(${PANGOLIN}.Config INTERFACE
         config/field.hpp
         config/serial_concepts.hpp
         config/config_interface.hpp
 )
-target_include_directories(${SERIALIZATION}.Config INTERFACE
+target_include_directories(${PANGOLIN}.Config INTERFACE
         config
 )
-target_link_libraries(${SERIALIZATION}.Config INTERFACE
+target_link_libraries(${PANGOLIN}.Config INTERFACE
         Menagerie::Common::Beaver
 )
 ##############################################################################
@@ -19,31 +19,31 @@ target_link_libraries(${SERIALIZATION}.Config INTERFACE
 ##############################################################################
 # JSON format support
 ##############################################################################
-add_library(${SERIALIZATION}.Formats.Json STATIC
+add_library(${PANGOLIN}.Formats.Json STATIC
         formats/json/json.hpp
         formats/json/json.cpp
 )
-target_include_directories(${SERIALIZATION}.Formats.Json PUBLIC
+target_include_directories(${PANGOLIN}.Formats.Json PUBLIC
         formats
 )
-target_link_libraries(${SERIALIZATION}.Formats.Json PUBLIC
-        ${SERIALIZATION}.Config
+target_link_libraries(${PANGOLIN}.Formats.Json PUBLIC
+        ${PANGOLIN}.Config
         JsonCpp::JsonCpp
 )
 ##############################################################################
 
 ##############################################################################
-# Serialization exported library
+# Pangolin exported library
 ##############################################################################
-add_combined_library(${SERIALIZATION}
+add_combined_library(${PANGOLIN}
         DIRECTORIES
         export
         SOURCES
-        export/menagerie/serialization
+        export/menagerie/pangolin
         LIBRARIES
-        ${SERIALIZATION}.Config
-        ${SERIALIZATION}.Formats.Json
+        ${PANGOLIN}.Config
+        ${PANGOLIN}.Formats.Json
 )
 
-add_library(Menagerie::Common::Serialization ALIAS ${SERIALIZATION})
+add_library(Menagerie::Common::Pangolin ALIAS ${PANGOLIN})
 ##############################################################################

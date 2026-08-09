@@ -1,7 +1,7 @@
 #pragma once
 
 #include <chrono>
-#include <menagerie/serialization>
+#include <menagerie/pangolin>
 #include <stdexcept>
 #include <tuple>
 #include <utility>
@@ -18,7 +18,7 @@ namespace menagerie::http {
      * idle_ms bounds the keep-alive wait for the next request; header_ms and
      * body_ms bound a message already mid-arrival (see http11_config.hpp).
      */
-    class Timeouts final : public serialization::ConfigInterface<Timeouts, Json::Value> {
+    class Timeouts final : public pangolin::ConfigInterface<Timeouts, Json::Value> {
     public:
         /// Constructs from explicit per-phase durations; does not validate.
         constexpr Timeouts(const std::chrono::milliseconds header,
@@ -57,9 +57,9 @@ namespace menagerie::http {
         /// Field descriptors consumed by the JSON (de)serialization machinery.
         static constexpr auto fields() {
             return std::tuple{
-                serialization::Field<&Timeouts::header_, "header_ms">{},
-                serialization::Field<&Timeouts::body_, "body_ms">{},
-                serialization::Field<&Timeouts::idle_, "idle_ms">{},
+                pangolin::Field<&Timeouts::header_, "header_ms">{},
+                pangolin::Field<&Timeouts::body_, "body_ms">{},
+                pangolin::Field<&Timeouts::idle_, "idle_ms">{},
             };
         }
 

@@ -15,7 +15,7 @@
 #include <json/json.h>
 #include <serial_concepts.hpp>
 
-namespace menagerie::serialization {
+namespace menagerie::pangolin {
 
     // ---- write_field overloads for Json::Value ----
     // The FieldName key parameter is the extension point's ADL anchor (see
@@ -208,4 +208,4 @@ namespace menagerie::serialization {
         return true;
     }
 
-}  // namespace menagerie::serialization
+}  // namespace menagerie::pangolin

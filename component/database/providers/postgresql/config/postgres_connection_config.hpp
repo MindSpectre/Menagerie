@@ -3,7 +3,7 @@
 #include <chrono>
 #include <cstdint>
 #include <map>
-#include <menagerie/serialization>
+#include <menagerie/pangolin>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -40,7 +40,7 @@ namespace menagerie::db::postgres {
      *       .role(NodeRole::PRIMARY)
      *       .finalize();
      */
-    class ConnectionConfig final : public serialization::ConfigInterface<ConnectionConfig, Json::Value> {
+    class ConnectionConfig final : public pangolin::ConfigInterface<ConnectionConfig, Json::Value> {
     public:
         /// Wraps existing credentials with default SSL, timeout, and node settings.
         constexpr explicit ConnectionConfig(ConnectionCredentials credentials) noexcept
@@ -249,36 +249,36 @@ namespace menagerie::db::postgres {
 
         // -------- Field Descriptors --------
 
-        /// Field descriptors for serialization::ConfigInterface auto-(de)serialization.
+        /// Field descriptors for pangolin::ConfigInterface auto-(de)serialization.
         static constexpr auto fields() {
             return std::tuple{
                 // Nested config (auto-serializes via HasFields overload)
-                serialization::Field<&ConnectionConfig::credentials_, "credentials">{},
+                pangolin::Field<&ConnectionConfig::credentials_, "credentials">{},
                 // Node configuration
-                serialization::Field<&ConnectionConfig::role_, "role">{},
-                serialization::Field<&ConnectionConfig::priority_, "priority">{},
-                serialization::Field<&ConnectionConfig::cluster_name_, "cluster_name">{},
+                pangolin::Field<&ConnectionConfig::role_, "role">{},
+                pangolin::Field<&ConnectionConfig::priority_, "priority">{},
+                pangolin::Field<&ConnectionConfig::cluster_name_, "cluster_name">{},
                 // Timeouts
-                serialization::Field<&ConnectionConfig::connect_timeout_, "connect_timeout">{},
-                serialization::Field<&ConnectionConfig::statement_timeout_, "statement_timeout">{},
-                serialization::Field<&ConnectionConfig::idle_in_transaction_timeout_, "idle_in_transaction_timeout">{},
-                serialization::Field<&ConnectionConfig::lock_timeout_, "lock_timeout">{},
+                pangolin::Field<&ConnectionConfig::connect_timeout_, "connect_timeout">{},
+                pangolin::Field<&ConnectionConfig::statement_timeout_, "statement_timeout">{},
+                pangolin::Field<&ConnectionConfig::idle_in_transaction_timeout_, "idle_in_transaction_timeout">{},
+                pangolin::Field<&ConnectionConfig::lock_timeout_, "lock_timeout">{},
                 // SSL/TLS
-                serialization::Field<&ConnectionConfig::ssl_mode_, "ssl_mode">{},
-                serialization::Field<&ConnectionConfig::ssl_cert_, "ssl_cert">{},
-                serialization::Field<&ConnectionConfig::ssl_key_, "ssl_key">{},
-                serialization::Field<&ConnectionConfig::ssl_root_cert_, "ssl_root_cert">{},
+                pangolin::Field<&ConnectionConfig::ssl_mode_, "ssl_mode">{},
+                pangolin::Field<&ConnectionConfig::ssl_cert_, "ssl_cert">{},
+                pangolin::Field<&ConnectionConfig::ssl_key_, "ssl_key">{},
+                pangolin::Field<&ConnectionConfig::ssl_root_cert_, "ssl_root_cert">{},
                 // Protocol
-                serialization::Field<&ConnectionConfig::binary_protocol_, "binary_protocol">{},
-                serialization::Field<&ConnectionConfig::auto_prepare_, "auto_prepare">{},
-                serialization::Field<&ConnectionConfig::pipeline_mode_, "pipeline_mode">{},
-                serialization::Field<&ConnectionConfig::application_name_, "application_name">{},
-                serialization::Field<&ConnectionConfig::search_path_, "search_path">{},
+                pangolin::Field<&ConnectionConfig::binary_protocol_, "binary_protocol">{},
+                pangolin::Field<&ConnectionConfig::auto_prepare_, "auto_prepare">{},
+                pangolin::Field<&ConnectionConfig::pipeline_mode_, "pipeline_mode">{},
+                pangolin::Field<&ConnectionConfig::application_name_, "application_name">{},
+                pangolin::Field<&ConnectionConfig::search_path_, "search_path">{},
                 // Performance
-                serialization::Field<&ConnectionConfig::work_mem_mb_, "work_mem_mb">{},
-                serialization::Field<&ConnectionConfig::jit_, "jit">{},
+                pangolin::Field<&ConnectionConfig::work_mem_mb_, "work_mem_mb">{},
+                pangolin::Field<&ConnectionConfig::jit_, "jit">{},
                 // Extra options
-                serialization::Field<&ConnectionConfig::extra_options_, "extra_options">{},
+                pangolin::Field<&ConnectionConfig::extra_options_, "extra_options">{},
             };
         }
 

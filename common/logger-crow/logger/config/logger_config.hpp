@@ -1,13 +1,13 @@
 #pragma once
 
 #include <chrono>
-#include <menagerie/serialization>
+#include <menagerie/pangolin>
 namespace menagerie::crow {
 
     /// Logger construction options: ring buffer size, internal-pool size, and the
     /// consumer's wait strategy. Build via LoggerConfig::Builder, which validates
     /// on finalize().
-    class LoggerConfig final : public serialization::ConfigInterface<LoggerConfig, Json::Value> {
+    class LoggerConfig final : public pangolin::ConfigInterface<LoggerConfig, Json::Value> {
     public:
         /// How the consumer thread waits for new events when the ring buffer is empty.
         enum class WaitStrategy {
@@ -63,13 +63,13 @@ namespace menagerie::crow {
             return health_check_interval_;
         }
 
-        /// Field list consumed by serialization::ConfigInterface for JSON (de)serialization.
+        /// Field list consumed by pangolin::ConfigInterface for JSON (de)serialization.
         static constexpr auto fields() {
             return std::tuple{
-                serialization::Field<&LoggerConfig::ring_buffer_size_, "ring_buffer_size">{},
-                serialization::Field<&LoggerConfig::pool_size_, "pool_size">{},
-                serialization::Field<&LoggerConfig::wait_strategy_, "wait_strategy">{},
-                serialization::Field<&LoggerConfig::health_check_interval_, "health_check_interval">{},
+                pangolin::Field<&LoggerConfig::ring_buffer_size_, "ring_buffer_size">{},
+                pangolin::Field<&LoggerConfig::pool_size_, "pool_size">{},
+                pangolin::Field<&LoggerConfig::wait_strategy_, "wait_strategy">{},
+                pangolin::Field<&LoggerConfig::health_check_interval_, "health_check_interval">{},
             };
         }
 

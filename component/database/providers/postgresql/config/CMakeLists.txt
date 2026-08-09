@@ -17,7 +17,7 @@ target_link_libraries(${DATABASE_POSTGRESQL}.Config
         PUBLIC
         ${DATABASE_POSTGRESQL}.Registries
         Menagerie::Common::Beaver
-        Menagerie::Common::Serialization
+        Menagerie::Common::Pangolin
         JsonCpp::JsonCpp
 )
 ##############################################################################

@@ -1,4 +1,4 @@
-# Serialization Library
+# Pangolin Library
 
 The serialization library (`common/serialization/`) is Menagerie's field-descriptor serialization framework:
 declare a `Field<&T::member, "key", Policy>` for every member a type wants serialized, and
@@ -6,7 +6,7 @@ declare a `Field<&T::member, "key", Policy>` for every member a type wants seria
 for free, without hand-writing per-field code. It underlies every Builder-pattern config type across the
 codebase -- `ServerConfig`, the PostgreSQL provider's `ConnectionConfig`, `ConsoleSinkConfig`, `FileSinkConfig`,
 and more all derive from `ConfigInterface`. The only shipped wire format today is JSON (via jsoncpp's `Json::Value`), added
-through `formats/json/`. Everything is reached through `#include <menagerie/serialization>`
+through `formats/json/`. Everything is reached through `#include <menagerie/pangolin>`
 (`export/menagerie/serialization`).
 
 ## Key types
@@ -29,7 +29,7 @@ through `formats/json/`. Everything is reached through `#include <menagerie/seri
   `static custom_deserialize(const Format&)` skips the generic field walk entirely for that format.
 - **`FieldName`** -- the key parameter every `write_field` /
   `read_field` overload takes; a domain type rather than a bare string so the call stays a two-phase-lookup
-  ADL hit into `menagerie::serialization` even though the format headers (e.g. `json.hpp`) are usually
+  ADL hit into `menagerie::pangolin` even though the format headers (e.g. `json.hpp`) are usually
   included after `config_interface.hpp`.
 - **`write_field(...)` / `read_field(...)` overloads for `Json::Value`**
   -- cover `std::string`, `std::string_view`, `int`, `std::size_t`, `std::uint16_t`, `bool`, `double`,
@@ -40,9 +40,9 @@ through `formats/json/`. Everything is reached through `#include <menagerie/seri
 ## Usage
 
 ```cpp
-#include <menagerie/serialization>
+#include <menagerie/pangolin>
 
-namespace ser = menagerie::serialization;
+namespace ser = menagerie::pangolin;
 
 class RetryConfig final : public ser::ConfigInterface<RetryConfig, Json::Value> {
 public:
@@ -91,7 +91,7 @@ and is exercised end-to-end in
 *before* the format headers that supply the overloads (`json.hpp`). Ordinary unqualified lookup at the
 template's definition point would see no overloads at all; two-phase lookup only reaches ones added later via
 argument-dependent lookup on the arguments' associated namespaces. A bare `std::string` carries no namespace
-ADL could search, but `FieldName` lives in `menagerie::serialization`, making that namespace an associated
+ADL could search, but `FieldName` lives in `menagerie::pangolin`, making that namespace an associated
 namespace of every `write_field(out, FieldName{...}, ...)` / `read_field(...)` call -- so overloads defined
 after `config_interface.hpp` (in `json.hpp`, or a future format header) are still found. `Secret` and
 `ReadOnly` are asymmetric by design, not by omission: `Secret` fields are written *into* a config (so a

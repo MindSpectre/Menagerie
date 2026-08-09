@@ -49,7 +49,7 @@ target_include_directories(${CROW}.Sink INTERFACE
 target_link_libraries(${CROW}.Sink INTERFACE
         ${CROW}.Entry
         Menagerie::Common::Chameleon
-        Menagerie::Common::Serialization
+        Menagerie::Common::Pangolin
 )
 ##############################################################################
 

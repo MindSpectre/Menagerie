@@ -8,6 +8,6 @@ target_include_directories(${Http}.Config.Timeouts INTERFACE
 )
 
 target_link_libraries(${Http}.Config.Timeouts INTERFACE
-        Menagerie::Common::Serialization
+        Menagerie::Common::Pangolin
 )
 ##############################################################################

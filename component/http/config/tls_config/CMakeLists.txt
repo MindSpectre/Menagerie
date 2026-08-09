@@ -8,6 +8,6 @@ target_include_directories(${Http}.Config.TlsConfig INTERFACE
 )
 
 target_link_libraries(${Http}.Config.TlsConfig INTERFACE
-        Menagerie::Common::Serialization
+        Menagerie::Common::Pangolin
 )
 ##############################################################################

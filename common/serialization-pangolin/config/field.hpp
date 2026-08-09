@@ -5,7 +5,7 @@
 #include <string>
 #include <string_view>
 
-namespace menagerie::serialization {
+namespace menagerie::pangolin {
 
     /// Controls which directions of ConfigInterface::serialize()/deserialize() a
     /// Field participates in.
@@ -19,7 +19,7 @@ namespace menagerie::serialization {
     /// Key wrapper for the read_field/write_field extension points. A domain
     /// type (rather than a bare string) so the machinery's unqualified,
     /// DEPENDENT calls always reach the format overloads: FieldName makes
-    /// menagerie::serialization an ASSOCIATED NAMESPACE of every call, which
+    /// menagerie::pangolin an ASSOCIATED NAMESPACE of every call, which
     /// two-phase lookup requires - the format headers (json.hpp) are normally
     /// included AFTER config_interface.hpp, so ordinary lookup at the template
     /// definition point sees none of them, and a plain string key carries no
@@ -60,4 +60,4 @@ namespace menagerie::serialization {
         using value_type = detail::member_pointer_traits<decltype(Ptr)>::value_type;  ///< Ptr's member type.
     };
 
-}  // namespace menagerie::serialization
+}  // namespace menagerie::pangolin

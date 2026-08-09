@@ -1,7 +1,7 @@
 #pragma once
 
 #include <iostream>
-#include <menagerie/serialization>
+#include <menagerie/pangolin>
 
 #include "detail/prefix_filter.hpp"
 #include "sink_interface.hpp"
@@ -11,7 +11,7 @@ namespace menagerie::crow {
     /// ConsoleSink construction options: severity threshold, ANSI color/flush
     /// behavior, output stream, and prefix filtering. Build via
     /// ConsoleSinkConfig::Builder.
-    class ConsoleSinkConfig final : public serialization::ConfigInterface<ConsoleSinkConfig, Json::Value> {
+    class ConsoleSinkConfig final : public pangolin::ConfigInterface<ConsoleSinkConfig, Json::Value> {
     public:
         /// Full constructor (escape hatch); prefer ConsoleSinkConfig::Builder for named,
         /// optional-with-defaults construction.
@@ -53,15 +53,15 @@ namespace menagerie::crow {
             return prefix_filter_;
         }
 
-        /// Field list consumed by serialization::ConfigInterface for JSON (de)serialization.
+        /// Field list consumed by pangolin::ConfigInterface for JSON (de)serialization.
         static constexpr auto fields() {
             return std::tuple{
-                serialization::Field<&ConsoleSinkConfig::threshold_, "threshold">{},
-                serialization::Field<&ConsoleSinkConfig::enable_colors_, "enable_colors">{},
-                serialization::Field<&ConsoleSinkConfig::flush_each_entry_, "flush_each_entry">{},
-                serialization::Field<&ConsoleSinkConfig::output_, "output", serialization::FieldPolicy::Excluded>{},
-                serialization::
-                    Field<&ConsoleSinkConfig::prefix_filter_, "prefix_filter", serialization::FieldPolicy::Excluded>{},
+                pangolin::Field<&ConsoleSinkConfig::threshold_, "threshold">{},
+                pangolin::Field<&ConsoleSinkConfig::enable_colors_, "enable_colors">{},
+                pangolin::Field<&ConsoleSinkConfig::flush_each_entry_, "flush_each_entry">{},
+                pangolin::Field<&ConsoleSinkConfig::output_, "output", pangolin::FieldPolicy::Excluded>{},
+                pangolin::
+                    Field<&ConsoleSinkConfig::prefix_filter_, "prefix_filter", pangolin::FieldPolicy::Excluded>{},
             };
         }
 

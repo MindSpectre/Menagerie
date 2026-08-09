@@ -2,7 +2,7 @@
 
 #include <cstdint>
 #include <menagerie/beaver>
-#include <menagerie/serialization>
+#include <menagerie/pangolin>
 #include <string>
 #include <string_view>
 
@@ -29,7 +29,7 @@ namespace menagerie::db::postgres {
      *
      *   PGconn* conn = PQconnectdb(creds.to_connection_string().c_str());
      */
-    class ConnectionCredentials final : public serialization::ConfigInterface<ConnectionCredentials, Json::Value> {
+    class ConnectionCredentials final : public pangolin::ConfigInterface<ConnectionCredentials, Json::Value> {
     public:
         /// Constructs credentials directly from host, port, dbname, user, and password.
         template <beaver::IsStringLike StringTp1,
@@ -143,15 +143,15 @@ namespace menagerie::db::postgres {
 
         // -------- Field Descriptors --------
 
-        /// Field descriptors for serialization::ConfigInterface auto-(de)serialization.
+        /// Field descriptors for pangolin::ConfigInterface auto-(de)serialization.
         static constexpr auto fields() {
             return std::tuple{
-                serialization::Field<&ConnectionCredentials::host_, "host">{},
-                serialization::Field<&ConnectionCredentials::port_, "port">{},
-                serialization::Field<&ConnectionCredentials::dbname_, "dbname">{},
-                serialization::Field<&ConnectionCredentials::user_, "user">{},
-                serialization::
-                    Field<&ConnectionCredentials::password_, "password", serialization::FieldPolicy::Secret>{},
+                pangolin::Field<&ConnectionCredentials::host_, "host">{},
+                pangolin::Field<&ConnectionCredentials::port_, "port">{},
+                pangolin::Field<&ConnectionCredentials::dbname_, "dbname">{},
+                pangolin::Field<&ConnectionCredentials::user_, "user">{},
+                pangolin::
+                    Field<&ConnectionCredentials::password_, "password", pangolin::FieldPolicy::Secret>{},
             };
         }
 
