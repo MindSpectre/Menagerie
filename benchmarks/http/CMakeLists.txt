@@ -1,14 +1,14 @@
 ##############################################################################
 # Http/1.1 saturating load generator. Pure Asio client — no menagerie types.
 # Links the umbrella for Boost propagation and so a non-test consumer exercises
-# Menagerie::Component::Http.
+# Menagerie::Component::Estuary.
 ##############################################################################
 add_executable(${BENCHMARKS}.Http.Bomber
         http_bomber.cpp
 )
 target_link_libraries(${BENCHMARKS}.Http.Bomber
         PRIVATE
-        Menagerie::Component::Http
+        Menagerie::Component::Estuary
         Threads::Threads
 )
 ##############################################################################
@@ -21,7 +21,7 @@ add_executable(${BENCHMARKS}.Http.BenchServer
 )
 target_link_libraries(${BENCHMARKS}.Http.BenchServer
         PRIVATE
-        Menagerie::Component::Http
+        Menagerie::Component::Estuary
 )
 ##############################################################################
 

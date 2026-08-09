@@ -8,6 +8,6 @@ add_executable(${EXAMPLES}.Http.MinimalServer
 )
 target_link_libraries(${EXAMPLES}.Http.MinimalServer
         PRIVATE
-        Menagerie::Component::Http
+        Menagerie::Component::Estuary
 )
 ##############################################################################

@@ -71,7 +71,7 @@ const auto now_iso = UTCClock::current_time(clock_formats::iso8601);
 `Stopwatch<>`, `sleep_for`, and `Stopwatch<>::measure` above mirror
 `tests/unit_tests/common/chrono-cuckoo/stopwatch/test_stopwatch.cpp`;
 `format_imf_fixdate` / `IMF_FIXDATE_LEN` mirror
-`tests/unit_tests/component/http/types/test_http_date.cpp`.
+`tests/unit_tests/component/http-estuary/types/test_http_date.cpp`.
 
 ## Design notes
 

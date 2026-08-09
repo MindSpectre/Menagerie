@@ -10,7 +10,7 @@ built through CMake presets, with dependencies resolved via vcpkg.
 
 | Component | Description | Docs |
 | --- | --- | --- |
-| `http` | Server-side HTTP/1.1 stack over TCP and TLS; HTTP/2 and HTTP/3 exist as compiling scaffolds. | [docs/architecture/http.md](docs/architecture/http.md) |
+| `estuary` | Server-side HTTP/1.1 stack over TCP and TLS; HTTP/2 and HTTP/3 exist as compiling scaffolds. | [docs/architecture/estuary.md](docs/architecture/estuary.md) |
 | `reef` | Layered PostgreSQL client with a provider-agnostic, compile-time-checkable query core. | [docs/architecture/reef.md](docs/architecture/reef.md) |
 | `starling` | Concurrency primitives: resource pools, a futex-based park/notify primitive, a lock-free ring buffer, a growable thread pool. | [docs/architecture/starling.md](docs/architecture/starling.md) |
 | `beaver` | Foundation layer: a typed result type, fixed-capacity strings, class-trait mixins, meta-programming utilities. | [docs/architecture/beaver.md](docs/architecture/beaver.md) |
@@ -28,9 +28,9 @@ built through CMake presets, with dependencies resolved via vcpkg.
 A minimal HTTP server, trimmed from `examples/http/minimal_http_server.cpp`:
 
 ```cpp
-#include <menagerie/http>
+#include <menagerie/estuary>
 
-namespace http = menagerie::http;
+namespace http = menagerie::estuary;
 
 class GreeterController final : public http::HttpController {
 public:

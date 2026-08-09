@@ -25,9 +25,9 @@ add_subdirectory(codesandbox)
 ##############################################################################
 if (BUILD_HTTP)
     message("Http tests will be built")
-    add_subdirectory(shared/component/http)
-    add_subdirectory(unit_tests/component/http)
-    add_subdirectory(integration_tests/component/http)
+    add_subdirectory(shared/component/http-estuary)
+    add_subdirectory(unit_tests/component/http-estuary)
+    add_subdirectory(integration_tests/component/http-estuary)
 endif ()
 ##############################################################################
 

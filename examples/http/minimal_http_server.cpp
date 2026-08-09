@@ -18,7 +18,7 @@
 #include <iostream>
 #include <memory>
 #include <menagerie/beaver>
-#include <menagerie/http>
+#include <menagerie/estuary>
 #include <string>
 #include <utility>
 
@@ -26,7 +26,7 @@ namespace {
 
     using namespace menagerie::beaver::literals;
 
-    namespace http = menagerie::http;
+    namespace http = menagerie::estuary;
 
     /// GET /hello/{name} — path parameter, URL-decoded into the request arena.
     /// GET /healthz      — arena-backed JSON response.
@@ -91,7 +91,7 @@ namespace {
 }  // namespace
 
 int main(const int argc, char* argv[]) {
-    namespace http = menagerie::http;
+    namespace http = menagerie::estuary;
 
     http::ServerConfig cfg = http::ServerConfig::Builder{}.finalize();
     if (argc > 1) {

@@ -14,6 +14,6 @@ endif ()
 ##############################################################################
 if (BUILD_HTTP)
     message("Http handler will be built")
-    add_subdirectory(http)
+    add_subdirectory(http-estuary)
 endif ()
 ##############################################################################

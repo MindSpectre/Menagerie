@@ -11,12 +11,12 @@
 #include <cstddef>
 #include <iostream>
 #include <memory>
-#include <menagerie/http>
+#include <menagerie/estuary>
 #include <string>
 
 namespace {
 
-    namespace http = menagerie::http;
+    namespace http = menagerie::estuary;
 
     /// GET /ping        → 200 "pong"           (fixed body — framework floor)
     /// GET /json        → 200 {"status":"ok"}  (arena-backed JSON response)
@@ -46,7 +46,7 @@ namespace {
 }  // namespace
 
 int main(const int argc, char* argv[]) {
-    namespace http = menagerie::http;
+    namespace http = menagerie::estuary;
 
     // Argument parsing sits inside the try: std::stoi throws on junk input,
     // and an uncaught throw out of main() is a terminate(), not a diagnostic.
