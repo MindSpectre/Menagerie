@@ -1,11 +1,11 @@
 ##############################################################################
 # Benchmark Scroll file logger (8-thread contention + 1-thread baseline)
 ##############################################################################
-add_executable(${BENCHMARKS}.Scroll.FileBenchmark
+add_executable(${BENCHMARKS}.Crow.FileBenchmark
         benchmark_harness.hpp
         crow_file_benchmark.cpp
 )
-target_link_libraries(${BENCHMARKS}.Scroll.FileBenchmark
+target_link_libraries(${BENCHMARKS}.Crow.FileBenchmark
         PRIVATE
         Menagerie::Common::Crow
         Menagerie::Common::Spider

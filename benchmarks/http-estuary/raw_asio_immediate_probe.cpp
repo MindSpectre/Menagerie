@@ -1,48 +1,44 @@
-// H3 CONTROL: minimal raw-asio HTTP/1.1 server matching menagerie's topology —
-// one shared io_context, N worker threads, strand-bound socket per connection,
-// one awaitable coroutine per connection — but ZERO beast, zero framework:
-// hand parser (find header terminator), flat serialization, response batching,
-// no timers. Measures the asio+coroutine+strand floor on this box.
+// EXPERIMENT: raw_asio_perthread_probe + IMMEDIATE EXECUTORS (asio 1.30+).
+// Identical to the per-thread probe except every socket token is wrapped in
+// bind_immediate_executor(<own context executor>, ...): async ops that
+// complete speculatively at initiation (data already readable / socket
+// writable — the common case under load) dispatch their completion INLINE
+// on the initiating thread instead of being posted through the scheduler
+// queue. Isolates ONE variable vs raw_asio_perthread_probe: the post-per-op
+// scheduler round-trip on speculative completions.
 //
-// Not wired into CMake — build standalone against the vcpkg boost headers:
+// Build standalone:
 //   clang++ -O3 -std=c++23 -stdlib=libc++ -DNDEBUG \
 //     -I build/bench/vcpkg_installed/x64-linux-clang/include \
-//     benchmarks/http/raw_asio_probe.cpp -o raw_asio_probe -pthread -fuse-ld=mold
+//     benchmarks/http-estuary/raw_asio_immediate_probe.cpp -o raw_asio_immediate_probe \
+//     -pthread -fuse-ld=mold
 //
-//   ./raw_asio_probe [port=8090] [threads=4]
-//
-// Measured 2026-07-10 (README Finding 7): 481k rps at pipeline 1 (= drogon),
-// 5.84M at pipeline 16 (1.7x drogon). menagerie's remaining gap is beast's
-// read path + framework glue, not asio.
-#include <array>
-#include <charconv>
+//   ./raw_asio_immediate_probe [port=8093] [threads=4]
 #include <cstdint>
 #include <cstdio>
 #include <ctime>
 #include <string>
-#include <string_view>
 #include <thread>
 #include <vector>
 
 #include <boost/asio/awaitable.hpp>
 #include <boost/asio/basic_socket_acceptor.hpp>
 #include <boost/asio/basic_stream_socket.hpp>
+#include <boost/asio/bind_immediate_executor.hpp>
 #include <boost/asio/co_spawn.hpp>
 #include <boost/asio/detached.hpp>
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/redirect_error.hpp>
-#include <boost/asio/strand.hpp>
 #include <boost/asio/use_awaitable.hpp>
 #include <boost/asio/write.hpp>
 
 namespace asio = boost::asio;
 using Executor = asio::io_context::executor_type;
-using Strand   = asio::strand<Executor>;
-using Socket   = asio::basic_stream_socket<asio::ip::tcp, Strand>;
+using Socket   = asio::basic_stream_socket<asio::ip::tcp, Executor>;
 using Acceptor = asio::basic_socket_acceptor<asio::ip::tcp, Executor>;
 
-static void render_date(char* buf) {  // "Fri, 10 Jul 2026 07:39:00 GMT"
+static void render_date(char* buf) {
     static constexpr const char* days[]   = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
     static constexpr const char* months[] = {
         "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
@@ -62,23 +58,23 @@ static void render_date(char* buf) {  // "Fri, 10 Jul 2026 07:39:00 GMT"
 }
 
 static asio::awaitable<void> session(Socket sock) {
-    std::string in;  // rolling input buffer
+    std::string in;
     in.reserve(8192);
-    std::string out;  // batched responses
+    std::string out;
     out.reserve(4096);
     char tmp[16384];
     char date[40];
 
     boost::system::error_code ec;
+    // Immediate executor = the socket's own single-runner context executor:
+    // dispatch from its own thread runs the completion inline.
+    const auto imm = sock.get_executor();
     for (;;) {
-        // parse every complete request already buffered; batch the responses
         std::size_t consumed = 0;
         for (;;) {
             const auto end = in.find("\r\n\r\n", consumed);
             if (end == std::string::npos)
                 break;
-            // request line: METHOD SP TARGET SP VERSION — we answer /ping only,
-            // like the bench controller (no body handling: GET-only load).
             render_date(date);
             out.append("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nDate: ");
             out.append(date);
@@ -86,18 +82,19 @@ static asio::awaitable<void> session(Socket sock) {
             consumed = end + 4;
         }
         if (consumed) {
-            in.erase(0, consumed);  // keep partial tail
-            const auto wec = co_await [&]() -> asio::awaitable<boost::system::error_code> {
-                boost::system::error_code w;
-                co_await asio::async_write(sock, asio::buffer(out), asio::redirect_error(asio::use_awaitable, w));
-                co_return w;
-            }();
+            in.erase(0, consumed);
+            boost::system::error_code w;
+            co_await asio::async_write(
+                sock,
+                asio::buffer(out),
+                asio::bind_immediate_executor(imm, asio::redirect_error(asio::use_awaitable, w)));
             out.clear();
-            if (wec)
+            if (w)
                 break;
         }
-        const std::size_t n =
-            co_await sock.async_read_some(asio::buffer(tmp, sizeof tmp), asio::redirect_error(asio::use_awaitable, ec));
+        const std::size_t n = co_await sock.async_read_some(
+            asio::buffer(tmp, sizeof tmp),
+            asio::bind_immediate_executor(imm, asio::redirect_error(asio::use_awaitable, ec)));
         if (ec)
             break;
         in.append(tmp, n);
@@ -109,36 +106,38 @@ static asio::awaitable<void> session(Socket sock) {
 
 static asio::awaitable<void> accept_loop(asio::io_context& ioc, Acceptor& acc) {
     for (;;) {
-        Strand strand = asio::make_strand(ioc.get_executor());
         boost::system::error_code ec;
-        Socket sock = co_await acc.async_accept(strand, asio::redirect_error(asio::use_awaitable, ec));
+        Socket sock = co_await acc.async_accept(ioc.get_executor(), asio::redirect_error(asio::use_awaitable, ec));
         if (ec)
             break;
         boost::system::error_code nd;
         sock.set_option(asio::ip::tcp::no_delay(true), nd);
-        asio::co_spawn(strand, session(std::move(sock)), asio::detached);
+        asio::co_spawn(ioc.get_executor(), session(std::move(sock)), asio::detached);
     }
 }
 
 int main(int argc, char* argv[]) {
-    const std::uint16_t port = argc > 1 ? static_cast<std::uint16_t>(std::atoi(argv[1])) : 8090;
+    const std::uint16_t port = argc > 1 ? static_cast<std::uint16_t>(std::atoi(argv[1])) : 8093;
     const int threads        = argc > 2 ? std::atoi(argv[2]) : 4;
 
-    asio::io_context ioc{threads};
-    Acceptor acc{ioc.get_executor()};
-    const asio::ip::tcp::endpoint ep{asio::ip::address_v4::any(), port};
-    acc.open(ep.protocol());
-    acc.set_option(asio::socket_base::reuse_address(true));
-    acc.bind(ep);
-    acc.listen(asio::socket_base::max_listen_connections);
+    std::printf("raw_asio_immediate_probe on :%u, %d io_contexts, IMMEDIATE completions\n", port, threads);
 
-    asio::co_spawn(ioc, accept_loop(ioc, acc), asio::detached);
-
-    std::printf("raw_asio_probe on :%u, %d threads\n", port, threads);
     std::vector<std::thread> workers;
-    for (int i = 1; i < threads; ++i)
-        workers.emplace_back([&] { ioc.run(); });
-    ioc.run();
+    for (int i = 0; i < threads; ++i) {
+        workers.emplace_back([port] {
+            asio::io_context ioc{1};  // ← the variable under test: one loop per thread
+            Acceptor acc{ioc.get_executor()};
+            const asio::ip::tcp::endpoint ep{asio::ip::address_v4::any(), port};
+            acc.open(ep.protocol());
+            acc.set_option(asio::socket_base::reuse_address(true));
+            const int one = 1;
+            ::setsockopt(acc.native_handle(), SOL_SOCKET, SO_REUSEPORT, &one, sizeof one);
+            acc.bind(ep);
+            acc.listen(asio::socket_base::max_listen_connections);
+            asio::co_spawn(ioc, accept_loop(ioc, acc), asio::detached);
+            ioc.run();
+        });
+    }
     for (auto& w : workers)
         w.join();
     return 0;

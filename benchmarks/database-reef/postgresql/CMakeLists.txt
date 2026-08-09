@@ -1,4 +1,4 @@
-set(BENCHMARKS_POSTGRESQL ${BENCHMARKS}.Database.PostgreSQL)
+set(BENCHMARKS_POSTGRESQL ${BENCHMARKS}.Reef.PostgreSQL)
 ##############################################################################
 # PostgreSQL Client Overhead Benchmarks
 # Requires vcpkg feature 'pg-benchmarks' (Google Benchmark + libpqxx)

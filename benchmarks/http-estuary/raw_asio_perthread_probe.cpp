@@ -12,7 +12,7 @@
 // Build standalone:
 //   clang++ -O3 -std=c++23 -stdlib=libc++ -DNDEBUG \
 //     -I build/bench/vcpkg_installed/x64-linux-clang/include \
-//     benchmarks/http/raw_asio_perthread_probe.cpp -o raw_asio_perthread_probe \
+//     benchmarks/http-estuary/raw_asio_perthread_probe.cpp -o raw_asio_perthread_probe \
 //     -pthread -fuse-ld=mold
 //
 //   ./raw_asio_perthread_probe [port=8092] [threads=4]

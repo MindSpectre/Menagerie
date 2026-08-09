@@ -21,7 +21,7 @@ for arg in "$@"; do
     esac
 done
 
-PREFIX="Menagerie.Benchmarks.Multithread.ResourcePool"
+PREFIX="Menagerie.Benchmarks.Starling.ResourcePool"
 TARGETS=(
     "${PREFIX}.Try"
     "${PREFIX}.AcqFor1us"
@@ -53,7 +53,7 @@ declare -a SUBJECTS=(
     "arp_acqfor_10us:ArpAcqFor10us"
 )
 
-BIN_DIR="build/release/benchmarks/multithread/resource_pool"
+BIN_DIR="build/release/benchmarks/concurrency-starling/resource_pool"
 
 for pair in "${SUBJECTS[@]}"; do
     slug="${pair%%:*}"

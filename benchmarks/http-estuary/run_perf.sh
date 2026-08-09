@@ -27,7 +27,7 @@ BUILD="${1:-$ROOT/build/release-perf}"
 REQUESTS="${2:-20000000}"
 PIPELINE="${3:-1}"
 WARMUP=$((REQUESTS / 20))
-BIN="$BUILD/benchmarks/http"
+BIN="$BUILD/benchmarks/http-estuary"
 # benchmark_results/ is gitignored and lives on /home (real disk).
 OUT="${OUT:-$ROOT/benchmark_results/http}"
 mkdir -p "$OUT"

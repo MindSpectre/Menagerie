@@ -9,11 +9,11 @@
 # benchmark code and only the crow library differs:
 #
 #   git checkout <branch>       && rm -rf build/release && cmake --preset release && build && BENCH_LABEL=branch  ./run_gate_bench.sh
-#   git checkout main           && git checkout <branch> -- benchmarks/logger/
+#   git checkout main           && git checkout <branch> -- benchmarks/logger-crow/
 #                               && rm -rf build/release && cmake --preset release && build && BENCH_LABEL=main    ./run_gate_bench.sh
 #   ./run_gate_bench.sh --report
 #
-# Every line carries a bench_tree hash of benchmarks/logger; --report refuses to
+# Every line carries a bench_tree hash of benchmarks/logger-crow; --report refuses to
 # print a delta between two sides whose hashes, governor or SMT state differ.
 #
 # Core allocation on this 6-physical-core box (CPUs 0-5 are distinct cores, 6-11
@@ -28,7 +28,7 @@ set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 BUILD="${BUILD:-$ROOT/build/release}"
-BIN="$BUILD/benchmarks/logger"
+BIN="$BUILD/benchmarks/logger-crow"
 OUT="${OUT:-$ROOT/benchmark_results/logger}"
 REPS="${REPS:-3}"
 LABEL="${BENCH_LABEL:-unlabelled}"
@@ -184,7 +184,7 @@ DIRTY="$(git -C "$ROOT" status --porcelain | wc -l | tr -d ' ')"
 # abseil_file_benchmark.cpp are deliberately excluded: they legitimately differ between the
 # sides (the newer Sink contract requires noexcept overrides the older one cannot have), and
 # they are not the A/B subject.
-BENCH_TREE="$(cd "$ROOT/benchmarks/logger" && sha256sum benchmark_harness.hpp crow_gate_benchmark.cpp CMakeLists.txt \
+BENCH_TREE="$(cd "$ROOT/benchmarks/logger-crow" && sha256sum benchmark_harness.hpp crow_gate_benchmark.cpp CMakeLists.txt \
     | sha256sum | cut -c1-12)"
 RUN_ID="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 

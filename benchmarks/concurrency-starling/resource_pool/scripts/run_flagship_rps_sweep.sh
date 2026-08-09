@@ -7,7 +7,7 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/../../../.." && pwd)"
-BIN="$REPO_ROOT/build/release/benchmarks/multithread/resource_pool/Menagerie.Benchmarks.Multithread.ResourcePool.FlagshipBurst"
+BIN="$REPO_ROOT/build/release/benchmarks/concurrency-starling/resource_pool/Menagerie.Benchmarks.Starling.ResourcePool.FlagshipBurst"
 OUT_DIR="/tmp/flagship_rps_sweep"
 
 skip_build=0
@@ -18,7 +18,7 @@ done
 if [[ "$skip_build" -eq 0 ]]; then
     echo "=== Building FlagshipBurst ==="
     cmake --build "$REPO_ROOT/build/release" \
-          --target Menagerie.Benchmarks.Multithread.ResourcePool.FlagshipBurst
+          --target Menagerie.Benchmarks.Starling.ResourcePool.FlagshipBurst
 fi
 
 mkdir -p "$OUT_DIR/steady" "$OUT_DIR/burst"
@@ -56,4 +56,4 @@ done
 
 echo ""
 echo "=== Done. Results in $OUT_DIR ==="
-echo "Run:  python3 $REPO_ROOT/benchmarks/multithread/resource_pool/scripts/plot_flagship_rps_sweep.py"
+echo "Run:  python3 $REPO_ROOT/benchmarks/concurrency-starling/resource_pool/scripts/plot_flagship_rps_sweep.py"

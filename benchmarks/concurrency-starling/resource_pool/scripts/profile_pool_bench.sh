@@ -13,7 +13,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../../../.." && pwd)"
 cd "$REPO_ROOT"
 
-PREFIX="Menagerie.Benchmarks.Multithread.ResourcePool"
+PREFIX="Menagerie.Benchmarks.Starling.ResourcePool"
 SUBJECT_TARGET="AcqFor10us"
 SUBJECT_BENCH="RP_AcqFor_10us"
 SCENARIOS=("TimeoutPressure" "AsioPostSteady" "Steady")
@@ -26,7 +26,7 @@ echo "=== Building release target ==="
 cmake --preset=release
 cmake --build build/release --target "${PREFIX}.${SUBJECT_TARGET}"
 
-PERF_BIN="build/release/benchmarks/multithread/resource_pool/${PREFIX}.${SUBJECT_TARGET}"
+PERF_BIN="build/release/benchmarks/concurrency-starling/resource_pool/${PREFIX}.${SUBJECT_TARGET}"
 for sc in "${SCENARIOS[@]}"; do
     echo "=== perf record: $sc ==="
     taskset -c 0-9 perf record -F 999 -g \
@@ -52,7 +52,7 @@ echo "=== Building release-instrprof target ==="
 cmake --preset=release-instrprof
 cmake --build build/release-instrprof --target "${PREFIX}.${SUBJECT_TARGET}"
 
-INSTR_BIN="build/release-instrprof/benchmarks/multithread/resource_pool/${PREFIX}.${SUBJECT_TARGET}"
+INSTR_BIN="build/release-instrprof/benchmarks/concurrency-starling/resource_pool/${PREFIX}.${SUBJECT_TARGET}"
 for sc in "${SCENARIOS[@]}"; do
     echo "=== llvm-profdata: $sc ==="
     LLVM_PROFILE_FILE="$PROF/${sc}-%p.profraw" \

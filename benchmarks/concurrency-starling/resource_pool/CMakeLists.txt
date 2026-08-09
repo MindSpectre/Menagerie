@@ -1,4 +1,4 @@
-set(BENCHMARKS_RESOURCEPOOL ${BENCHMARKS_MULTITHREAD}.ResourcePool)
+set(BENCHMARKS_RESOURCEPOOL ${BENCHMARKS_STARLING}.ResourcePool)
 ##############################################################################
 # ResourcePool concurrency benchmarks
 # One binary per subject; each defines its own main() (no benchmark_main link).

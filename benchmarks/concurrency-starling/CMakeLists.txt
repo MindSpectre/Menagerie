@@ -1,4 +1,4 @@
-set(BENCHMARKS_MULTITHREAD ${BENCHMARKS}.Multithread)
+set(BENCHMARKS_STARLING ${BENCHMARKS}.Starling)
 ##############################################################################
 # Multithread benchmarks
 ##############################################################################

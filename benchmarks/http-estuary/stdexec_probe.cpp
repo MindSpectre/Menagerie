@@ -19,7 +19,7 @@
 // the ring via raw syscalls + <linux/io_uring.h>):
 //   git clone --depth 1 https://github.com/NVIDIA/stdexec /tmp/stdexec
 //   clang++ -O3 -std=c++23 -stdlib=libc++ -DNDEBUG -I /tmp/stdexec/include \
-//     benchmarks/http/stdexec_probe.cpp -o stdexec_probe -pthread -fuse-ld=mold
+//     benchmarks/http-estuary/stdexec_probe.cpp -o stdexec_probe -pthread -fuse-ld=mold
 //
 //   ./stdexec_probe [port=8091] [threads=4]
 #include <cstdint>

@@ -28,7 +28,7 @@ BUILD="${1:-$ROOT/build/bench}"
 REQUESTS="${2:-100000000}"
 WARMUP=$((REQUESTS / 20))   # 5%
 REPS="${REPS:-3}"
-BIN="$BUILD/benchmarks/http"
+BIN="$BUILD/benchmarks/http-estuary"
 
 SERVER_CPUS="0-3"
 CLIENT_CPUS_PRIMARY="4-11"

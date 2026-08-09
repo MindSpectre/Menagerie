@@ -553,9 +553,9 @@ numbers.
 ```
 cmake --preset release -B build/bench -DENABLE_LOGGING=OFF -DCOMPONENT_LOGGING=OFF
 cmake --build build/bench --target Menagerie.Benchmarks.Http.{Bomber,BenchServer,DrogonBenchServer}
-./benchmarks/http/run_bench.sh build/bench 100000000     # ~70 min
+./benchmarks/http-estuary/run_bench.sh build/bench 100000000     # ~70 min
 cmake --preset release-perf && cmake --build build/release-perf --target ...
-./benchmarks/http/run_perf.sh build/release-perf 20000000 1
+./benchmarks/http-estuary/run_perf.sh build/release-perf 20000000 1
 ```
 
 `run_perf.sh` uses `build/release-perf`, which sets `KEEP_FRAME_POINTERS=ON`. That matters: root `CMakeLists.txt`

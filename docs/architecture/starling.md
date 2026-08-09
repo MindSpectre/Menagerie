@@ -238,9 +238,9 @@ deterministic core placement.
 
 ## Performance notes
 
-The `benchmarks/multithread/` tree has two independent subjects, each measuring a different thing:
+The `benchmarks/concurrency-starling/` tree has two independent subjects, each measuring a different thing:
 
-**Disruptor** (`benchmarks/multithread/disruptor/disruptor_speed_test.cpp`)
+**Disruptor** (`benchmarks/concurrency-starling/disruptor/disruptor_speed_test.cpp`)
 is a standalone throughput harness (not a Google Benchmark subject) that times raw claim/publish/
 consume loops: multi-producer-to-one-consumer with one-at-a-time versus batched claims, pinned
 single-producer/single-consumer runs comparing `MultiProducerSequencer` against
@@ -252,7 +252,7 @@ size. The shape to look for, not a number to memorize: `SingleProducerSequencer`
 per-slot availability buffer), and both sequencers' throughput should climb as the consumer-batching
 sweep lets more entries drain per cache-line-crossing.
 
-**ResourcePool / AsyncResourcePool** (`benchmarks/multithread/resource_pool/`)
+**ResourcePool / AsyncResourcePool** (`benchmarks/concurrency-starling/resource_pool/`)
 is a Google Benchmark suite plus one standalone flagship binary:
 
 - Per-subject binaries (`Try`, `AcqFor1us`/`2us`/`10us`, `Pinned` for the sync pool;
