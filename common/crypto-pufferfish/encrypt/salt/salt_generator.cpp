@@ -8,7 +8,7 @@
 #include <openssl/rand.h>
 
 
-namespace menagerie::crypto {
+namespace menagerie::pufferfish {
     std::vector<std::uint8_t> SaltGenerator::generate_bytes(const std::size_t size) {
         if (size == 0) {
             throw std::runtime_error("SaltGenerator::generateBytes: size must be greater than 0");
@@ -93,4 +93,4 @@ namespace menagerie::crypto {
 
         return encoded;
     }
-}  // namespace menagerie::crypto
+}  // namespace menagerie::pufferfish

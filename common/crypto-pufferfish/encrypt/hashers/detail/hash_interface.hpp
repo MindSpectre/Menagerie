@@ -8,7 +8,7 @@
 /// OpenSSL-backed password/data hashing: an abstract hasher interface with
 /// HMAC-SHA256 and PBKDF2-HMAC-SHA256 implementations, plus a cryptographically
 /// secure salt generator.
-namespace menagerie::crypto {
+namespace menagerie::pufferfish {
     /// @brief Abstract hasher interface: derived classes implement
     /// hash_function; hash_with_generated_salt is provided once here.
     struct HashInterface {
@@ -39,4 +39,4 @@ namespace menagerie::crypto {
         }
     };
 
-}  // namespace menagerie::crypto
+}  // namespace menagerie::pufferfish

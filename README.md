@@ -19,7 +19,7 @@ built through CMake presets, with dependencies resolved via vcpkg.
 | `cuckoo` | Timing toolkit: wall-clock formatting, HTTP-date rendering, a hardware tick counter, stopwatches, deadline-bound execution. | [docs/architecture/cuckoo.md](docs/architecture/cuckoo.md) |
 | `serialization` | Field-descriptor serialization framework behind every Builder-pattern config type in the codebase. | [docs/architecture/serialization.md](docs/architecture/serialization.md) |
 | `spider` | Thread-safe service locator with configurable per-registration instance lifetimes. | [docs/architecture/spider.md](docs/architecture/spider.md) |
-| `crypto` | OpenSSL wrapper for password/data hashing: HMAC-SHA256, PBKDF2-HMAC-SHA256, secure salt generation. | [docs/architecture/crypto.md](docs/architecture/crypto.md) |
+| `pufferfish` | OpenSSL wrapper for password/data hashing: HMAC-SHA256, PBKDF2-HMAC-SHA256, secure salt generation. | [docs/architecture/pufferfish.md](docs/architecture/pufferfish.md) |
 | `rabbit` | Random-value toolkit built on `std::mt19937`: integers, durations/dates, collection sampling. | [docs/architecture/rabbit.md](docs/architecture/rabbit.md) |
 | `bowerbird` | Bounded-memory streaming sort over batched data (`SlidingWindowSorter`). | [docs/architecture/bowerbird.md](docs/architecture/bowerbird.md) |
 

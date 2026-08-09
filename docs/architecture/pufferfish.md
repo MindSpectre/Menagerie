@@ -1,11 +1,11 @@
-# Crypto Library
+# Pufferfish Library
 
-The crypto library (`common/crypto/`) wraps OpenSSL for password/data hashing: an abstract hasher interface with
+The pufferfish library (`common/crypto-pufferfish/`) wraps OpenSSL for password/data hashing: an abstract hasher interface with
 HMAC-SHA256 and PBKDF2-HMAC-SHA256 implementations, a cryptographically secure salt generator, and a couple of
 small `menagerie::utilities` helpers (constant-time comparison, compile-time string concatenation) that ship
 through the same umbrella. It depends on `menagerie::beaver` and links OpenSSL's `libssl` / `libcrypto`
-privately. Everything is reached through `#include <menagerie/crypto>`
-(`export/menagerie/crypto`).
+privately. Everything is reached through `#include <menagerie/pufferfish>`
+(`export/menagerie/pufferfish`).
 
 ## Key types
 
@@ -29,9 +29,9 @@ privately. Everything is reached through `#include <menagerie/crypto>`
 ## Usage
 
 ```cpp
-#include <menagerie/crypto>
+#include <menagerie/pufferfish>
 
-using namespace menagerie::crypto;
+using namespace menagerie::pufferfish;
 
 SHA256Hash hasher;
 hasher.set_key("server-side-hmac-key");
@@ -52,5 +52,5 @@ before the base name, which defaults to private inheritance for a `class` -- onl
 explicitly redeclares as `public` (`hash_function`) is reachable on the derived type from outside the class. `hash_with_generated_salt(...)`, defined once on
 `HashInterface`, is therefore not callable through either concrete hasher; callers pair a hasher's
 `hash_function` with `SaltGenerator` directly instead, as in the snippet above. The two `utilities/` headers live
-under `common/crypto/` and ship through the crypto umbrella, but their symbols are declared in
-`menagerie::utilities::security` and `menagerie::utilities::compile_time`, not `menagerie::crypto`.
+under `common/crypto-pufferfish/` and ship through the pufferfish umbrella, but their symbols are declared in
+`menagerie::utilities::security` and `menagerie::utilities::compile_time`, not `menagerie::pufferfish`.

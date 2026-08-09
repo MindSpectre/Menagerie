@@ -4,7 +4,7 @@
 
 #include "detail/hash_interface.hpp"
 
-namespace menagerie::crypto {
+namespace menagerie::pufferfish {
 
     /// @brief PBKDF2-HMAC-SHA256 hasher (100,000 iterations, 256-bit digest).
     ///
@@ -24,4 +24,4 @@ namespace menagerie::crypto {
         /// @throw std::runtime_error if the underlying PKCS5_PBKDF2_HMAC call fails
         [[nodiscard]] std::string hash_function(std::string_view password, std::string_view salt) override;
     };
-}  // namespace menagerie::crypto
+}  // namespace menagerie::pufferfish

@@ -7,7 +7,7 @@
 #include "pbkdf2.hpp"
 #include "sha_256.hpp"
 
-std::string menagerie::crypto::SHA256Hash::hash_function(const std::string_view data, const std::string_view salt) {
+std::string menagerie::pufferfish::SHA256Hash::hash_function(const std::string_view data, const std::string_view salt) {
     // Combine key and salt to create the HMAC key
     const std::string hmacKey = key_ + salt.data();
 
@@ -32,7 +32,7 @@ std::string menagerie::crypto::SHA256Hash::hash_function(const std::string_view 
 }
 
 
-std::string menagerie::crypto::PBKDF2Hash::hash_function(const std::string_view password, const std::string_view salt) {
+std::string menagerie::pufferfish::PBKDF2Hash::hash_function(const std::string_view password, const std::string_view salt) {
     constexpr int key_length = 32;  // 256-bit hash
     std::vector<unsigned char> derived_key(key_length);
 

@@ -5,7 +5,7 @@
 
 #include "detail/hash_interface.hpp"
 
-namespace menagerie::crypto {
+namespace menagerie::pufferfish {
 
     /// @brief HMAC-SHA256 hasher.
     ///
@@ -38,4 +38,4 @@ namespace menagerie::crypto {
     private:
         std::string key_;
     };
-}  // namespace menagerie::crypto
+}  // namespace menagerie::pufferfish

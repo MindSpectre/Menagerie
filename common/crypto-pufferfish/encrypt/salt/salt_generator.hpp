@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-namespace menagerie::crypto {
+namespace menagerie::pufferfish {
     /// @brief Static helpers backed by OpenSSL's RAND_bytes for generating
     /// cryptographically secure random salts.
     class SaltGenerator {
@@ -26,4 +26,4 @@ namespace menagerie::crypto {
         /// Helper function: Encode data as Base64 using OpenSSL's BIO and EVP APIs.
         [[nodiscard]] static std::string encode_base64(const std::vector<std::uint8_t>& data);
     };
-}  // namespace menagerie::crypto
+}  // namespace menagerie::pufferfish
