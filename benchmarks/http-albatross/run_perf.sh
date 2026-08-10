@@ -49,9 +49,9 @@ avail_kb=$(df -Pk "$OUT" | awk 'NR==2 {print $4}')
 
 SERVER_PID=""; PERF_PID=""; BOMBER_PID=""
 # NB: pkill -x matches the process NAME (comm, truncated to 15 chars), not the
-# command line. `pkill -f 'Menagerie.Benchmarks.Http'` also matches any shell whose
+# command line. `pkill -f 'Menagerie.Benchmarks.Albatross'` also matches any shell whose
 # argv contains that string -- including the one running this script, and any
-# `cmake --build --target Menagerie.Benchmarks.Http.*` invocation. Do not use -f here.
+# `cmake --build --target Menagerie.Benchmarks.Albatross.*` invocation. Do not use -f here.
 cleanup() {
     for p in "$BOMBER_PID" "$SERVER_PID" "$PERF_PID"; do
         [[ -n "$p" ]] && kill -INT "$p" 2>/dev/null
@@ -75,7 +75,7 @@ profile() { # <label> <binary> <port>
     curl -s --retry 60 --retry-delay 0 --retry-connrefused -o /dev/null "http://127.0.0.1:$port/ping" \
         || { echo "$label never came up"; return 1; }
 
-    taskset -c 4-11 "$BIN/Menagerie.Benchmarks.Http.Bomber" \
+    taskset -c 4-11 "$BIN/Menagerie.Benchmarks.Albatross.Bomber" \
         --port "$port" --threads 8 --conns 256 --pipeline "$PIPELINE" \
         --requests "$REQUESTS" --warmup "$WARMUP" --json &
     BOMBER_PID=$!
@@ -90,8 +90,8 @@ profile() { # <label> <binary> <port>
     echo
 }
 
-profile menagerie Menagerie.Benchmarks.Http.BenchServer       8080
-profile drogon    Menagerie.Benchmarks.Http.DrogonBenchServer 8081
+profile menagerie Menagerie.Benchmarks.Albatross.BenchServer       8080
+profile drogon    Menagerie.Benchmarks.Albatross.DrogonBenchServer 8081
 
 echo "profiles written to $OUT/{menagerie,drogon}.data"
 echo "inspect with: perf report -i $OUT/menagerie.data --no-children -g none --sort=symbol"

@@ -4,32 +4,57 @@ Round 1 measured 2026-07-09 (findings 1–3 below); round 2 measured 2026-07-10 
 are reproducible with `run_bench.sh`
 and `run_perf.sh` in this directory.
 
-## Current standing (2026-07-13, after Finding 15 shipped)
+## Current standing (2026-08-11)
 
-Median of 3 × 20M requests, zero failures. **menagerie is now FASTER than drogon at every depth and in both core
+Median of 3 × 20M requests, zero failures. **menagerie is FASTER than drogon at every depth and in both core
 layouts:**
 
 |                      | menagerie         | drogon        | menagerie faster by | was (07-09)  |
 |----------------------|-------------------|---------------|---------------------|--------------|
-| pipeline 1, primary  | **475,650 rps**   | 467,859 rps   | **1.02x**           | 2.08x behind |
-| pipeline 16, primary | **3,589,475 rps** | 3,039,676 rps | **1.18x**           | 12.0x behind |
-| pipeline 1, control  | **504,428 rps**   | 472,906 rps   | **1.07x**           | 1.92x behind |
+| pipeline 1, primary  | **545,985 rps**   | 520,013 rps   | **1.05x**           | 2.08x behind |
+| pipeline 16, primary | **3,920,426 rps** | 3,376,320 rps | **1.16x**           | 12.0x behind |
+| pipeline 1, control  | **555,918 rps**   | 532,484 rps   | **1.04x**           | 1.92x behind |
 
-**Pipeline-1 progression: 2.08x behind → 1.20x → 1.15x → 1.13x → 1.04x → 1.02x AHEAD.** Tail latency is menagerie's at
-every depth (p99 976µs vs 1120µs at p1 primary, 85µs vs 134µs at p16). The control number (504k) is above the
-shared-topology raw-asio floor entirely — only the strandless per-thread probes (528-545k) remain ahead. Architecture:
-io_context-per- thread, round-robin placement, no strands, tracker-sweep deadlines (Finding 13); raw-socket TCP path +
-slim RequestContext (Finding 15).
+**Pipeline-1 progression: 2.08x behind → 1.20x → 1.15x → 1.13x → 1.04x → 1.02x → 1.05x AHEAD.** Tail latency is
+menagerie's at every depth (p99 696µs vs 1016µs at p1 primary, 82µs vs 98µs at p16, 332µs vs 544µs in the control).
+Architecture: io_context-per-thread, round-robin placement, no strands, tracker-sweep deadlines (Finding 13);
+raw-socket TCP path + slim RequestContext (Finding 15).
 
-For where these numbers sit against other frameworks (crow, oat++, Go net/http, fasthttp, axum), see Finding 10.
+Both servers came out ~5-11% above their 07-13 figures (drogon 467,859 → 520,013 on an unchanged binary), so the box
+itself is faster than it was in July. That is exactly why the drogon anchor is re-run in the same session rather than
+quoted from a previous day — compare within a run, never across.
+
+### Three-way run vs axum (2026-08-11)
+
+Same harness, separate session, via `benchmark_results/http/frameworks/run_field.sh` — menagerie, drogon and axum all
+re-measured back-to-back so the three columns are mutually comparable. Absolute numbers sit slightly below the two-way
+table above because it is a different session; the ratios are what carry.
+
+|             | menagerie         | drogon        | axum 0.8      | vs drogon | vs axum   |
+|-------------|-------------------|---------------|---------------|-----------|-----------|
+| pipeline 1  | **530,490 rps**   | 503,962 rps   | 481,108 rps   | **1.05x** | **1.10x** |
+| p99         | **912µs**         | 1248µs        | 1424µs        |           |           |
+| pipeline 16 | **3,601,669 rps** | 3,108,486 rps | 3,254,957 rps | **1.16x** | **1.11x** |
+| p99         | **114µs**         | 156µs         | 166µs         |           |           |
+
+menagerie leads both frameworks at both depths and holds the best p99 in the field at both. Response sizes were 131
+bytes for menagerie against axum's 127, so the lead is not bought by shipping fewer bytes. This reverses Finding 10's
+07-11 standing, where axum led menagerie 449k to 385k at pipeline 1 — the intervening work is Findings 11-15.
+
+The axum probe was rebuilt on 2026-08-11 (`frameworks/axum_probe/`, axum 0.8.9): manual accept loop for
+`set_nodelay(true)` and `pipeline_flush(true)`, matching the fairness notes in Finding 10. The original probe tree was
+gitignored and lost.
+
+For crow, oat++ and the Go servers, see Finding 10 — those numbers are still the 07-11 measurements and have not been
+re-run.
 
 ## Binaries
 
 | Target                                        | Source                    | Role                                 |
 |-----------------------------------------------|---------------------------|--------------------------------------|
-| `Menagerie.Benchmarks.Http.BenchServer`       | `bench_server.cpp`        | subject — `GET /ping` → `"pong"`     |
-| `Menagerie.Benchmarks.Http.DrogonBenchServer` | `drogon_bench_server.cpp` | reference, same endpoint             |
-| `Menagerie.Benchmarks.Http.Bomber`            | `http_bomber.cpp`         | saturating keep-alive load generator |
+| `Menagerie.Benchmarks.Albatross.BenchServer`       | `bench_server.cpp`        | subject — `GET /ping` → `"pong"`     |
+| `Menagerie.Benchmarks.Albatross.DrogonBenchServer` | `drogon_bench_server.cpp` | reference, same endpoint             |
+| `Menagerie.Benchmarks.Albatross.Bomber`            | `http_bomber.cpp`         | saturating keep-alive load generator |
 
 Drogon comes from the in-tree vcpkg manifest (feature `drogon-benchmarks`, port 1.9.13). The bomber was rewritten for
 this work: the version restored in PR 7 opened a fresh TCP connection per request, blocked one request at a time per
@@ -552,7 +577,7 @@ numbers.
 
 ```
 cmake --preset release -B build/bench -DENABLE_LOGGING=OFF -DCOMPONENT_LOGGING=OFF
-cmake --build build/bench --target Menagerie.Benchmarks.Http.{Bomber,BenchServer,DrogonBenchServer}
+cmake --build build/bench --target Menagerie.Benchmarks.Albatross.{Bomber,BenchServer,DrogonBenchServer}
 ./benchmarks/http-albatross/run_bench.sh build/bench 100000000     # ~70 min
 cmake --preset release-perf && cmake --build build/release-perf --target ...
 ./benchmarks/http-albatross/run_perf.sh build/release-perf 20000000 1
