@@ -26,7 +26,7 @@ add_combined_library(${SAVANNA_ELEPHANT}
         DIRECTORIES
         export/
         SOURCES
-        export/menagerie/postgresql
+        export/menagerie/elephant
         LIBRARIES
         ${SAVANNA_ELEPHANT}.Config
         ${SAVANNA_ELEPHANT}.Dialect

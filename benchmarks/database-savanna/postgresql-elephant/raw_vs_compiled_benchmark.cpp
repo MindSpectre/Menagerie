@@ -1,23 +1,32 @@
 #include <algorithm>
+#include <chrono>
 #include <cstdlib>
+#include <cstring>
 #include <format>
 #include <functional>
 #include <iomanip>
 #include <iostream>
-#include <menagerie/beaver>
 #include <menagerie/cuckoo>
-#include <menagerie/postgresql>
+#include <menagerie/elephant>
 #include <numeric>
 #include <string>
+#include <string_view>
+#include <utility>
 #include <vector>
 
-#include <db_static_table.hpp>
 #include <libpq-fe.h>
-#include <postgres_sync_executor.hpp>
-#include <query_compiler.hpp>
-#include <query_expressions.hpp>
 
 namespace {
+
+    using menagerie::savanna::CompiledDynamicQuery;
+    using menagerie::savanna::ParamMode;
+    using menagerie::savanna::QueryCompiler;
+    using menagerie::savanna::elephant::PostgresDialect;
+    using menagerie::savanna::elephant::SyncExecutor;
+
+    /// The compiler under test: literals formatted straight into the SQL text, so the
+    /// compiled path emits the same self-contained statement the raw path sends.
+    using BenchCompiler = QueryCompiler<PostgresDialect, ParamMode::Inline>;
 
     constexpr std::size_t WARMUP_ITERATIONS    = 100;
     constexpr std::size_t BENCHMARK_ITERATIONS = 1000;
@@ -66,7 +75,7 @@ namespace {
         return conn;
     }
 
-    void setup_tables(menagerie::savanna::elephant::SyncExecutor& executor) {
+    void setup_tables(SyncExecutor& executor) {
         // Drop and recreate tables for clean state
         (void)executor.execute("DROP TABLE IF EXISTS bench_users CASCADE");
 
@@ -141,154 +150,149 @@ namespace {
         std::cout << "  Ops/sec: " << std::setprecision(0) << stats.ops_per_sec << "\n\n";
     }
 
-}  // namespace
-
-// Benchmark definitions - each returns TimingStats for the specified mode
-struct BenchmarkDef {
-    std::string_view name;
-    std::string_view raw_sql;
-};
-
-std::vector<BenchmarkDef> get_benchmarks() {
-    return {
-        {"SELECT by ID",          "SELECT id, name, age FROM bench_users WHERE id = 1"              },
-        {"SELECT with range",     "SELECT id, name FROM bench_users WHERE age > 30"                 },
-        {"COUNT(*) aggregate",    "SELECT COUNT(*) FROM bench_users WHERE active = true"            },
-        {"UPDATE single row",     "UPDATE bench_users SET age = 25 WHERE id = 1"                    },
-        {"SELECT ORDER BY LIMIT", "SELECT id, name, age FROM bench_users ORDER BY age DESC LIMIT 10"},
-        {"GROUP BY with COUNT",   "SELECT active, COUNT(*) FROM bench_users GROUP BY active"        },
+    // Benchmark definitions - each returns TimingStats for the specified mode
+    struct BenchmarkDef {
+        std::string_view name;
+        std::string_view raw_sql;
     };
-}
 
-void run_raw_benchmarks(menagerie::savanna::elephant::SyncExecutor& executor) {
-    auto benchmarks = get_benchmarks();
-
-    std::cout << "Running RAW STRING benchmarks...\n\n";
-
-    double total_avg = 0.0;
-
-    for (const auto& bench : benchmarks) {
-        std::vector<std::chrono::nanoseconds> timings;
-        timings.reserve(BENCHMARK_ITERATIONS);
-
-        // Warmup
-        for (std::size_t i = 0; i < WARMUP_ITERATIONS; ++i) {
-            (void)executor.execute(std::string(bench.raw_sql));
-        }
-
-        // Benchmark
-        for (std::size_t i = 0; i < BENCHMARK_ITERATIONS; ++i) {
-            auto elapsed = menagerie::cuckoo::Stopwatch<std::chrono::nanoseconds>::measure(
-                [&] { (void)executor.execute(std::string(bench.raw_sql)); });
-            timings.push_back(elapsed);
-        }
-
-        TimingStats stats;
-        stats.calculate(timings);
-        print_single_result(bench.name, stats);
-        total_avg += stats.avg_us;
+    std::vector<BenchmarkDef> get_benchmarks() {
+        return {
+            {"SELECT by ID",          "SELECT id, name, age FROM bench_users WHERE id = 1"              },
+            {"SELECT with range",     "SELECT id, name FROM bench_users WHERE age > 30"                 },
+            {"COUNT(*) aggregate",    "SELECT COUNT(*) FROM bench_users WHERE active = true"            },
+            {"UPDATE single row",     "UPDATE bench_users SET age = 25 WHERE id = 1"                    },
+            {"SELECT ORDER BY LIMIT", "SELECT id, name, age FROM bench_users ORDER BY age DESC LIMIT 10"},
+            {"GROUP BY with COUNT",   "SELECT active, COUNT(*) FROM bench_users GROUP BY active"        },
+        };
     }
 
-    std::cout << std::string(50, '=') << "\n";
-    std::cout << "TOTAL AVERAGE: " << std::fixed << std::setprecision(1)
-              << (total_avg / static_cast<double>(benchmarks.size())) << " us\n";
-    std::cout << std::string(50, '=') << "\n";
-}
+    void run_raw_benchmarks(SyncExecutor& executor) {
+        auto benchmarks = get_benchmarks();
 
-void run_compiled_benchmarks(menagerie::savanna::elephant::SyncExecutor& executor,
-                             menagerie::savanna::QueryCompiler<menagerie::savanna::elephant::PostgresDialect,
-                                                          menagerie::savanna::ParamMode::Inline>& compiler) {
-    using namespace menagerie::savanna;
-    using namespace menagerie::savanna::constraints;
+        std::cout << "Running RAW STRING benchmarks...\n\n";
 
-    using BenchUsersTable = StaticTable<"bench_users",
-                                        StaticFieldSchema<int, "id", PrimaryKey, NotNull>,
-                                        StaticFieldSchema<std::string, "name">,
-                                        StaticFieldSchema<int, "age">,
-                                        StaticFieldSchema<bool, "active">>;
+        double total_avg = 0.0;
 
-    constexpr BenchUsersTable u{Providers::PostgreSQL};
+        for (const auto& bench : benchmarks) {
+            std::vector<std::chrono::nanoseconds> timings;
+            timings.reserve(BENCHMARK_ITERATIONS);
 
-    std::cout << "Running COMPILED benchmarks...\n\n";
+            // Warmup
+            for (std::size_t i = 0; i < WARMUP_ITERATIONS; ++i) {
+                (void)executor.execute(std::string(bench.raw_sql));
+            }
 
-    std::vector<std::pair<std::string_view, std::function<CompiledDynamicQuery()>>> compiled_queries = {
-        {"SELECT by ID",
-         [&] {
-             auto query = select(u.column<"id">(), u.column<"name">(), u.column<"age">())
-                              .from("bench_users")
-                              .where(u.column<"id">() == 1);
-             return compiler.compile_dynamic(query);
-         }},
-        {"SELECT with range",
-         [&] {
-             auto query =
-                 select(u.column<"id">(), u.column<"name">()).from("bench_users").where(u.column<"age">() > 30);
-             return compiler.compile_dynamic(query);
-         }},
-        {"COUNT(*) aggregate",
-         [&] {
-             auto query = select(count(u.column<"id">())).from("bench_users").where(u.column<"active">() == true);
-             return compiler.compile_dynamic(query);
-         }},
-        {"UPDATE single row",
-         [&] {
-             auto query = update("bench_users").set("age", 25).where(u.column<"id">() == 1);
-             return compiler.compile_dynamic(query);
-         }},
-        {"SELECT ORDER BY LIMIT",
-         [&] {
-             auto query = select(u.column<"id">(), u.column<"name">(), u.column<"age">())
-                              .from("bench_users")
-                              .order_by(desc(u.column<"age">()))
-                              .limit(10);
-             return compiler.compile_dynamic(query);
-         }},
-        {"GROUP BY with COUNT",
-         [&] {
-             auto query = select(u.column<"active">(), count(u.column<"id">()))
-                              .from("bench_users")
-                              .group_by(u.column<"active">());
-             return compiler.compile_dynamic(query);
-         }},
-    };
+            // Benchmark
+            for (std::size_t i = 0; i < BENCHMARK_ITERATIONS; ++i) {
+                auto elapsed = menagerie::cuckoo::Stopwatch<std::chrono::nanoseconds>::measure(
+                    [&] { (void)executor.execute(std::string(bench.raw_sql)); });
+                timings.push_back(elapsed);
+            }
 
-    double total_avg = 0.0;
-
-    for (const auto& [name, make_query] : compiled_queries) {
-        std::vector<std::chrono::nanoseconds> timings;
-        timings.reserve(BENCHMARK_ITERATIONS);
-
-        // Warmup
-        for (std::size_t i = 0; i < WARMUP_ITERATIONS; ++i) {
-            auto compiled = make_query();
-            (void)executor.execute(compiled);
+            TimingStats stats;
+            stats.calculate(timings);
+            print_single_result(bench.name, stats);
+            total_avg += stats.avg_us;
         }
 
-        // Benchmark
-        for (std::size_t i = 0; i < BENCHMARK_ITERATIONS; ++i) {
-            auto elapsed = menagerie::cuckoo::Stopwatch<std::chrono::nanoseconds>::measure([&] {
+        std::cout << std::string(50, '=') << "\n";
+        std::cout << "TOTAL AVERAGE: " << std::fixed << std::setprecision(1)
+                  << (total_avg / static_cast<double>(benchmarks.size())) << " us\n";
+        std::cout << std::string(50, '=') << "\n";
+    }
+
+    void run_compiled_benchmarks(SyncExecutor& executor, BenchCompiler& compiler) {
+        using namespace menagerie::savanna;
+        using namespace menagerie::savanna::constraints;
+
+        using BenchUsersTable = StaticTable<"bench_users",
+                                            StaticFieldSchema<int, "id", PrimaryKey, NotNull>,
+                                            StaticFieldSchema<std::string, "name">,
+                                            StaticFieldSchema<int, "age">,
+                                            StaticFieldSchema<bool, "active">>;
+
+        constexpr BenchUsersTable u{Providers::PostgreSQL};
+
+        std::cout << "Running COMPILED benchmarks...\n\n";
+
+        std::vector<std::pair<std::string_view, std::function<CompiledDynamicQuery()>>> compiled_queries = {
+            {"SELECT by ID",
+             [&] {
+                 auto query = select(u.column<"id">(), u.column<"name">(), u.column<"age">())
+                                  .from("bench_users")
+                                  .where(u.column<"id">() == 1);
+                 return compiler.compile_dynamic(query);
+             }},
+            {"SELECT with range",
+             [&] {
+                 auto query =
+                     select(u.column<"id">(), u.column<"name">()).from("bench_users").where(u.column<"age">() > 30);
+                 return compiler.compile_dynamic(query);
+             }},
+            {"COUNT(*) aggregate",
+             [&] {
+                 auto query = select(count(u.column<"id">())).from("bench_users").where(u.column<"active">() == true);
+                 return compiler.compile_dynamic(query);
+             }},
+            {"UPDATE single row",
+             [&] {
+                 auto query = update("bench_users").set("age", 25).where(u.column<"id">() == 1);
+                 return compiler.compile_dynamic(query);
+             }},
+            {"SELECT ORDER BY LIMIT",
+             [&] {
+                 auto query = select(u.column<"id">(), u.column<"name">(), u.column<"age">())
+                                  .from("bench_users")
+                                  .order_by(desc(u.column<"age">()))
+                                  .limit(10);
+                 return compiler.compile_dynamic(query);
+             }},
+            {"GROUP BY with COUNT",
+             [&] {
+                 auto query = select(u.column<"active">(), count(u.column<"id">()))
+                                  .from("bench_users")
+                                  .group_by(u.column<"active">());
+                 return compiler.compile_dynamic(query);
+             }},
+        };
+
+        double total_avg = 0.0;
+
+        for (const auto& [name, make_query] : compiled_queries) {
+            std::vector<std::chrono::nanoseconds> timings;
+            timings.reserve(BENCHMARK_ITERATIONS);
+
+            // Warmup
+            for (std::size_t i = 0; i < WARMUP_ITERATIONS; ++i) {
                 auto compiled = make_query();
                 (void)executor.execute(compiled);
-            });
-            timings.push_back(elapsed);
+            }
+
+            // Benchmark
+            for (std::size_t i = 0; i < BENCHMARK_ITERATIONS; ++i) {
+                auto elapsed = menagerie::cuckoo::Stopwatch<std::chrono::nanoseconds>::measure([&] {
+                    auto compiled = make_query();
+                    (void)executor.execute(compiled);
+                });
+                timings.push_back(elapsed);
+            }
+
+            TimingStats stats;
+            stats.calculate(timings);
+            print_single_result(name, stats);
+            total_avg += stats.avg_us;
         }
 
-        TimingStats stats;
-        stats.calculate(timings);
-        print_single_result(name, stats);
-        total_avg += stats.avg_us;
+        std::cout << std::string(50, '=') << "\n";
+        std::cout << "TOTAL AVERAGE: " << std::fixed << std::setprecision(1)
+                  << (total_avg / static_cast<double>(compiled_queries.size())) << " us\n";
+        std::cout << std::string(50, '=') << "\n";
     }
 
-    std::cout << std::string(50, '=') << "\n";
-    std::cout << "TOTAL AVERAGE: " << std::fixed << std::setprecision(1)
-              << (total_avg / static_cast<double>(compiled_queries.size())) << " us\n";
-    std::cout << std::string(50, '=') << "\n";
-}
+}  // namespace
 
 int main(int argc, char* argv[]) {
-    using namespace menagerie::savanna;
-    using namespace menagerie::savanna::elephant;
-
     BenchmarkMode mode = BenchmarkMode::Both;
 
     // Parse command line
@@ -321,7 +325,7 @@ int main(int argc, char* argv[]) {
 
     // Create executor and compiler
     SyncExecutor executor(conn);
-    QueryCompiler<PostgresDialect, ParamMode::Inline> compiler;
+    BenchCompiler compiler;
 
     // Setup test tables
     std::cout << "Setting up test tables...\n";

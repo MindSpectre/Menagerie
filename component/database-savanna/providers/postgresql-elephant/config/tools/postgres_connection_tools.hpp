@@ -2,7 +2,7 @@
 #include <format>
 #include <string>
 
-namespace menagerie::savanna::detail {
+namespace menagerie::savanna::elephant::detail {
 
     /**
      * @brief Escape a value for libpq connection string
@@ -35,4 +35,4 @@ namespace menagerie::savanna::detail {
         }
         return escaped;
     }
-}  // namespace menagerie::savanna::detail
+}  // namespace menagerie::savanna::elephant::detail
