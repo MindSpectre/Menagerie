@@ -1,6 +1,6 @@
 # Chameleon Library
 
-The chameleon library (`common/chameleon/`) is Menagerie's terminal text-formatting toolkit: ANSI color
+The chameleon library (`common/render-chameleon/`) is Menagerie's terminal text-formatting toolkit: ANSI color
 helpers, box-drawing glyph sets, alignment/padding primitives, and three composable renderers -- `Box`,
 `Section`, and `Table` -- for turning structured data into readable console or log output. Crow's `ConsoleSink`
 uses it for level-based colorization; anywhere else that needs a bordered block, a label/value summary, or a

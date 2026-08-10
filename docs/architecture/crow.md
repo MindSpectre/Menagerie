@@ -1,6 +1,6 @@
 # Crow Library
 
-The crow library (`common/crow/`) is Menagerie's asynchronous logging stack: a Disruptor-backed `Logger` that
+The crow library (`common/logger-crow/`) is Menagerie's asynchronous logging stack: a Disruptor-backed `Logger` that
 buffers events from any number of producer threads into a lock-free ring buffer and dispatches them to a set of
 sinks from one consumer thread, `LoggerProvider` (a mixin giving any class its own logger handle and prefix),
 `ConsoleSink`/`FileSink` output destinations, and the `LOG_*`/`COMPONENT_LOG_*` macro API most call sites use

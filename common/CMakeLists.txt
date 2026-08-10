@@ -2,24 +2,24 @@ set(COMMON ${PROJECT_NAME}.Common)
 
 ###############################################
 
-add_subdirectory(beavers)
+add_subdirectory(core-beaver)
 
-add_subdirectory(serialization)
+add_subdirectory(serialization-pangolin)
 
-add_subdirectory(crypto)
+add_subdirectory(crypto-pufferfish)
 
-add_subdirectory(multithread)
+add_subdirectory(concurrency-starling)
 
-add_subdirectory(chameleon)
+add_subdirectory(render-chameleon)
 
-add_subdirectory(crow)
+add_subdirectory(logger-crow)
 
 add_subdirectory(3rdparty)
 
-add_subdirectory(chrono)
+add_subdirectory(chrono-cuckoo)
 
-add_subdirectory(math)
+add_subdirectory(math-rabbit)
 
-add_subdirectory(spider)
+add_subdirectory(locator-spider)
 
-add_subdirectory(algorithms)
+add_subdirectory(algorithms-bowerbird)

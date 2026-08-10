@@ -1,0 +1,26 @@
+#pragma once
+
+/**
+ * Public umbrella for the savanna database component. Pulls in the umbrella of every
+ * provider compiled into this build; each provider umbrella already carries the
+ * provider-agnostic core it is built on -- the Providers enum, the dialect/params/
+ * type-mapping contracts, the schema primitives, and the query expression tree with its
+ * compiler -- so this header is the whole component. Consumers link
+ * Menagerie::Component::Savanna and write `#include <menagerie/savanna>`.
+ *
+ * The provider umbrellas are gated on the same POSTGRESQL_ENABLED / REDIS_ENABLED macros
+ * that gate the Providers enumerators themselves. A consumer that wants one specific
+ * engine unconditionally can include that provider's umbrella directly.
+ */
+
+// -- Providers - one umbrella per engine compiled into this build ---------------
+#ifdef POSTGRESQL_ENABLED
+    #include <menagerie/elephant>
+#endif
+
+#ifdef MENAGERIE_CONVENTIONAL_ALIASES
+namespace menagerie {
+    /// Opt-in conventional spelling: `menagerie::database` resolves to `menagerie::savanna`.
+    namespace database = savanna;
+}  // namespace menagerie
+#endif

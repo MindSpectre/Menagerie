@@ -16,7 +16,7 @@ Apply to:
 ```cpp
 [[nodiscard]] constexpr bool is_success() const noexcept;
 [[nodiscard]] static std::shared_ptr<Table> make_ptr(std::string name);
-[[nodiscard]] beavers::Outcome<ResultBlock, ErrorCode> execute(std::string_view query);
+[[nodiscard]] beaver::Outcome<ResultBlock, ErrorCode> execute(std::string_view query);
 ```
 
 ### `[[maybe_unused]]`
@@ -46,7 +46,7 @@ server.on_request([]([[maybe_unused]] const Request& req) {
 | Variables            | snake_case                | `table_name`, `result_count`  |
 | Member variables     | snake_case + trailing `_` | `table_name_`, `distinct_`    |
 | Template type params | PascalCase                | `T`, `ValueType`, `ColumnsTp` |
-| Namespaces           | lowercase                 | `menagerie::db::postgres`     |
+| Namespaces           | lowercase                 | `menagerie::savanna::elephant`     |
 | Enum values          | PascalCase                | `LogLevel::Warning`           |
 | Macros               | SCREAMING_SNAKE           | `ENABLE_LOGGING`              |
 | Files                | snake_case                | `query_compiler.hpp`          |
@@ -306,7 +306,7 @@ std::unreachable();
 ### `GEARS_UNREACHABLE(Type, Message)`
 
 Use in `if constexpr` chains to catch unhandled types at compile time. Expands to a
-`static_assert` on `beavers::dependent_false_v<Type>` followed by `std::unreachable()`, so the assert only fires when
+`static_assert` on `beaver::dependent_false_v<Type>` followed by `std::unreachable()`, so the assert only fires when
 the branch is actually instantiated:
 
 ```cpp
@@ -324,14 +324,14 @@ constexpr auto process(T value) {
 
 ## Static Member Enforcement
 
-Use `beavers::enforce_non_static` for members that could be static but intentionally aren't (e.g., for polymorphism or
+Use `beaver::enforce_non_static` for members that could be static but intentionally aren't (e.g., for polymorphism or
 future instance state):
 
 ```cpp
 class Dialect {
 public:
     std::string quote_identifier(std::string_view id) const {
-        beavers::enforce_non_static(this);
+        beaver::enforce_non_static(this);
     }
 };
 ```
@@ -344,11 +344,11 @@ Use `Outcome` only in performance-critical, hot-path code:
 
 ```cpp
 // Async executor - called thousands of times per second
-[[nodiscard]] boost::asio::awaitable<beavers::Outcome<ResultBlock, ErrorCode>>
+[[nodiscard]] boost::asio::awaitable<beaver::Outcome<ResultBlock, ErrorCode>>
 execute(std::string_view query);
 
 // Tight loop processing
-[[nodiscard]] beavers::Outcome<Row, ParseError> parse_row(std::span<const std::byte> data);
+[[nodiscard]] beaver::Outcome<Row, ParseError> parse_row(std::span<const std::byte> data);
 ```
 
 ### Setup/Rare/Cold Path: Exceptions
@@ -493,9 +493,9 @@ same namespace context:
 
 ```cpp
 // db_field.hpp
-namespace menagerie::db {
+namespace menagerie::savanna {
     // ... class declarations ...
-}  // namespace menagerie::db
+}  // namespace menagerie::savanna
 
 #include "detail/db_field.inl"
 ```
@@ -558,7 +558,7 @@ Each top-level module under `common/` (and each component under `component/`) sh
 for every public header of the module:
 
 ```cpp
-// common/beavers/export/menagerie/beavers
+// common/core-beaver/export/menagerie/beaver
 #pragma once
 
 #include "beavers_class_traits.hpp"
@@ -571,7 +571,7 @@ for every public header of the module:
 Consumers include the whole module via `#include <menagerie/<module>>`:
 
 ```cpp
-#include <menagerie/beavers>
+#include <menagerie/beaver>
 #include <menagerie/crow>
 ```
 
@@ -583,7 +583,7 @@ Use the C++17 one-line nested form. Never nest with separate braces.
 
 ```cpp
 namespace menagerie::crow { ... }            // Good
-namespace menagerie::db::postgres { ... }      // Good
+namespace menagerie::savanna::elephant { ... }      // Good
 
 // Avoid:
 // namespace menagerie { namespace crow { ... } }
@@ -622,7 +622,7 @@ Order (separated by blank lines):
 
 #include <boost/asio.hpp>
 
-#include <menagerie/beavers>
+#include <menagerie/beaver>
 
 #include <db_table.hpp>
 #include "local_helper.hpp"
@@ -707,7 +707,7 @@ need `#ifdef` guards:
 
 ### Logging
 
-The `common/crow` module defines three families of logging macros (`LOG_*`,
+The `common/logger-crow` module defines three families of logging macros (`LOG_*`,
 `COMPONENT_LOG_*`, `LOG_DIRECT_*`), each with its own precondition on the call site. See
-`common/crow/provider/include/log_macros.hpp` for the full set and the class-scope setup required by
+`common/logger-crow/provider/macros/log_macros.hpp` for the full set and the class-scope setup required by
 `CROW_COMPONENT_PREFIX`.

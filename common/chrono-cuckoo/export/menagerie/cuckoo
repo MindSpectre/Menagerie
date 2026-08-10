@@ -1,0 +1,16 @@
+#pragma once
+
+#include "chrono_utils.hpp"
+#include "clock.hpp"
+#include "imf_date.hpp"
+#include "tsc_clock.hpp"
+#include "printing_stopwatch.hpp"
+#include "stopwatch.hpp"
+#include "timer.hpp"
+
+#ifdef MENAGERIE_CONVENTIONAL_ALIASES
+namespace menagerie {
+    /// Opt-in conventional spelling: `menagerie::chrono` resolves to `menagerie::cuckoo`.
+    namespace chrono = cuckoo;
+}  // namespace menagerie
+#endif

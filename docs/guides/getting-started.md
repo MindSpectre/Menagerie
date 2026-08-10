@@ -115,7 +115,7 @@ for the service container it starts).
 Feature toggles live in `cmake/features.cmake` and are set with `-D<NAME>=ON|OFF` on the
 `cmake --preset` invocation, or overridden per preset in `CMakePresets.json`:
 
-- `USE_BOOST` - enable Boost (ON by default; most of `common/` and all of `component/http`
+- `USE_BOOST` - enable Boost (ON by default; most of `common/` and all of `component/http-albatross`
   depend on it)
 - `BUILD_COMPONENTS` - build `component/` (http, database); OFF shrinks the build to
   `common/` only, as `dev-slim` and `tsan` do

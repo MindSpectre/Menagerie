@@ -1,0 +1,13 @@
+#pragma once
+
+#include "compile_time_utils.hpp"
+#include "pbkdf2.hpp"
+#include "security_utils.hpp"
+#include "sha_256.hpp"
+
+#ifdef MENAGERIE_CONVENTIONAL_ALIASES
+namespace menagerie {
+    /// Opt-in conventional spelling: `menagerie::crypto` resolves to `menagerie::pufferfish`.
+    namespace crypto = pufferfish;
+}  // namespace menagerie
+#endif

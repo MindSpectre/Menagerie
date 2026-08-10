@@ -8,29 +8,66 @@ built through CMake presets, with dependencies resolved via vcpkg.
 
 ## Components
 
-| Component | Description | Docs |
-| --- | --- | --- |
-| `http` | Server-side HTTP/1.1 stack over TCP and TLS; HTTP/2 and HTTP/3 exist as compiling scaffolds. | [docs/architecture/http.md](docs/architecture/http.md) |
-| `database` | Layered PostgreSQL client with a provider-agnostic, compile-time-checkable query core. | [docs/architecture/database.md](docs/architecture/database.md) |
-| `multithread` | Concurrency primitives: resource pools, a futex-based park/notify primitive, a lock-free ring buffer, a growable thread pool. | [docs/architecture/multithread.md](docs/architecture/multithread.md) |
-| `beavers` | Foundation layer: a typed result type, fixed-capacity strings, class-trait mixins, meta-programming utilities. | [docs/architecture/beavers.md](docs/architecture/beavers.md) |
-| `crow` | Asynchronous logging stack: a Disruptor-backed ring buffer dispatching to console and file sinks. | [docs/architecture/crow.md](docs/architecture/crow.md) |
-| `chameleon` | Terminal text-formatting toolkit: ANSI colors, box-drawing glyphs, and Box/Section/Table renderers. | [docs/architecture/chameleon.md](docs/architecture/chameleon.md) |
-| `chrono` | Timing toolkit: wall-clock formatting, HTTP-date rendering, a hardware tick counter, stopwatches, deadline-bound execution. | [docs/architecture/chrono.md](docs/architecture/chrono.md) |
-| `serialization` | Field-descriptor serialization framework behind every Builder-pattern config type in the codebase. | [docs/architecture/serialization.md](docs/architecture/serialization.md) |
-| `spider` | Thread-safe service locator with configurable per-registration instance lifetimes. | [docs/architecture/spider.md](docs/architecture/spider.md) |
-| `crypto` | OpenSSL wrapper for password/data hashing: HMAC-SHA256, PBKDF2-HMAC-SHA256, secure salt generation. | [docs/architecture/crypto.md](docs/architecture/crypto.md) |
-| `math` | Random-value toolkit built on `std::mt19937`: integers, durations/dates, collection sampling. | [docs/architecture/math.md](docs/architecture/math.md) |
-| `algorithms` | Bounded-memory streaming sort over batched data (`SlidingWindowSorter`). | [docs/architecture/algorithms.md](docs/architecture/algorithms.md) |
+| Namespace | Directory | Description | Docs |
+| --- | --- | --- | --- |
+| `albatross` | `component/http-albatross/` | Server-side HTTP/1.1 stack over TCP and TLS; HTTP/2 and HTTP/3 exist as compiling scaffolds. | [docs/architecture/albatross.md](docs/architecture/albatross.md) |
+| `savanna` | `component/database-savanna/` | Layered PostgreSQL client with a provider-agnostic, compile-time-checkable query core. | [docs/architecture/savanna.md](docs/architecture/savanna.md) |
+| `starling` | `common/concurrency-starling/` | Concurrency primitives: resource pools, a futex-based park/notify primitive, a lock-free ring buffer, a growable thread pool. | [docs/architecture/starling.md](docs/architecture/starling.md) |
+| `beaver` | `common/core-beaver/` | Foundation layer: a typed result type, fixed-capacity strings, class-trait mixins, meta-programming utilities. | [docs/architecture/beaver.md](docs/architecture/beaver.md) |
+| `crow` | `common/logger-crow/` | Asynchronous logging stack: a Disruptor-backed ring buffer dispatching to console and file sinks. | [docs/architecture/crow.md](docs/architecture/crow.md) |
+| `chameleon` | `common/render-chameleon/` | Terminal text-formatting toolkit: ANSI colors, box-drawing glyphs, and Box/Section/Table renderers. | [docs/architecture/chameleon.md](docs/architecture/chameleon.md) |
+| `cuckoo` | `common/chrono-cuckoo/` | Timing toolkit: wall-clock formatting, HTTP-date rendering, a hardware tick counter, stopwatches, deadline-bound execution. | [docs/architecture/cuckoo.md](docs/architecture/cuckoo.md) |
+| `pangolin` | `common/serialization-pangolin/` | Field-descriptor serialization framework behind every Builder-pattern config type in the codebase. | [docs/architecture/pangolin.md](docs/architecture/pangolin.md) |
+| `spider` | `common/locator-spider/` | Thread-safe service locator with configurable per-registration instance lifetimes. | [docs/architecture/spider.md](docs/architecture/spider.md) |
+| `pufferfish` | `common/crypto-pufferfish/` | OpenSSL wrapper for password/data hashing: HMAC-SHA256, PBKDF2-HMAC-SHA256, secure salt generation. | [docs/architecture/pufferfish.md](docs/architecture/pufferfish.md) |
+| `rabbit` | `common/math-rabbit/` | Random-value toolkit built on `std::mt19937`: integers, durations/dates, collection sampling. | [docs/architecture/rabbit.md](docs/architecture/rabbit.md) |
+| `bowerbird` | `common/algorithms-bowerbird/` | Bounded-memory streaming sort over batched data (`SlidingWindowSorter`). | [docs/architecture/bowerbird.md](docs/architecture/bowerbird.md) |
+
+## Naming
+
+Every module directory is `<role>-<creature>`: the role word says what it does, the
+creature is the namespace. Directories sort by function, so `ls common/` reads as a
+table of contents, while code keeps the short, greppable token -- `crow::Logger`, not
+`logger::Logger`. A habitat stands in for the creature in one case only: a module that
+fronts interchangeable providers behind a provider-agnostic core, which is why the
+PostgreSQL client is `database-savanna/` -- a savanna hosts many species, and Postgres is one
+provider rather than the whole component. Providers are then the creatures living in it:
+`providers/postgresql-elephant/` is `menagerie::savanna::elephant`.
+
+The theme stops at the module boundary. Anything naming an external standard or product
+keeps its own name, because those are already unique and universally recognized -- hence
+`Providers::PostgreSQL`, `PostgresDialect`, `Http11Driver`, and the `postgres_*.hpp`
+sources are untouched by any of the above.
+
+If you prefer conventional names in your own code, define
+`MENAGERIE_CONVENTIONAL_ALIASES` and each umbrella header additionally exposes the role
+word as a namespace alias:
+
+```cpp
+#define MENAGERIE_CONVENTIONAL_ALIASES
+#include <menagerie/crow>
+
+menagerie::logger::Logger log;   // same entity as menagerie::crow::Logger
+```
+
+The aliases are opt-in and purely additive: library sources always use the creature
+namespaces, so enabling the macro changes no symbol names, no ABI, and cannot cause an
+ODR mismatch between translation units that set it and ones that do not. You can qualify
+through an alias but not reopen or forward-declare through it -- `namespace
+menagerie::logger { class X; }` is not valid; use `menagerie::crow` for that. Two aliases
+are worth a second thought before enabling: `menagerie::chrono` sits next to `std::chrono`
+and `menagerie::http` next to `boost::beast::http`, so an unqualified `chrono::` or
+`http::` in a file that sees both becomes ambiguous.
+
 
 ## Quick example
 
-A minimal HTTP server, trimmed from `examples/http/minimal_http_server.cpp`:
+A minimal HTTP server, trimmed from `examples/http-albatross/minimal_http_server.cpp`:
 
 ```cpp
-#include <menagerie/http>
+#include <menagerie/albatross>
 
-namespace http = menagerie::http;
+namespace http = menagerie::albatross;
 
 class GreeterController final : public http::HttpController {
 public:

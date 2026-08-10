@@ -2,13 +2,13 @@
 # Test Stopwatch benchmark
 ##############################################################################
 add_unit_test(${UNIT_TESTING_TARGET}.Stopwatch
-        chrono/stopwatch/test_printing_stopwatch.cpp
-        chrono/stopwatch/test_stopwatch.cpp
-        chrono/stopwatch/main.cpp
+        chrono-cuckoo/stopwatch/test_printing_stopwatch.cpp
+        chrono-cuckoo/stopwatch/test_stopwatch.cpp
+        chrono-cuckoo/stopwatch/main.cpp
 )
 target_link_libraries(${UNIT_TESTING_TARGET}.Stopwatch
         PRIVATE
-        Menagerie::Common::Chrono
+        Menagerie::Common::Cuckoo
         ${TEST_LIBS}
 )
 ##############################################################################
@@ -17,13 +17,13 @@ target_link_libraries(${UNIT_TESTING_TARGET}.Stopwatch
 # Test Thread Pool
 ##############################################################################
 add_unit_test(${UNIT_TESTING_TARGET}.ThreadPool
-        multithread/thread_pool/test_thread_pool.cpp
+        concurrency-starling/thread_pool/test_thread_pool.cpp
 )
 target_link_libraries(${UNIT_TESTING_TARGET}.ThreadPool
         PRIVATE
-        Menagerie::Common::Multithread
-        Menagerie::Common::Math
-        Menagerie::Common::Chrono
+        Menagerie::Common::Starling
+        Menagerie::Common::Rabbit
+        Menagerie::Common::Cuckoo
         ${TEST_LIBS}
 
 )
@@ -33,13 +33,13 @@ target_link_libraries(${UNIT_TESTING_TARGET}.ThreadPool
 # Test Thread Pool
 ##############################################################################
 add_unit_test(${UNIT_TESTING_TARGET}.Disruptor
-        multithread/disruptor/test_disruptor.cpp
+        concurrency-starling/disruptor/test_disruptor.cpp
 )
 target_link_libraries(${UNIT_TESTING_TARGET}.Disruptor
         PRIVATE
-        Menagerie::Common::Multithread
-        Menagerie::Common::Math
-        Menagerie::Common::Chrono
+        Menagerie::Common::Starling
+        Menagerie::Common::Rabbit
+        Menagerie::Common::Cuckoo
         ${TEST_LIBS}
 
 )
@@ -50,13 +50,13 @@ target_link_libraries(${UNIT_TESTING_TARGET}.Disruptor
 # Test Chameleon (unit)
 ##############################################################################
 add_unit_test(${UNIT_TESTING_TARGET}.Chameleon
-        chameleon/main.cpp
-        chameleon/colors_test.cpp
-        chameleon/separators_test.cpp
-        chameleon/table_test.cpp
-        chameleon/section_test.cpp
-        chameleon/box_test.cpp
-        chameleon/composition_test.cpp
+        render-chameleon/main.cpp
+        render-chameleon/colors_test.cpp
+        render-chameleon/separators_test.cpp
+        render-chameleon/table_test.cpp
+        render-chameleon/section_test.cpp
+        render-chameleon/box_test.cpp
+        render-chameleon/composition_test.cpp
 )
 target_link_libraries(${UNIT_TESTING_TARGET}.Chameleon
         PRIVATE
@@ -69,20 +69,20 @@ target_link_libraries(${UNIT_TESTING_TARGET}.Chameleon
 # Test crow
 ##############################################################################
 add_unit_test(${UNIT_TESTING_TARGET}.Crow
-        crow/logger_provider_test.cpp
-        crow/entry_tests.cpp
-        crow/main.cpp
-        crow/logger/file_sink_test.cpp
-        crow/logger/console_sink_test.cpp
-        crow/logger/logger_ordering_test.cpp
-        crow/logger/sink_status_test.cpp
-        crow/logger/sink_health_test.cpp
-        crow/logger/file_naming_test.cpp
-        crow/logger/rotation_test.cpp
-        crow/logger/logger_registry_test.cpp
-        crow/logger/logger_gate_test.cpp
-        crow/prefix_filter_test.cpp
-        crow/prefix_integration_test.cpp
+        logger-crow/logger_provider_test.cpp
+        logger-crow/entry_tests.cpp
+        logger-crow/main.cpp
+        logger-crow/logger/file_sink_test.cpp
+        logger-crow/logger/console_sink_test.cpp
+        logger-crow/logger/logger_ordering_test.cpp
+        logger-crow/logger/sink_status_test.cpp
+        logger-crow/logger/sink_health_test.cpp
+        logger-crow/logger/file_naming_test.cpp
+        logger-crow/logger/rotation_test.cpp
+        logger-crow/logger/logger_registry_test.cpp
+        logger-crow/logger/logger_gate_test.cpp
+        logger-crow/prefix_filter_test.cpp
+        logger-crow/prefix_integration_test.cpp
 )
 target_link_libraries(${UNIT_TESTING_TARGET}.Crow
         PRIVATE
@@ -96,7 +96,7 @@ target_link_libraries(${UNIT_TESTING_TARGET}.Crow
 #  Spider uint test
 ##############################################################################
 add_unit_test(${UNIT_TESTING_TARGET}.Spider
-        spider/test_spider.cpp
+        locator-spider/test_spider.cpp
 )
 
 target_link_libraries(${UNIT_TESTING_TARGET}.Spider
@@ -106,40 +106,40 @@ target_link_libraries(${UNIT_TESTING_TARGET}.Spider
 ##############################################################################
 
 ##############################################################################
-# Test Algorithms
+# Test Bowerbird
 ##############################################################################
-add_unit_test(${UNIT_TESTING_TARGET}.Algorithms
-        algorithms/test_sliding_window_sorter.cpp
+add_unit_test(${UNIT_TESTING_TARGET}.Bowerbird
+        algorithms-bowerbird/test_sliding_window_sorter.cpp
 )
-target_link_libraries(${UNIT_TESTING_TARGET}.Algorithms
+target_link_libraries(${UNIT_TESTING_TARGET}.Bowerbird
         PRIVATE
-        Menagerie::Common::Algorithms
+        Menagerie::Common::Bowerbird
         ${TEST_LIBS}
 )
 ##############################################################################
 
 ##############################################################################
-# Test Beavers Result (Outcome)
+# Test Beaver Result (Outcome)
 ##############################################################################
-add_unit_test(${UNIT_TESTING_TARGET}.Beavers.Outcome
-        beavers/test_outcome.cpp
+add_unit_test(${UNIT_TESTING_TARGET}.Beaver.Outcome
+        core-beaver/test_outcome.cpp
 )
-target_link_libraries(${UNIT_TESTING_TARGET}.Beavers.Outcome
+target_link_libraries(${UNIT_TESTING_TARGET}.Beaver.Outcome
         PRIVATE
-        Menagerie::Common::Beavers
+        Menagerie::Common::Beaver
         ${TEST_LIBS}
 )
 ##############################################################################
 
 ##############################################################################
-# Test Beavers InlineString
+# Test Beaver InlineString
 ##############################################################################
-add_unit_test(${UNIT_TESTING_TARGET}.Beavers.Strings.InlineString
-        beavers/test_inline_string.cpp
+add_unit_test(${UNIT_TESTING_TARGET}.Beaver.Strings.InlineString
+        core-beaver/test_inline_string.cpp
 )
-target_link_libraries(${UNIT_TESTING_TARGET}.Beavers.Strings.InlineString
+target_link_libraries(${UNIT_TESTING_TARGET}.Beaver.Strings.InlineString
         PRIVATE
-        Menagerie::Common::Beavers
+        Menagerie::Common::Beaver
         ${TEST_LIBS}
 )
 ##############################################################################
@@ -148,11 +148,11 @@ target_link_libraries(${UNIT_TESTING_TARGET}.Beavers.Strings.InlineString
 # Test EventCount
 ##############################################################################
 add_unit_test(${UNIT_TESTING_TARGET}.EventCount
-        multithread/event_count/test_event_count.cpp
+        concurrency-starling/event_count/test_event_count.cpp
 )
 target_link_libraries(${UNIT_TESTING_TARGET}.EventCount
         PRIVATE
-        Menagerie::Common::Multithread
+        Menagerie::Common::Starling
         ${TEST_LIBS}
 )
 ##############################################################################
@@ -161,7 +161,7 @@ target_link_libraries(${UNIT_TESTING_TARGET}.EventCount
 # Test EventCount - forced condition_variable fallback path
 ##############################################################################
 add_unit_test(${UNIT_TESTING_TARGET}.EventCount.Fallback
-        multithread/event_count/test_event_count.cpp
+        concurrency-starling/event_count/test_event_count.cpp
 )
 target_compile_definitions(${UNIT_TESTING_TARGET}.EventCount.Fallback
         PRIVATE
@@ -169,7 +169,7 @@ target_compile_definitions(${UNIT_TESTING_TARGET}.EventCount.Fallback
 )
 target_link_libraries(${UNIT_TESTING_TARGET}.EventCount.Fallback
         PRIVATE
-        Menagerie::Common::Multithread
+        Menagerie::Common::Starling
         ${TEST_LIBS}
 )
 ##############################################################################
@@ -178,11 +178,11 @@ target_link_libraries(${UNIT_TESTING_TARGET}.EventCount.Fallback
 # Test ResourcePool
 ##############################################################################
 add_unit_test(${UNIT_TESTING_TARGET}.ResourcePool
-        multithread/resource_pool/test_resource_pool.cpp
+        concurrency-starling/resource_pool/test_resource_pool.cpp
 )
 target_link_libraries(${UNIT_TESTING_TARGET}.ResourcePool
         PRIVATE
-        Menagerie::Common::Multithread
+        Menagerie::Common::Starling
         ${TEST_LIBS}
 )
 ##############################################################################
@@ -191,24 +191,24 @@ target_link_libraries(${UNIT_TESTING_TARGET}.ResourcePool
 # Test AsyncResourcePool
 ##############################################################################
 add_unit_test(${UNIT_TESTING_TARGET}.AsyncResourcePool
-        multithread/resource_pool/test_async_resource_pool.cpp
+        concurrency-starling/resource_pool/test_async_resource_pool.cpp
 )
 target_link_libraries(${UNIT_TESTING_TARGET}.AsyncResourcePool
         PRIVATE
-        Menagerie::Common::Multithread
+        Menagerie::Common::Starling
         ${TEST_LIBS}
 )
 ##############################################################################
 
 ##############################################################################
-# Test Serialization (ConfigInterface machinery + JSON field codecs)
+# Test Pangolin (ConfigInterface machinery + JSON field codecs)
 ##############################################################################
-add_unit_test(${UNIT_TESTING_TARGET}.Serialization
-        serialization/test_config_interface.cpp
+add_unit_test(${UNIT_TESTING_TARGET}.Pangolin
+        serialization-pangolin/test_config_interface.cpp
 )
-target_link_libraries(${UNIT_TESTING_TARGET}.Serialization
+target_link_libraries(${UNIT_TESTING_TARGET}.Pangolin
         PRIVATE
-        Menagerie::Common::Serialization
+        Menagerie::Common::Pangolin
         ${TEST_LIBS}
 )
 ##############################################################################

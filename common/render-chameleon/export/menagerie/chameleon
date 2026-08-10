@@ -1,0 +1,15 @@
+#pragma once
+
+#include "glyphs.hpp"
+#include "colors.hpp"
+#include "layout.hpp"
+#include "table.hpp"
+#include "section.hpp"
+#include "box.hpp"
+
+#ifdef MENAGERIE_CONVENTIONAL_ALIASES
+namespace menagerie {
+    /// Opt-in conventional spelling: `menagerie::render` resolves to `menagerie::chameleon`.
+    namespace render = chameleon;
+}  // namespace menagerie
+#endif
