@@ -39,7 +39,7 @@ OUT="${OUT:-$ROOT/benchmark_results/http}"   # gitignored, on real disk
 mkdir -p "$OUT"
 
 command -v taskset >/dev/null || { echo "taskset not found"; exit 1; }
-for f in Menagerie.Benchmarks.Http.Bomber Menagerie.Benchmarks.Http.BenchServer Menagerie.Benchmarks.Http.DrogonBenchServer; do
+for f in Menagerie.Benchmarks.Albatross.Bomber Menagerie.Benchmarks.Albatross.BenchServer Menagerie.Benchmarks.Albatross.DrogonBenchServer; do
     [[ -x "$BIN/$f" ]] || { echo "missing $BIN/$f — build first"; exit 1; }
 done
 
@@ -58,9 +58,9 @@ stop_server() {
 # Backstop: a `timeout` or Ctrl-C kills this shell, not its grandchildren. An
 # orphaned bomber saturates every core until it finishes its request budget.
 # NB: pkill -x matches the process NAME (comm, truncated to 15 chars), not the
-# command line. `pkill -f 'Menagerie.Benchmarks.Http'` also matches any shell whose
+# command line. `pkill -f 'Menagerie.Benchmarks.Albatross'` also matches any shell whose
 # argv contains that string -- including the one running this script, and any
-# `cmake --build --target Menagerie.Benchmarks.Http.*` invocation. Do not use -f here.
+# `cmake --build --target Menagerie.Benchmarks.Albatross.*` invocation. Do not use -f here.
 cleanup() { stop_server; pkill -9 -x 'Menagerie.Bench' 2>/dev/null; }
 trap cleanup EXIT INT TERM
 
@@ -84,7 +84,7 @@ run_one() {
     local label="$1" bin="$2" port="$3" pipe="$4" cpus="$5" thr="$6" conns="$7" rep="$8"
     start_server "$bin" "$port"
     local json
-    json=$(taskset -c "$cpus" "$BIN/Menagerie.Benchmarks.Http.Bomber" \
+    json=$(taskset -c "$cpus" "$BIN/Menagerie.Benchmarks.Albatross.Bomber" \
         --host 127.0.0.1 --port "$port" --path /ping \
         --threads "$thr" --conns "$conns" --pipeline "$pipe" \
         --requests "$REQUESTS" --warmup "$WARMUP" --json 2>/dev/null)
@@ -103,14 +103,14 @@ echo "writing $OUT/raw.jsonl"
 
 for pipe in 1 16; do
     for rep in $(seq 1 "$REPS"); do
-        run_one "menagerie/pipe$pipe/primary" Menagerie.Benchmarks.Http.BenchServer       8080 "$pipe" "$CLIENT_CPUS_PRIMARY" 8 256 "$rep"
-        run_one "drogon/pipe$pipe/primary"    Menagerie.Benchmarks.Http.DrogonBenchServer 8081 "$pipe" "$CLIENT_CPUS_PRIMARY" 8 256 "$rep"
+        run_one "menagerie/pipe$pipe/primary" Menagerie.Benchmarks.Albatross.BenchServer       8080 "$pipe" "$CLIENT_CPUS_PRIMARY" 8 256 "$rep"
+        run_one "drogon/pipe$pipe/primary"    Menagerie.Benchmarks.Albatross.DrogonBenchServer 8081 "$pipe" "$CLIENT_CPUS_PRIMARY" 8 256 "$rep"
     done
 done
 
 # Control layout: one rep each at pipeline 1, to size the SMT contention.
-run_one "menagerie/pipe1/control" Menagerie.Benchmarks.Http.BenchServer       8080 1 "$CLIENT_CPUS_CONTROL" 4 128 1
-run_one "drogon/pipe1/control"    Menagerie.Benchmarks.Http.DrogonBenchServer 8081 1 "$CLIENT_CPUS_CONTROL" 4 128 1
+run_one "menagerie/pipe1/control" Menagerie.Benchmarks.Albatross.BenchServer       8080 1 "$CLIENT_CPUS_CONTROL" 4 128 1
+run_one "drogon/pipe1/control"    Menagerie.Benchmarks.Albatross.DrogonBenchServer 8081 1 "$CLIENT_CPUS_CONTROL" 4 128 1
 
 echo
 echo "=== median rps per label ==="
