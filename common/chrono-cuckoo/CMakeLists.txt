@@ -44,24 +44,6 @@ target_include_directories(${CUCKOO}.Clock INTERFACE
 ##############################################################################
 
 ##############################################################################
-# Timer for managing function flow
-##############################################################################
-add_library(${CUCKOO}.Timer STATIC
-        timer/detail/timer.inl
-        timer/detail/cancellation_token.hpp
-        timer/timer.hpp
-        timer/timer.cpp
-)
-target_include_directories(${CUCKOO}.Timer PUBLIC
-        timer/
-)
-target_link_libraries(${CUCKOO}.Timer PUBLIC
-        Menagerie::Common::Beaver
-        Menagerie::Common::Starling
-)
-##############################################################################
-
-##############################################################################
 # Cuckoo exported library
 ##############################################################################
 add_combined_library(${CUCKOO}
@@ -73,7 +55,6 @@ add_combined_library(${CUCKOO}
         ${CUCKOO}.Clock
         ${CUCKOO}.Stopwatch
         ${CUCKOO}.Utilities
-        ${CUCKOO}.Timer
 )
 
 add_library(Menagerie::Common::Cuckoo ALIAS ${CUCKOO})

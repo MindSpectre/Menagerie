@@ -14,23 +14,7 @@ target_link_libraries(${UNIT_TESTING_TARGET}.Stopwatch
 ##############################################################################
 
 ##############################################################################
-# Test Thread Pool
-##############################################################################
-add_unit_test(${UNIT_TESTING_TARGET}.ThreadPool
-        concurrency-starling/thread_pool/test_thread_pool.cpp
-)
-target_link_libraries(${UNIT_TESTING_TARGET}.ThreadPool
-        PRIVATE
-        Menagerie::Common::Starling
-        Menagerie::Common::Rabbit
-        Menagerie::Common::Cuckoo
-        ${TEST_LIBS}
-
-)
-##############################################################################
-
-##############################################################################
-# Test Thread Pool
+# Test Disruptor
 ##############################################################################
 add_unit_test(${UNIT_TESTING_TARGET}.Disruptor
         concurrency-starling/disruptor/test_disruptor.cpp
@@ -209,6 +193,19 @@ add_unit_test(${UNIT_TESTING_TARGET}.Pangolin
 target_link_libraries(${UNIT_TESTING_TARGET}.Pangolin
         PRIVATE
         Menagerie::Common::Pangolin
+        ${TEST_LIBS}
+)
+##############################################################################
+
+##############################################################################
+# Test Thread Safe Resource
+##############################################################################
+add_unit_test(${UNIT_TESTING_TARGET}.ThreadSafeResource
+        concurrency-starling/thread_safe_resource/test_thread_safe_resource.cpp
+)
+target_link_libraries(${UNIT_TESTING_TARGET}.ThreadSafeResource
+        PRIVATE
+        Menagerie::Common::Starling
         ${TEST_LIBS}
 )
 ##############################################################################

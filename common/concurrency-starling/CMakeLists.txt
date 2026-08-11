@@ -115,27 +115,6 @@ target_link_libraries(${STARLING}.ThreadSafeResource
 
 
 ##############################################################################
-# Thread pool for paralleling tasks
-##############################################################################
-add_library(${STARLING}.ThreadPool STATIC
-        thread_pool/thread_pool.cpp
-        thread_pool/thread_pool.hpp
-        thread_pool/detail/enqueued_task.hpp
-        thread_pool/config/thread_pool_config.hpp
-)
-target_include_directories(${STARLING}.ThreadPool PUBLIC
-        thread_pool/
-
-)
-
-target_link_libraries(${STARLING}.ThreadPool PUBLIC
-        Menagerie::Common::Beaver
-        ${STARLING}.ThreadSafeResource
-)
-##############################################################################
-
-
-##############################################################################
 # Disruptor - Lock-free ring buffer for high-performance messaging
 ##############################################################################
 add_subdirectory(disruptor)
@@ -151,7 +130,6 @@ add_combined_library(${STARLING}
         DIRECTORIES
         export
         LIBRARIES
-        ${STARLING}.ThreadPool
         ${STARLING}.ThreadSafeResource
         ${STARLING}.Disruptor
         ${STARLING}.EventCount
