@@ -198,12 +198,25 @@ target_link_libraries(${UNIT_TESTING_TARGET}.Pangolin
 ##############################################################################
 
 ##############################################################################
-# Test Thread Safe Resource
+# Test Synchronized Resource
 ##############################################################################
-add_unit_test(${UNIT_TESTING_TARGET}.ThreadSafeResource
-        concurrency-starling/thread_safe_resource/test_thread_safe_resource.cpp
+add_unit_test(${UNIT_TESTING_TARGET}.SynchronizedResource
+        concurrency-starling/synchronized_resource/test_synchronized_resource.cpp
 )
-target_link_libraries(${UNIT_TESTING_TARGET}.ThreadSafeResource
+target_link_libraries(${UNIT_TESTING_TARGET}.SynchronizedResource
+        PRIVATE
+        Menagerie::Common::Starling
+        ${TEST_LIBS}
+)
+##############################################################################
+
+##############################################################################
+# Test Shared Resource
+##############################################################################
+add_unit_test(${UNIT_TESTING_TARGET}.SharedResource
+        concurrency-starling/shared_resource/test_shared_resource.cpp
+)
+target_link_libraries(${UNIT_TESTING_TARGET}.SharedResource
         PRIVATE
         Menagerie::Common::Starling
         ${TEST_LIBS}

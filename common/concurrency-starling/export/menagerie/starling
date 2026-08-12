@@ -1,6 +1,7 @@
 #pragma once
 
-#include "thread_safe_resource.hpp"
+#include "synchronized_resource.hpp"
+#include "shared_resource.hpp"
 #include "disruptor.hpp"
 #include "event_count.hpp"
 #include "resource_pool.hpp"
