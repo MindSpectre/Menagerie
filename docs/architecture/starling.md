@@ -19,8 +19,6 @@ and the choice between them is a choice about the calling code's execution model
   AsyncResourcePool section below.
 - **A single producer (or a bounded set of producers) publishing to one or more consumers** at the
   highest achievable throughput reaches for the Disruptor section below.
-- **Fire-and-forget work with an unpredictable arrival rate** reaches for `ThreadPool`, covered
-  under Other primitives below.
 
 ```text
 common/concurrency-starling/
@@ -29,8 +27,8 @@ common/concurrency-starling/
 |   `-- async/               AsyncResourcePool<T, MaxSize>, AsyncLease<T>  (coroutine suspend)
 |-- event_count/             EventCount                                   (futex park/notify)
 |-- disruptor/                Disruptor<T, SequencerT, WaitStrategyT>       (lock-free ring buffer)
-|-- thread_pool/              ThreadPool                                   (growable worker pool)
-|-- thread_safe_resource/     ThreadSafeResource<T>                       (mutex/shared_mutex wrapper)
+|-- synchronized_resource/    SynchronizedResource<T>                     (std::mutex wrapper)
+|-- shared_resource/          SharedResource<T>                           (shared_mutex wrapper)
 |-- asio_backend/             AsioBackend, ShardedAsioBackend              (io_context runners)
 |-- utils/                    pause_arc_agnostic, pin_current_thread_to_core
 `-- export/menagerie/starling   umbrella header
@@ -199,25 +197,33 @@ backpressure watermark the producer's claim path waits on.
 
 ## Other primitives
 
-**`ThreadPool`** (`thread_pool/thread_pool.hpp`,
-`thread_pool.cpp`) is a priority-queue-backed
-worker pool that grows between `min_threads` and `max_threads`
-(`ThreadPoolConfig`, with
-`minimal()`/`basic()`/`high_performance()`/`quick_cleanup()` presets): `enqueue(func, priority,
-args...)` returns a `std::future`, spins up a new worker when the pool is not yet full and no
-worker is idle, and a background cleanup thread periodically reaps workers that have exceeded
-`idle_timeout`. Unlike the other primitives in this library, `ThreadPool` is a `STATIC` (not
-`INTERFACE`/header-only) target, since it has an out-of-line `.cpp`.
+Two wrappers guard a `T` behind a mutex. They are separate classes rather than one class
+parameterized on the mutex, because the mutex is what their APIs are *made of*: a reader-writer lock
+is only worth its cost if callers say which accesses are reads, and a plain mutex has nothing to say
+that about. One template with two public surfaces would hide that.
 
-**`ThreadSafeResource<T>`** (`thread_safe_resource/thread_safe_resource.hpp`)
-is a small `std::shared_mutex` wrapper: `.read()` returns a `ReadProxy` holding a `shared_lock`,
-`.write()` (and `operator->`) return a `WriteProxy` holding a `unique_lock`, and `with_lock` /
-`with_read_lock` take a callable for scoped access. `ThreadPool` uses it internally to guard its
-worker list and task queue. Construction mirrors `T`'s own two initialization forms rather than
-collapsing them: the parenthesized form forwards to `T(args...)`, while the braced form goes
-through `T`'s `initializer_list` constructor - so
-`ThreadSafeResource<std::vector<int>>(5)` holds five elements and
-`ThreadSafeResource<std::vector<int>>{5}` holds one.
+**`SynchronizedResource<T>`** (`synchronized_resource/synchronized_resource.hpp`) is the default
+choice: a `std::mutex` and one `Proxy`. `in_lock(func)` runs a callable under the lock, and
+`lock()` / `operator->` hand out the proxy for a single statement (`res->push_back(x)`). Const
+instances get a `ConstProxy` and a `const T&` overload of `in_lock` over the same `mutable` mutex.
+`std::mutex` is not recursive, so two live proxies in one full expression - `f(*res.lock(),
+*res.lock())`, or a second `res->` while a proxy is still in scope - deadlock the calling thread;
+`in_lock` bounds the scope explicitly and is the safer of the two.
+
+**`SharedResource<T>`** (`shared_resource/shared_resource.hpp`) is the reader-writer variant, and
+the exception rather than the rule: `.read()` returns a `ReadProxy` holding a `shared_lock`,
+`.write()` (and `operator->`) return a `WriteProxy` holding a `unique_lock`, and `with_write_lock` /
+`with_read_lock` take a callable. Reach for it only when reads dominate *and* the critical section
+is long enough to bury the lock - `std::shared_mutex` costs several times a plain `std::mutex` per
+acquisition and bounces its shared reader counter between cores, so under the short sections a
+wrapper like this invites, the concurrency it buys never repays the acquisition.
+
+In both, each proxy holds its lock for its own lifetime, so the critical section is bounded by the
+statement that acquired it - do not store a proxy past that statement. Construction likewise mirrors
+`T`'s own two initialization forms rather than collapsing them: the parenthesized form forwards to
+`T(args...)`, while the braced form goes through `T`'s `initializer_list` constructor - so
+`SynchronizedResource<std::vector<int>>(5)` holds five elements and
+`SynchronizedResource<std::vector<int>>{5}` holds one.
 
 **`AsioBackend` / `ShardedAsioBackend`** (`asio_backend/`)
 are RAII `io_context` runners for asio-based code (used throughout the resource-pool benchmarks).

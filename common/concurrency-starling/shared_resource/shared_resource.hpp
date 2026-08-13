@@ -9,14 +9,22 @@ namespace menagerie::starling {
     /**
      * @brief `std::shared_mutex` wrapper around a `T`: `.read()` returns a
      *        `ReadProxy` holding a shared lock, `.write()` (and `operator->`)
-     *        return a `WriteProxy` holding a unique lock, and `with_lock` /
+     *        return a `WriteProxy` holding a unique lock, and `with_write_lock` /
      *        `with_read_lock` take a callable for scoped access.
+     *
+     * Reach for this only when reads dominate *and* the critical section is long
+     * enough to bury the lock: `std::shared_mutex` costs several times a plain
+     * `std::mutex` per acquisition and bounces its shared reader counter between
+     * cores, so under short sections the concurrency it buys never repays the
+     * acquisition, however read-heavy the load. Guard those with
+     * `SynchronizedResource<T>` (`synchronized_resource/synchronized_resource.hpp`)
+     * instead - it is the default choice, and this one is the exception.
      *
      * The proxy holds the lock for its lifetime - keep it short-lived and
      * do not store it past the statement that acquired it.
      */
     template <typename T>
-    class ThreadSafeResource {
+    class SharedResource {
     public:
         /// RAII shared-lock handle over the wrapped resource, returned by `read()`.
         class ReadProxy {
@@ -76,22 +84,22 @@ namespace menagerie::starling {
         /// Forwards `args...` to `T`'s constructor: `T(args...)`.
         ///
         /// For scalar `T` the constraint also rejects narrowing, so
-        /// `ThreadSafeResource<int>{2.5}` stays ill-formed; use an explicit
+        /// `SharedResource<int>{2.5}` stays ill-formed; use an explicit
         /// cast to truncate on purpose.
         template <typename... Args>
             requires std::is_constructible_v<T, Args...> &&
                      (!std::is_scalar_v<T> || requires { T{std::declval<Args>()...}; })
-        explicit ThreadSafeResource(Args&&... args) noexcept(std::is_nothrow_constructible_v<T, Args...>)
+        explicit SharedResource(Args&&... args) noexcept(std::is_nothrow_constructible_v<T, Args...>)
             : resource_(std::forward<Args>(args)...) {
         }
 
         /// List-initializes `T` from `il`, mirroring `T{...}`: a braced
-        /// `ThreadSafeResource<std::vector<int>>{5}` holds one element, while
+        /// `SharedResource<std::vector<int>>{5}` holds one element, while
         /// the parenthesized form above holds five.
         template <typename U = T>
             requires requires { typename U::value_type; } &&
                      std::is_constructible_v<T, std::initializer_list<typename U::value_type>>
-        ThreadSafeResource(std::initializer_list<typename U::value_type> il)
+        SharedResource(std::initializer_list<typename U::value_type> il)
             noexcept(std::is_nothrow_constructible_v<T, std::initializer_list<typename U::value_type>>)
             : resource_(il) {
         }
@@ -119,7 +127,7 @@ namespace menagerie::starling {
         /// Runs `func(resource)` under the exclusive lock and returns its result.
         template <typename Func>
             requires std::is_invocable_v<Func, T&>
-        std::invoke_result_t<Func, T&> with_lock(Func&& func) {
+        std::invoke_result_t<Func, T&> with_write_lock(Func&& func) {
             std::unique_lock lock{mutex_};
             return func(resource_);
         }

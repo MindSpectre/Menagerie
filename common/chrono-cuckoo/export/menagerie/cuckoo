@@ -6,7 +6,6 @@
 #include "tsc_clock.hpp"
 #include "printing_stopwatch.hpp"
 #include "stopwatch.hpp"
-#include "timer.hpp"
 
 #ifdef MENAGERIE_CONVENTIONAL_ALIASES
 namespace menagerie {

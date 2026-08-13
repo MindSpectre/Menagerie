@@ -3,7 +3,7 @@
 The cuckoo library (`common/chrono-cuckoo/`) is Menagerie's timing toolkit: wall-clock formatting/parsing for two
 locales (local time and UTC), a locale-independent HTTP-date renderer, a raw hardware tick counter for
 latency sampling below `steady_clock`'s call overhead, two stopwatch flavors for ad hoc interval measurement,
-and a deadline-bound function executor built on top of `ThreadPool`. Everything is reached through
+and blocking and coroutine sleeps. Everything is reached through
 `#include <menagerie/cuckoo>` (`export/menagerie/cuckoo`).
 
 ## Key types
@@ -33,13 +33,6 @@ and a deadline-bound function executor built on top of `ThreadPool`. Everything 
   that prints its report to `std::cout` on `print()`/`finish()` and automatically in its destructor;
   `flag(name)` (or `operator++`/`operator--` for unnamed add/remove), `set_countdown_from_prev(bool)` and
   `set_countdown_from_start(bool)` control which deltas the report includes.
-- **`Timer`** -- runs a callable with a deadline on an owned
-  `ThreadPool`: `execute_polite_vanish(timeout, fn, args...)` requires a
-  `std::shared_ptr<CancellationToken>` among `args...` and, on timeout, asks the callable to cooperatively
-  stop; `execute_violent_kill(timeout, token, fn, args...)` runs `fn` on a raw `std::thread` and force-kills
-  it on timeout (`pthread_cancel` / `TerminateThread`). Both return a `std::future` for the result.
-- **`CancellationToken`** -- the cooperative-stop
-  flag `execute_polite_vanish` watches: `cancel()`, `renew()`, `stop_requested()`.
 - **`exponential_backoff(attempt, base, cap)`** -- `base *
   2^attempt` clamped to `cap`, with the shift itself clamped so `1u << shift` cannot overflow.
 - **`sleep_for<Duration>(d)` / `async_sleep_for<Duration>(d)`**
@@ -72,15 +65,3 @@ const auto now_iso = UTCClock::current_time(clock_formats::iso8601);
 `tests/unit_tests/common/chrono-cuckoo/stopwatch/test_stopwatch.cpp`;
 `format_imf_fixdate` / `IMF_FIXDATE_LEN` mirror
 `tests/unit_tests/component/http-albatross/types/test_http_date.cpp`.
-
-## Design notes
-
-`Timer`'s two execution modes trade correctness for reach differently. `execute_polite_vanish` only ever asks
-the worker to stop -- the watchdog thread flips a `CancellationToken` and returns, leaving the worker
-responsible for noticing and unwinding, so it is safe with locks held but does nothing if the callable never
-checks the token. `execute_violent_kill` guarantees the deadline is enforced from the outside
-(`pthread_cancel`/`TerminateThread`) but is undefined behavior if the target thread holds a lock at
-cancellation time; the header comments call the Windows path "dangerous!" and the POSIX path "UB if locks
-held" outright. Reach for `execute_polite_vanish` unless the callable is known-uncooperative (e.g. calling
-into a library with no cancellation point), since a violently killed thread can leave shared state
-(mutexes, allocator internals) permanently corrupted for the rest of the process.

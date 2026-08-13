@@ -68,6 +68,7 @@ target_include_directories(${CROW}.Logger PUBLIC
 target_link_libraries(${CROW}.Logger
         PUBLIC
         ${CROW}.Sink
+        Menagerie::Common::Starling
         Boost::asio
         Boost::system
 )

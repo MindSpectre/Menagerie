@@ -100,14 +100,14 @@ target_link_libraries(${STARLING}.AsioBackend
 ##############################################################################
 # Synchronized resource class - wraps resource with mutex
 ##############################################################################
-add_library(${STARLING}.ThreadSafeResource INTERFACE
-        thread_safe_resource/thread_safe_resource.hpp
+add_library(${STARLING}.SynchronizedResource INTERFACE
+        synchronized_resource/synchronized_resource.hpp
 )
-target_include_directories(${STARLING}.ThreadSafeResource
+target_include_directories(${STARLING}.SynchronizedResource
         INTERFACE
-        thread_safe_resource/
+        synchronized_resource/
 )
-target_link_libraries(${STARLING}.ThreadSafeResource
+target_link_libraries(${STARLING}.SynchronizedResource
         INTERFACE
         Threads::Threads
 )
@@ -115,22 +115,18 @@ target_link_libraries(${STARLING}.ThreadSafeResource
 
 
 ##############################################################################
-# Thread pool for paralleling tasks
+# Shared resource class - wraps resource with a reader-writer mutex
 ##############################################################################
-add_library(${STARLING}.ThreadPool STATIC
-        thread_pool/thread_pool.cpp
-        thread_pool/thread_pool.hpp
-        thread_pool/detail/enqueued_task.hpp
-        thread_pool/config/thread_pool_config.hpp
+add_library(${STARLING}.SharedResource INTERFACE
+        shared_resource/shared_resource.hpp
 )
-target_include_directories(${STARLING}.ThreadPool PUBLIC
-        thread_pool/
-
+target_include_directories(${STARLING}.SharedResource
+        INTERFACE
+        shared_resource/
 )
-
-target_link_libraries(${STARLING}.ThreadPool PUBLIC
-        Menagerie::Common::Beaver
-        ${STARLING}.ThreadSafeResource
+target_link_libraries(${STARLING}.SharedResource
+        INTERFACE
+        Threads::Threads
 )
 ##############################################################################
 
@@ -151,8 +147,8 @@ add_combined_library(${STARLING}
         DIRECTORIES
         export
         LIBRARIES
-        ${STARLING}.ThreadPool
-        ${STARLING}.ThreadSafeResource
+        ${STARLING}.SynchronizedResource
+        ${STARLING}.SharedResource
         ${STARLING}.Disruptor
         ${STARLING}.EventCount
         ${STARLING}.ResourcePool.Sync
