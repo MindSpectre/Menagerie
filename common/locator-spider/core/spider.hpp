@@ -243,9 +243,9 @@ namespace menagerie::spider {
         // State members
         std::unordered_map<Key, Slot, KeyHash> map_;                ///< Service registry
         mutable std::shared_mutex mtx_;                             ///< Read-write lock for thread safety
-        std::jthread janitor_;                                      ///< Background cleanup thread
         std::atomic<bool> stop_                           = false;  ///< Stop flag for janitor
         std::atomic<std::chrono::seconds> sweep_interval_ = std::chrono::seconds(2);  ///< Cleanup interval
+        std::jthread janitor_;                                      ///< Background cleanup thread
     };
 
     /**
