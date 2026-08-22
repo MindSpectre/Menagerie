@@ -13,7 +13,7 @@ namespace menagerie::savanna::elephant {
     class QueuedHolder;
 
     /**
-     * @brief Heap-allocated waiter node for BlockingPool::async_acquire.
+     * @brief Heap-allocated waiter node for ConnectionPool::async_acquire.
      *
      * Unlike the sync Waiter (stack + CV), AsyncWaiter holds a type-erased
      * asio completion handler bound to the caller's executor and a
@@ -21,7 +21,7 @@ namespace menagerie::savanna::elephant {
      * the race between "pool released a slot to me" and "my timer fired";
      * whichever side flips the flag first drives the completion.
      *
-     * Lifetime: owned by BlockingPool via std::shared_ptr while queued.
+     * Lifetime: owned by ConnectionPool via std::shared_ptr while queued.
      * Timer callbacks hold only a std::weak_ptr, so shutdown clears the
      * deque and any lagging callback no-ops safely.
      */
@@ -37,9 +37,9 @@ namespace menagerie::savanna::elephant {
         }
 
         boost::asio::any_io_executor caller_exec;  ///< Executor the completion handler is posted to.
-        boost::asio::steady_timer timer;            ///< Armed only for bounded (timed) acquires.
-        Handler handler{};                          ///< Completion callback; moved out and invoked exactly once.
-        std::atomic_bool claimed{false};             ///< CAS flag: first of {release, timeout, shutdown} wins the waiter.
+        boost::asio::steady_timer timer;           ///< Armed only for bounded (timed) acquires.
+        Handler handler{};                         ///< Completion callback; moved out and invoked exactly once.
+        std::atomic_bool claimed{false};           ///< CAS flag: first of {release, timeout, shutdown} wins the waiter.
     };
 
 }  // namespace menagerie::savanna::elephant

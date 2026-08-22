@@ -1,4 +1,4 @@
-#include "postgres_blocking_session.hpp"
+#include "postgres_session.hpp"
 
 #include <menagerie/crow>
 #include <utility>
@@ -11,24 +11,24 @@
 namespace menagerie::savanna::elephant {
 
     namespace {
-        ClientErrorCode map_empty_weak_timed(const BlockingPool& pool) noexcept {
+        ClientErrorCode map_empty_weak_timed(const ConnectionPool& pool) noexcept {
             return pool.is_shutdown() ? ClientErrorCode::PoolShutdown : ClientErrorCode::WaitTimeout;
         }
     }  // namespace
 
-    BlockingSession::BlockingSession(ConnectionConfig connection_config, PoolConfig pool_config)
+    Session::Session(ConnectionConfig connection_config, PoolConfig pool_config)
         : pool_{std::move(connection_config), std::move(pool_config)} {
-        COMPONENT_LOG_INF() << "BlockingSession created";
+        COMPONENT_LOG_INF() << "Session created";
     }
 
-    BlockingSession::~BlockingSession() {
+    Session::~Session() {
         shutdown();
-        COMPONENT_LOG_INF() << "BlockingSession destroyed";
+        COMPONENT_LOG_INF() << "Session destroyed";
     }
 
     // -------- Sync --------
 
-    std::expected<SyncExecutor, ErrorContext> BlockingSession::try_with_sync() noexcept {
+    std::expected<SyncExecutor, ErrorContext> Session::try_with_sync() noexcept {
         auto holder = pool_.try_acquire();
         if (holder.expired()) {
             return std::unexpected(ErrorContext{ErrorCode{ClientErrorCode::PoolExhausted}});
@@ -36,8 +36,7 @@ namespace menagerie::savanna::elephant {
         return SyncExecutor{std::move(holder)};
     }
 
-    std::expected<SyncExecutor, ErrorContext>
-    BlockingSession::with_sync(std::chrono::steady_clock::duration timeout) noexcept {
+    std::expected<SyncExecutor, ErrorContext> Session::with_sync(std::chrono::steady_clock::duration timeout) noexcept {
         auto holder = pool_.acquire(timeout);
         if (holder.expired()) {
             return std::unexpected(ErrorContext{ErrorCode{map_empty_weak_timed(pool_)}});
@@ -45,7 +44,7 @@ namespace menagerie::savanna::elephant {
         return SyncExecutor{std::move(holder)};
     }
 
-    std::expected<SyncExecutor, ErrorContext> BlockingSession::with_sync() noexcept {
+    std::expected<SyncExecutor, ErrorContext> Session::with_sync() noexcept {
         auto holder = pool_.acquire();
         if (holder.expired()) {
             return std::unexpected(ErrorContext{ErrorCode{ClientErrorCode::PoolShutdown}});
@@ -55,8 +54,7 @@ namespace menagerie::savanna::elephant {
 
     // -------- Async --------
 
-    std::expected<AsyncExecutor, ErrorContext>
-    BlockingSession::try_with_async(boost::asio::any_io_executor exec) noexcept {
+    std::expected<AsyncExecutor, ErrorContext> Session::try_with_async(boost::asio::any_io_executor exec) noexcept {
         auto holder = pool_.try_acquire();
         if (holder.expired()) {
             return std::unexpected(ErrorContext{ErrorCode{ClientErrorCode::PoolExhausted}});
@@ -65,7 +63,7 @@ namespace menagerie::savanna::elephant {
     }
 
     boost::asio::awaitable<std::expected<AsyncExecutor, ErrorContext>>
-    BlockingSession::with_async(boost::asio::any_io_executor exec, std::chrono::steady_clock::duration timeout) {
+    Session::with_async(boost::asio::any_io_executor exec, std::chrono::steady_clock::duration timeout) {
         auto [ec, holder_sp] =
             co_await pool_.async_acquire(exec, timeout, boost::asio::as_tuple(boost::asio::use_awaitable));
 
@@ -83,7 +81,7 @@ namespace menagerie::savanna::elephant {
     }
 
     boost::asio::awaitable<std::expected<AsyncExecutor, ErrorContext>>
-    BlockingSession::with_async(boost::asio::any_io_executor exec) {
+    Session::with_async(boost::asio::any_io_executor exec) {
         auto [ec, holder_sp] = co_await pool_.async_acquire(exec, boost::asio::as_tuple(boost::asio::use_awaitable));
 
         if (ec || !holder_sp) {
@@ -95,7 +93,7 @@ namespace menagerie::savanna::elephant {
 
     // -------- Transactions --------
 
-    std::expected<Transaction, ErrorContext> BlockingSession::try_begin_transaction(TransactionOptions opts) noexcept {
+    std::expected<Transaction, ErrorContext> Session::try_begin_transaction(TransactionOptions opts) noexcept {
         auto holder = pool_.try_acquire();
         if (holder.expired()) {
             return std::unexpected(ErrorContext{ErrorCode{ClientErrorCode::PoolExhausted}});
@@ -104,7 +102,7 @@ namespace menagerie::savanna::elephant {
     }
 
     std::expected<Transaction, ErrorContext>
-    BlockingSession::begin_transaction(TransactionOptions opts, std::chrono::steady_clock::duration timeout) noexcept {
+    Session::begin_transaction(TransactionOptions opts, std::chrono::steady_clock::duration timeout) noexcept {
         auto holder = pool_.acquire(timeout);
         if (holder.expired()) {
             return std::unexpected(ErrorContext{ErrorCode{map_empty_weak_timed(pool_)}});
@@ -112,7 +110,7 @@ namespace menagerie::savanna::elephant {
         return Transaction{std::move(holder), opts};
     }
 
-    std::expected<Transaction, ErrorContext> BlockingSession::begin_transaction(TransactionOptions opts) noexcept {
+    std::expected<Transaction, ErrorContext> Session::begin_transaction(TransactionOptions opts) noexcept {
         auto holder = pool_.acquire();
         if (holder.expired()) {
             return std::unexpected(ErrorContext{ErrorCode{ClientErrorCode::PoolShutdown}});
@@ -120,8 +118,7 @@ namespace menagerie::savanna::elephant {
         return Transaction{std::move(holder), opts};
     }
 
-    std::expected<AutoTransaction, ErrorContext>
-    BlockingSession::try_begin_auto_transaction(TransactionOptions opts) noexcept {
+    std::expected<AutoTransaction, ErrorContext> Session::try_begin_auto_transaction(TransactionOptions opts) noexcept {
         auto tx_outcome = try_begin_transaction(opts);
         if (!tx_outcome.has_value()) {
             return std::unexpected(std::move(tx_outcome).error());
@@ -134,8 +131,7 @@ namespace menagerie::savanna::elephant {
     }
 
     std::expected<AutoTransaction, ErrorContext>
-    BlockingSession::begin_auto_transaction(TransactionOptions opts,
-                                            std::chrono::steady_clock::duration timeout) noexcept {
+    Session::begin_auto_transaction(TransactionOptions opts, std::chrono::steady_clock::duration timeout) noexcept {
         auto tx_outcome = begin_transaction(opts, timeout);
         if (!tx_outcome.has_value()) {
             return std::unexpected(std::move(tx_outcome).error());
@@ -147,8 +143,7 @@ namespace menagerie::savanna::elephant {
         return AutoTransaction{std::move(tx)};
     }
 
-    std::expected<AutoTransaction, ErrorContext>
-    BlockingSession::begin_auto_transaction(TransactionOptions opts) noexcept {
+    std::expected<AutoTransaction, ErrorContext> Session::begin_auto_transaction(TransactionOptions opts) noexcept {
         auto tx_outcome = begin_transaction(opts);
         if (!tx_outcome.has_value()) {
             return std::unexpected(std::move(tx_outcome).error());
@@ -162,23 +157,23 @@ namespace menagerie::savanna::elephant {
 
     // -------- Lifecycle + Stats --------
 
-    void BlockingSession::shutdown() {
+    void Session::shutdown() {
         pool_.shutdown();
     }
 
-    std::size_t BlockingSession::pool_capacity() const noexcept {
+    std::size_t Session::pool_capacity() const noexcept {
         return pool_.capacity();
     }
-    std::size_t BlockingSession::pool_active_count() const noexcept {
+    std::size_t Session::pool_active_count() const noexcept {
         return pool_.active_count();
     }
-    std::size_t BlockingSession::pool_free_count() const noexcept {
+    std::size_t Session::pool_free_count() const noexcept {
         return pool_.free_count();
     }
-    std::size_t BlockingSession::pool_waiter_count() const noexcept {
+    std::size_t Session::pool_waiter_count() const noexcept {
         return pool_.waiter_count();
     }
-    bool BlockingSession::is_shutdown() const noexcept {
+    bool Session::is_shutdown() const noexcept {
         return pool_.is_shutdown();
     }
 

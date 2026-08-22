@@ -13,6 +13,7 @@
 
 #include <boost/asio/any_io_executor.hpp>
 #include <boost/asio/async_result.hpp>
+#include <connection.hpp>
 #include <connection_holder.hpp>
 #include <pool_config.hpp>
 #include <postgres_connection_config.hpp>
@@ -24,7 +25,8 @@
 namespace menagerie::savanna::elephant {
 
     /**
-     * @brief Classic mutex + FIFO-waiter PostgreSQL connection pool.
+     * @brief The provider's PostgreSQL connection pool: mutex-guarded free list
+     *        with one FIFO waiter queue shared by threads and coroutines.
      *
      * Owns its QueuedHolders as std::shared_ptr; capabilities receive
      * std::weak_ptr<ConnectionHolder>. On release, either hands the
@@ -44,15 +46,15 @@ namespace menagerie::savanna::elephant {
      * deque so fairness is preserved regardless of which acquisition
      * mode each caller uses.
      */
-    class BlockingPool : beaver::Immutable {
+    class ConnectionPool : beaver::Immutable {
     public:
         /// Completion signature for async_acquire: (error_code, acquired holder or null on failure).
         using AsyncSignature = void(boost::system::error_code, std::shared_ptr<QueuedHolder>);
 
         /// Builds the pool and eagerly creates pool_config.min_connections() connections.
-        BlockingPool(ConnectionConfig connection_config, PoolConfig pool_config);
+        ConnectionPool(ConnectionConfig connection_config, PoolConfig pool_config);
         /// Shuts down the pool if not already shut down.
-        ~BlockingPool();
+        ~ConnectionPool();
 
         /**
          * @brief Non-blocking acquire: takes a free holder or creates one up to capacity.
@@ -139,10 +141,10 @@ namespace menagerie::savanna::elephant {
 
         /**
          * @brief Opens a new PostgreSQL connection using the pool's connection config.
-         * @return A live PGconn* the caller now owns, or nullptr if
-         *         PQconnectdb failed or the connection came up unhealthy.
+         * @return A READY Connection, or a DISCONNECTED one if the attempt failed or
+         *         the connection came up unhealthy.
          */
-        [[nodiscard]] PGconn* create_connection() const;
+        [[nodiscard]] Connection create_connection() const;
 
     private:
         friend class QueuedHolder;

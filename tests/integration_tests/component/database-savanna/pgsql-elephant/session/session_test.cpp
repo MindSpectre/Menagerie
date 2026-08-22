@@ -1,5 +1,6 @@
-// PostgreSQL BlockingSession Functional Tests
-// Tests BlockingSession, BlockingPool, QueuedHolder, FIFO waiter semantics.
+// PostgreSQL Session Functional Tests
+// Tests Session, ConnectionPool, QueuedHolder, FIFO waiter semantics, and the
+// no-DB units that ship with the session: PoolConfig and the Connection FSM.
 
 #include <atomic>
 #include <chrono>
@@ -8,8 +9,9 @@
 #include <tuple>
 #include <vector>
 
+#include <boost/asio.hpp>
 #include <gtest/gtest.h>
-#include <postgres_blocking_session.hpp>
+#include <postgres_session.hpp>
 
 using namespace menagerie::savanna::elephant;
 using namespace menagerie::savanna;
@@ -32,9 +34,126 @@ static PoolConfig make_pool_config(std::size_t cap, std::size_t min) {
     return PoolConfig::Builder{}.capacity(cap).min_connections(min).finalize();
 }
 
-// ============== BlockingSession Fixture ==============
+// Helper to run an async coroutine to completion in tests
+template <typename CoroFunc>
+auto run_async(boost::asio::io_context& io, CoroFunc&& func) {
+    using awaitable_type = std::invoke_result_t<CoroFunc>;
+    using result_type    = awaitable_type::value_type;
 
-class BlockingSessionTest : public ::testing::Test {
+    std::optional<result_type> result;
+    std::exception_ptr eptr;
+
+    boost::asio::co_spawn(
+        io,
+        [&]() -> boost::asio::awaitable<void> {
+            try {
+                result = co_await func();
+            } catch (...) {
+                eptr = std::current_exception();
+            }
+        },
+        boost::asio::detached);
+
+    io.run();
+    io.restart();
+
+    if (eptr) {
+        std::rethrow_exception(eptr);
+    }
+
+    return result;
+}
+
+// ============== PoolConfig Unit Tests (no DB required) ==============
+
+class PoolConfigTest : public ::testing::Test {};
+
+TEST_F(PoolConfigTest, ValidateAcceptsValidConfig) {
+    const auto cfg = PoolConfig::Builder{}.capacity(16).min_connections(2).finalize();
+    EXPECT_NO_THROW(cfg.validate());
+}
+
+TEST_F(PoolConfigTest, ValidateRejectsZeroCapacity) {
+    EXPECT_THROW((void)PoolConfig::Builder{}.capacity(0).finalize(), std::invalid_argument);
+}
+
+TEST_F(PoolConfigTest, ValidateAcceptsNonPowerOfTwoCapacity) {
+    // The power-of-two constraint died with the ring-buffer pool.
+    EXPECT_NO_THROW((void)PoolConfig::Builder{}.capacity(10).min_connections(2).finalize());
+}
+
+TEST_F(PoolConfigTest, ValidateRejectsMinConnectionsExceedCapacity) {
+    EXPECT_THROW((void)PoolConfig::Builder{}.capacity(4).min_connections(8).finalize(), std::invalid_argument);
+}
+
+TEST_F(PoolConfigTest, FactoryMethodsProduceValidConfigs) {
+    EXPECT_NO_THROW(PoolConfig::minimal().validate());
+    EXPECT_NO_THROW(PoolConfig::standard().validate());
+    EXPECT_NO_THROW(PoolConfig::high_performance().validate());
+}
+
+TEST_F(PoolConfigTest, MinimalConfigHasSmallCapacity) {
+    const auto cfg = PoolConfig::minimal();
+    EXPECT_EQ(cfg.capacity(), 2u);
+    EXPECT_EQ(cfg.min_connections(), 1u);
+}
+
+TEST_F(PoolConfigTest, HighPerformanceConfigHasLargeCapacity) {
+    const auto cfg = PoolConfig::high_performance();
+    EXPECT_GE(cfg.capacity(), 32u);
+}
+
+// ============== Connection FSM Unit Tests (no DB required) ==============
+
+class ConnectionFsmTest : public ::testing::Test {};
+
+TEST_F(ConnectionFsmTest, DefaultConstructedIsDisconnected) {
+    const Connection conn;
+    EXPECT_EQ(conn.state(), ConnectionState::DISCONNECTED);
+    EXPECT_FALSE(conn.ready());
+    EXPECT_EQ(conn.native_handle(), nullptr);
+}
+
+TEST_F(ConnectionFsmTest, OpenFailureStaysDisconnected) {
+    // Unroutable host with an immediate-failure conninfo: PQconnectdb returns a
+    // handle whose status is not CONNECTION_OK, and open() must close it.
+    auto conn = Connection::open("host=invalid.invalid port=1 connect_timeout=1");
+    EXPECT_EQ(conn.state(), ConnectionState::DISCONNECTED);
+    EXPECT_EQ(conn.native_handle(), nullptr);
+}
+
+TEST_F(ConnectionFsmTest, GuardedOperationsFailOnDisconnected) {
+    Connection conn;
+    EXPECT_FALSE(conn.verify());
+    EXPECT_FALSE(conn.run_cleanup("DISCARD ALL"));
+    EXPECT_EQ(conn.state(), ConnectionState::DISCONNECTED) << "guarded ops must not transition";
+}
+
+TEST_F(ConnectionFsmTest, CloseIsIdempotent) {
+    Connection conn;
+    conn.close();
+    conn.close();
+    EXPECT_EQ(conn.state(), ConnectionState::DISCONNECTED);
+}
+
+TEST_F(ConnectionFsmTest, MoveTransfersOwnershipAndState) {
+    Connection a;
+    Connection b{std::move(a)};
+    EXPECT_EQ(b.state(), ConnectionState::DISCONNECTED);
+    // NOLINTNEXTLINE(bugprone-use-after-move) - post-move state is the point under test
+    EXPECT_EQ(a.state(), ConnectionState::DISCONNECTED);
+    EXPECT_EQ(a.native_handle(), nullptr);
+}
+
+TEST_F(ConnectionFsmTest, StateNamesAreStable) {
+    EXPECT_STREQ(to_string(ConnectionState::DISCONNECTED), "DISCONNECTED");
+    EXPECT_STREQ(to_string(ConnectionState::READY), "READY");
+    EXPECT_STREQ(to_string(ConnectionState::BROKEN), "BROKEN");
+}
+
+// ============== Session Fixture ==============
+
+class SessionTest : public ::testing::Test {
 protected:
     void SetUp() override {
         const auto conn_string = make_test_config().to_connection_string();
@@ -47,12 +166,14 @@ protected:
         }
         PQfinish(probe);
     }
+
+    boost::asio::io_context io_;
 };
 
 // ============== Basic Execution ==============
 
-TEST_F(BlockingSessionTest, TryWithSyncExecutesSimpleQuery) {
-    BlockingSession session{make_test_config(), make_pool_config(2, 1)};
+TEST_F(SessionTest, TryWithSyncExecutesSimpleQuery) {
+    Session session{make_test_config(), make_pool_config(2, 1)};
 
     auto outcome = session.try_with_sync();
     ASSERT_TRUE(outcome.has_value());
@@ -63,8 +184,8 @@ TEST_F(BlockingSessionTest, TryWithSyncExecutesSimpleQuery) {
     EXPECT_EQ(result.value().rows(), 1u);
 }
 
-TEST_F(BlockingSessionTest, WithSyncTimedExecutesQueryOnFreePool) {
-    BlockingSession session{make_test_config(), make_pool_config(2, 1)};
+TEST_F(SessionTest, WithSyncTimedExecutesQueryOnFreePool) {
+    Session session{make_test_config(), make_pool_config(2, 1)};
 
     auto outcome = session.with_sync(500ms);
     ASSERT_TRUE(outcome.has_value());
@@ -72,8 +193,8 @@ TEST_F(BlockingSessionTest, WithSyncTimedExecutesQueryOnFreePool) {
     EXPECT_TRUE(exec.execute("SELECT 1").has_value());
 }
 
-TEST_F(BlockingSessionTest, WithSyncBlockingExecutesQueryOnFreePool) {
-    BlockingSession session{make_test_config(), make_pool_config(2, 1)};
+TEST_F(SessionTest, WithSyncBlockingExecutesQueryOnFreePool) {
+    Session session{make_test_config(), make_pool_config(2, 1)};
 
     auto outcome = session.with_sync();
     ASSERT_TRUE(outcome.has_value());
@@ -83,8 +204,8 @@ TEST_F(BlockingSessionTest, WithSyncBlockingExecutesQueryOnFreePool) {
 
 // ============== Exhaustion + Error Codes ==============
 
-TEST_F(BlockingSessionTest, TryWithSyncReturnsPoolExhaustedWhenFull) {
-    BlockingSession session{make_test_config(), make_pool_config(1, 1)};
+TEST_F(SessionTest, TryWithSyncReturnsPoolExhaustedWhenFull) {
+    Session session{make_test_config(), make_pool_config(1, 1)};
 
     auto first = session.try_with_sync();
     ASSERT_TRUE(first.has_value());
@@ -94,8 +215,8 @@ TEST_F(BlockingSessionTest, TryWithSyncReturnsPoolExhaustedWhenFull) {
     EXPECT_EQ(second.error().code.value(), static_cast<int>(ClientErrorCode::PoolExhausted));
 }
 
-TEST_F(BlockingSessionTest, WithSyncTimedReturnsWaitTimeoutOnExpiry) {
-    BlockingSession session{make_test_config(), make_pool_config(1, 1)};
+TEST_F(SessionTest, WithSyncTimedReturnsWaitTimeoutOnExpiry) {
+    Session session{make_test_config(), make_pool_config(1, 1)};
 
     auto first = session.try_with_sync();
     ASSERT_TRUE(first.has_value());
@@ -110,10 +231,39 @@ TEST_F(BlockingSessionTest, WithSyncTimedReturnsWaitTimeoutOnExpiry) {
     EXPECT_LT(elapsed, 500ms);
 }
 
+TEST_F(SessionTest, WithSyncZeroTimeoutReturnsImmediately) {
+    Session session{make_test_config(), make_pool_config(1, 1)};
+
+    auto first = session.try_with_sync();
+    ASSERT_TRUE(first.has_value());
+
+    const auto start   = std::chrono::steady_clock::now();
+    const auto result  = session.with_sync(std::chrono::milliseconds::zero());
+    const auto elapsed = std::chrono::steady_clock::now() - start;
+
+    EXPECT_FALSE(result.has_value());
+    EXPECT_LT(elapsed, 20ms) << "zero timeout must not sleep";
+}
+
+TEST_F(SessionTest, WithAsyncTimedReturnsWaitTimeoutWhenExhausted) {
+    Session session{make_test_config(), make_pool_config(1, 1)};
+
+    auto first = session.try_with_sync();
+    ASSERT_TRUE(first.has_value());
+
+    auto result = run_async(io_, [&]() -> boost::asio::awaitable<std::expected<AsyncExecutor, ErrorContext>> {
+        co_return co_await session.with_async(io_.get_executor(), 100ms);
+    });
+
+    ASSERT_TRUE(result.has_value());
+    ASSERT_FALSE(result->has_value());
+    EXPECT_EQ(result->error().code.value(), static_cast<int>(ClientErrorCode::WaitTimeout));
+}
+
 // ============== Handoff on Release ==============
 
-TEST_F(BlockingSessionTest, WithSyncTimedAcquiresSlotReleasedDuringWait) {
-    BlockingSession session{make_test_config(), make_pool_config(1, 1)};
+TEST_F(SessionTest, WithSyncTimedAcquiresSlotReleasedDuringWait) {
+    Session session{make_test_config(), make_pool_config(1, 1)};
 
     auto first = session.try_with_sync();
     ASSERT_TRUE(first.has_value());
@@ -136,8 +286,8 @@ TEST_F(BlockingSessionTest, WithSyncTimedAcquiresSlotReleasedDuringWait) {
     EXPECT_LT(took, 500ms) << "handoff should be near-instant after release";
 }
 
-TEST_F(BlockingSessionTest, WithSyncBlockingAcquiresSlotReleasedDuringWait) {
-    BlockingSession session{make_test_config(), make_pool_config(1, 1)};
+TEST_F(SessionTest, WithSyncBlockingAcquiresSlotReleasedDuringWait) {
+    Session session{make_test_config(), make_pool_config(1, 1)};
 
     auto first          = session.try_with_sync();
     auto holder_wrapper = std::make_unique<SyncExecutor>(std::move(first).value());
@@ -153,16 +303,41 @@ TEST_F(BlockingSessionTest, WithSyncBlockingAcquiresSlotReleasedDuringWait) {
     ASSERT_TRUE(waited.has_value());
 }
 
+TEST_F(SessionTest, WithAsyncAcquiresSlotReleasedDuringWait) {
+    Session session{make_test_config(), make_pool_config(1, 1)};
+
+    auto first = session.try_with_sync();
+    ASSERT_TRUE(first.has_value());
+    auto holder_wrapper = std::make_unique<SyncExecutor>(std::move(first).value());
+
+    std::thread releaser{[&] {
+        // Wait until the coroutine has enqueued, then free the slot.
+        while (session.pool_waiter_count() == 0) {
+            std::this_thread::sleep_for(5ms);
+        }
+        holder_wrapper.reset();
+    }};
+
+    auto result = run_async(io_, [&]() -> boost::asio::awaitable<std::expected<AsyncExecutor, ErrorContext>> {
+        co_return co_await session.with_async(io_.get_executor(), 5s);
+    });
+
+    releaser.join();
+
+    ASSERT_TRUE(result.has_value());
+    ASSERT_TRUE(result->has_value()) << "coroutine waiter must receive the released slot";
+}
+
 // ============== Shutdown Semantics ==============
 
-TEST_F(BlockingSessionTest, ShutdownWakesTimedWaiter) {
-    BlockingSession session{make_test_config(), make_pool_config(1, 1)};
+TEST_F(SessionTest, ShutdownWakesTimedWaiter) {
+    Session session{make_test_config(), make_pool_config(1, 1)};
     auto first = session.try_with_sync();
     ASSERT_TRUE(first.has_value());
 
     std::atomic<bool> waiter_observed_shutdown{false};
     std::thread waiter{[&] {
-        auto result              = session.with_sync(5s);
+        auto result = session.with_sync(5s);
         waiter_observed_shutdown =
             !result.has_value() && result.error().code.value() == static_cast<int>(ClientErrorCode::PoolShutdown);
     }};
@@ -177,14 +352,14 @@ TEST_F(BlockingSessionTest, ShutdownWakesTimedWaiter) {
     EXPECT_TRUE(waiter_observed_shutdown.load());
 }
 
-TEST_F(BlockingSessionTest, ShutdownWakesBlockingWaiter) {
-    BlockingSession session{make_test_config(), make_pool_config(1, 1)};
+TEST_F(SessionTest, ShutdownWakesBlockingWaiter) {
+    Session session{make_test_config(), make_pool_config(1, 1)};
     auto first = session.try_with_sync();
     ASSERT_TRUE(first.has_value());
 
     std::atomic<bool> waiter_observed_shutdown{false};
     std::thread waiter{[&] {
-        auto result              = session.with_sync();  // unbounded
+        auto result = session.with_sync();  // unbounded
         waiter_observed_shutdown =
             !result.has_value() && result.error().code.value() == static_cast<int>(ClientErrorCode::PoolShutdown);
     }};
@@ -200,8 +375,8 @@ TEST_F(BlockingSessionTest, ShutdownWakesBlockingWaiter) {
 
 // ============== FIFO Fairness ==============
 
-TEST_F(BlockingSessionTest, FifoFairnessUnderContention) {
-    BlockingSession session{make_test_config(), make_pool_config(1, 1)};
+TEST_F(SessionTest, FifoFairnessUnderContention) {
+    Session session{make_test_config(), make_pool_config(1, 1)};
 
     auto initial_outcome = session.try_with_sync();
     ASSERT_TRUE(initial_outcome.has_value());
@@ -245,16 +420,16 @@ TEST_F(BlockingSessionTest, FifoFairnessUnderContention) {
 
 // ============== Transactions ==============
 
-TEST_F(BlockingSessionTest, BeginTransactionRollsBackOnScopeExit) {
-    BlockingSession session{make_test_config(), make_pool_config(2, 1)};
+TEST_F(SessionTest, BeginTransactionRollsBackOnScopeExit) {
+    Session session{make_test_config(), make_pool_config(2, 1)};
 
     // Setup: create a test table in an auto-committed statement
     {
         auto exec_outcome = session.try_with_sync();
         ASSERT_TRUE(exec_outcome.has_value());
         auto exec = std::move(exec_outcome).value();
-        ASSERT_TRUE(exec.execute("CREATE TABLE IF NOT EXISTS blocking_tx_test (id INT)").has_value());
-        ASSERT_TRUE(exec.execute("TRUNCATE blocking_tx_test").has_value());
+        ASSERT_TRUE(exec.execute("CREATE TABLE IF NOT EXISTS session_tx_test (id INT)").has_value());
+        ASSERT_TRUE(exec.execute("TRUNCATE session_tx_test").has_value());
     }
 
     // Insert inside a transaction and roll back
@@ -267,7 +442,7 @@ TEST_F(BlockingSessionTest, BeginTransactionRollsBackOnScopeExit) {
             auto exec_outcome = tx.with_sync();
             ASSERT_TRUE(exec_outcome.has_value());
             auto exec = std::move(exec_outcome).value();
-            ASSERT_TRUE(exec.execute("INSERT INTO blocking_tx_test VALUES (1)").has_value());
+            ASSERT_TRUE(exec.execute("INSERT INTO session_tx_test VALUES (1)").has_value());
         }
         ASSERT_TRUE(tx.rollback().has_value());
     }
@@ -277,7 +452,7 @@ TEST_F(BlockingSessionTest, BeginTransactionRollsBackOnScopeExit) {
         auto exec_outcome = session.try_with_sync();
         ASSERT_TRUE(exec_outcome.has_value());
         auto exec   = std::move(exec_outcome).value();
-        auto result = exec.execute("SELECT COUNT(*) FROM blocking_tx_test");
+        auto result = exec.execute("SELECT COUNT(*) FROM session_tx_test");
         ASSERT_TRUE(result.has_value());
         EXPECT_EQ(result.value().rows(), 1u);
     }
@@ -286,20 +461,20 @@ TEST_F(BlockingSessionTest, BeginTransactionRollsBackOnScopeExit) {
     {
         auto exec_outcome = session.try_with_sync();
         ASSERT_TRUE(exec_outcome.has_value());
-        auto exec = std::move(exec_outcome).value();
-        std::ignore = exec.execute("DROP TABLE IF EXISTS blocking_tx_test");
+        auto exec   = std::move(exec_outcome).value();
+        std::ignore = exec.execute("DROP TABLE IF EXISTS session_tx_test");
     }
 }
 
-TEST_F(BlockingSessionTest, TryBeginAutoTransactionAutoCommits) {
-    BlockingSession session{make_test_config(), make_pool_config(2, 1)};
+TEST_F(SessionTest, TryBeginAutoTransactionAutoCommits) {
+    Session session{make_test_config(), make_pool_config(2, 1)};
 
     {
         auto exec_outcome = session.try_with_sync();
         ASSERT_TRUE(exec_outcome.has_value());
         auto exec = std::move(exec_outcome).value();
-        ASSERT_TRUE(exec.execute("CREATE TABLE IF NOT EXISTS blocking_autotx_test (id INT)").has_value());
-        ASSERT_TRUE(exec.execute("TRUNCATE blocking_autotx_test").has_value());
+        ASSERT_TRUE(exec.execute("CREATE TABLE IF NOT EXISTS session_autotx_test (id INT)").has_value());
+        ASSERT_TRUE(exec.execute("TRUNCATE session_autotx_test").has_value());
     }
 
     {
@@ -310,7 +485,7 @@ TEST_F(BlockingSessionTest, TryBeginAutoTransactionAutoCommits) {
             auto exec_outcome = tx.with_sync();
             ASSERT_TRUE(exec_outcome.has_value());
             auto exec = std::move(exec_outcome).value();
-            ASSERT_TRUE(exec.execute("INSERT INTO blocking_autotx_test VALUES (7)").has_value());
+            ASSERT_TRUE(exec.execute("INSERT INTO session_autotx_test VALUES (7)").has_value());
         }
         ASSERT_TRUE(tx.commit().has_value());
     }
@@ -319,18 +494,29 @@ TEST_F(BlockingSessionTest, TryBeginAutoTransactionAutoCommits) {
         auto exec_outcome = session.try_with_sync();
         ASSERT_TRUE(exec_outcome.has_value());
         auto exec   = std::move(exec_outcome).value();
-        auto result = exec.execute("SELECT id FROM blocking_autotx_test");
+        auto result = exec.execute("SELECT id FROM session_autotx_test");
         ASSERT_TRUE(result.has_value());
         EXPECT_EQ(result.value().rows(), 1u);
 
-        std::ignore = exec.execute("DROP TABLE IF EXISTS blocking_autotx_test");
+        std::ignore = exec.execute("DROP TABLE IF EXISTS session_autotx_test");
     }
+}
+
+TEST_F(SessionTest, BeginTransactionTimedReturnsWaitTimeoutWhenExhausted) {
+    Session session{make_test_config(), make_pool_config(1, 1)};
+
+    auto first = session.try_with_sync();
+    ASSERT_TRUE(first.has_value());
+
+    const auto result = session.begin_transaction(TransactionOptions{}, 100ms);
+    ASSERT_FALSE(result.has_value());
+    EXPECT_EQ(result.error().code.value(), static_cast<int>(ClientErrorCode::WaitTimeout));
 }
 
 // ============== Stats ==============
 
-TEST_F(BlockingSessionTest, StatsReflectFreeAndActiveHolders) {
-    BlockingSession session{make_test_config(), make_pool_config(4, 2)};
+TEST_F(SessionTest, StatsReflectFreeAndActiveHolders) {
+    Session session{make_test_config(), make_pool_config(4, 2)};
 
     EXPECT_EQ(session.pool_capacity(), 4u);
     EXPECT_EQ(session.pool_free_count(), 2u);

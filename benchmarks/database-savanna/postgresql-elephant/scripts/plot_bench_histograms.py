@@ -3,8 +3,9 @@
 Plot per-(scenario, worker-count) histograms comparing all 5 benchmark subjects
 across every metric reported by the PostgreSQL concurrency-scenario benchmarks.
 
-Input:  /tmp/bench_results/{libpq,pqxx,sync_executor,lock_free,blocking}.json
-        (Google Benchmark JSON output, one file per subject binary)
+Input:  /tmp/bench_results/{libpq,pqxx,sync_executor,session}.json
+        (Google Benchmark JSON output, one file per subject binary; the session
+        binary reports two subjects, SessionTry and SessionAwait)
 
 Output: benchmark_results/histograms/<scenario>_w<workers>.png
         One figure per (scenario, worker-count) pair. Each figure has one
@@ -30,8 +31,8 @@ JSON_FILES = {
     "LibPQ": "libpq.json",
     "Pqxx": "pqxx.json",
     "SyncExecutor": "sync_executor.json",
-    "LockFree": "lock_free.json",
-    "Blocking": "blocking.json",
+    "SessionTry": "session.json",
+    "SessionAwait": "session.json",
 }
 SUBJECTS = list(JSON_FILES.keys())
 
@@ -40,8 +41,8 @@ COLORS = {
     "LibPQ": "#1f77b4",
     "Pqxx": "#17becf",
     "SyncExecutor": "#2ca02c",
-    "LockFree": "#ff7f0e",
-    "Blocking": "#d62728",
+    "SessionTry": "#ff7f0e",
+    "SessionAwait": "#d62728",
 }
 
 SCENARIOS = [
@@ -90,8 +91,12 @@ def load_all():
         for bench in blob["benchmarks"]:
             subj, scenario, workers = parse_name(bench["name"])
             if subj != subject:
+                if subj in SUBJECTS:
+                    # The session binary emits both SessionTry and SessionAwait
+                    # into one file; each pass picks out only its own subject.
+                    continue
                 # Cross-contamination safety: binary emitted a benchmark with a
-                # name that doesn't match its own subject. Skip it loudly.
+                # name that doesn't match any known subject. Skip it loudly.
                 print(f"WARN: {fname} contains unexpected subject {subj} in {bench['name']}")
                 continue
             data.setdefault(scenario, {}).setdefault(workers, {})[subject] = bench

@@ -33,7 +33,6 @@ Rounding out the provider. In rough order:
 - Pipeline mode (`capabilities/pipeline/` is a scaffold)
 - Prepared statement caching (`auto_prepare` exists as config, not yet applied)
 - COPY IN/OUT and LISTEN/NOTIFY capabilities
-- Session unification (BlockingSession + LockFreeSession -> one Session)
 - Connection pool: validation-on-checkout and dynamic resizing
 - `RETURNING` clause and expression-based `SET` in the query builder
 - Type-safe result-to-struct mapping

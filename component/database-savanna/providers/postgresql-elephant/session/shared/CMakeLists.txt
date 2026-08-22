@@ -1,6 +1,5 @@
 ##############################################################################
 # PostgreSQL Session Shared Types (PoolConfig)
-# Consumed by both free_lock/ and blocking/ session variants.
 ##############################################################################
 add_library(${SAVANNA_ELEPHANT}.Session.Shared STATIC
         pool_config.hpp

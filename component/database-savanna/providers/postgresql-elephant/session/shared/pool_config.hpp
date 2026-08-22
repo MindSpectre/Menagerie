@@ -13,8 +13,7 @@ namespace menagerie::savanna::elephant {
      * @brief Configuration for the connection pool
      *
      * Controls pool sizing, connection timeouts, health check intervals,
-     * and cleanup behavior. Capacity must be a power of 2 for efficient
-     * ring buffer masking.
+     * and cleanup behavior.
      *
      * Usage:
      *   auto cfg = PoolConfig::Builder{}
@@ -29,16 +28,12 @@ namespace menagerie::savanna::elephant {
 
         /**
          * @brief Validate pool sizing invariants
-         * @throw std::invalid_argument if capacity is zero, if capacity is not a power
-         *        of 2, if min_connections exceeds capacity, or if connect_timeout is
-         *        not positive.
+         * @throw std::invalid_argument if capacity is zero, if min_connections exceeds
+         *        capacity, or if connect_timeout is not positive.
          */
         constexpr void validate() const override {
             if (capacity_ == 0) {
                 throw std::invalid_argument("Pool capacity must be greater than 0");
-            }
-            if ((capacity_ & (capacity_ - 1)) != 0) {
-                throw std::invalid_argument("Pool capacity must be a power of 2");
             }
             if (min_connections_ > capacity_) {
                 throw std::invalid_argument("min_connections cannot exceed capacity");
@@ -50,11 +45,11 @@ namespace menagerie::savanna::elephant {
 
         // -------- Getters --------
 
-        /// Ring buffer capacity (slot count); always a power of 2.
+        /// Maximum number of pooled connections.
         [[nodiscard]] constexpr std::size_t capacity() const noexcept {
             return capacity_;
         }
-        /// Number of slots pre-warmed with a live connection when the pool is constructed.
+        /// Number of connections eagerly created when the pool is constructed.
         [[nodiscard]] constexpr std::size_t min_connections() const noexcept {
             return min_connections_;
         }
@@ -62,15 +57,18 @@ namespace menagerie::savanna::elephant {
         [[nodiscard]] constexpr std::chrono::seconds connect_timeout() const noexcept {
             return connect_timeout_;
         }
-        /// Configured maximum idle duration for a FREE slot.
+        /// Configured maximum idle duration for a free connection. Not yet consumed by
+        /// the pool; reserved for the validation-on-checkout arc (see roadmap).
         [[nodiscard]] constexpr std::chrono::seconds idle_timeout() const noexcept {
             return idle_timeout_;
         }
-        /// Interval between PoolJanitor sweeps of the pool.
+        /// Interval between pool health sweeps. Not yet consumed by the pool; reserved
+        /// for the validation-on-checkout arc (see roadmap).
         [[nodiscard]] constexpr std::chrono::seconds health_check_interval() const noexcept {
             return health_check_interval_;
         }
-        /// Configured maximum connection age before it is recycled.
+        /// Configured maximum connection age before it is recycled. Not yet consumed by
+        /// the pool; reserved for the validation-on-checkout arc (see roadmap).
         [[nodiscard]] constexpr std::chrono::seconds max_lifetime() const noexcept {
             return max_lifetime_;
         }
@@ -140,14 +138,14 @@ namespace menagerie::savanna::elephant {
             : config_{std::move(existing)} {
         }
 
-        /// Sets the ring buffer capacity; must be a nonzero power of 2 (checked by finalize()).
+        /// Sets the maximum number of pooled connections; must be nonzero (checked by finalize()).
         template <typename Self>
         constexpr auto&& capacity(this Self&& self, std::size_t value) noexcept {
             self.config_.capacity_ = value;
             return std::forward<Self>(self);
         }
 
-        /// Sets how many slots are pre-warmed with a live connection at construction; must not exceed capacity().
+        /// Sets how many connections are eagerly created at construction; must not exceed capacity().
         template <typename Self>
         constexpr auto&& min_connections(this Self&& self, std::size_t value) noexcept {
             self.config_.min_connections_ = value;
@@ -161,14 +159,14 @@ namespace menagerie::savanna::elephant {
             return std::forward<Self>(self);
         }
 
-        /// Sets the maximum idle duration for a FREE slot.
+        /// Sets the maximum idle duration for a free connection.
         template <typename Self>
         constexpr auto&& idle_timeout(this Self&& self, std::chrono::seconds value) noexcept {
             self.config_.idle_timeout_ = value;
             return std::forward<Self>(self);
         }
 
-        /// Sets how often the background janitor sweeps the pool.
+        /// Sets how often the pool health sweep runs.
         template <typename Self>
         constexpr auto&& health_check_interval(this Self&& self, std::chrono::seconds value) noexcept {
             self.config_.health_check_interval_ = value;
@@ -191,9 +189,8 @@ namespace menagerie::savanna::elephant {
 
         /**
          * @brief Validate and finalize the builder into a PoolConfig
-         * @throw std::invalid_argument if capacity is zero, if capacity is not a power
-         *        of 2, if min_connections exceeds capacity, or if connect_timeout is
-         *        not positive.
+         * @throw std::invalid_argument if capacity is zero, if min_connections exceeds
+         *        capacity, or if connect_timeout is not positive.
          */
         [[nodiscard]] PoolConfig finalize() && {
             config_.validate();

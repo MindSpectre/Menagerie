@@ -50,8 +50,7 @@ namespace menagerie::savanna::elephant {
         [[nodiscard]] bool is_finished() const noexcept;
 
     private:
-        friend class LockFreeSession;
-        friend class BlockingSession;
+        friend class Session;
         explicit AutoTransaction(Transaction tx);
 
         Transaction tx_;

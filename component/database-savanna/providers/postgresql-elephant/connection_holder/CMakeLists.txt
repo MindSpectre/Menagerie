@@ -1,7 +1,8 @@
 ##############################################################################
-# PostgreSql ConnectionHolder (INTERFACE — shared by executors and pools)
+# PostgreSql ConnectionHolder (INTERFACE — shared by executors and the pool)
 ##############################################################################
 add_library(${SAVANNA_ELEPHANT}.ConnectionHolder INTERFACE
+        connection.hpp
         connection_holder.hpp
 )
 target_include_directories(${SAVANNA_ELEPHANT}.ConnectionHolder INTERFACE

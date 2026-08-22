@@ -7,10 +7,10 @@ engine-facing half: today that is `providers/postgresql-elephant/` only, built w
 default). The dividing line is deliberate: everything above the provider layer can be type-checked and, for
 schemas known at compile time, evaluated at compile time; everything in the provider layer talks to libpq,
 manages real sockets, and returns `std::expected<T, ErrorContext>` instead of throwing on the ordinary failure
-paths (pool exhaustion, a bad connection, a constraint violation). Two independent connection-pooling strategies
-live side by side in the PostgreSQL provider -- a lock-free ring-buffer pool for the fail-fast path and a classic
-mutex-plus-FIFO pool for strict waiter fairness -- both exposed through the same small `CapabilityProvider`
-surface so executor and transaction code does not need to know which pool it is borrowing from.
+paths (pool exhaustion, a bad connection, a constraint violation). One `Session` fronts a single connection pool;
+what happens on exhaustion is chosen per call site -- fail fast, block the thread, or suspend the coroutine -- via
+three acquisition verbs on the same session, rather than by picking between pool implementations. Executor and
+transaction code borrows connections through the same small capability surface either way.
 
 ## Layer map
 
@@ -99,36 +99,36 @@ auto compiled = compiler.compile_dynamic<ParamMode::Inline>(query);
 
 ## PostgreSQL provider
 
-`CapabilityProvider` (`capabilities/provider/capability_provider.hpp`) is a concept, not a base class: a type
-satisfies it by providing `with_sync() -> std::expected<SyncExecutor, ErrorContext>` and
-`with_async(exec) -> std::expected<AsyncExecutor, ErrorContext>`. Two session types implement it against two
-different pools:
+The capability concepts (`capabilities/provider/capability_provider.hpp`) are concepts, not base classes:
+`SyncCapabilityProvider` requires `with_sync() -> std::expected<SyncExecutor, ErrorContext>`,
+`AsyncCapabilityProvider` requires `with_async(exec) -> std::expected<AsyncExecutor, ErrorContext>` (a synchronous
+borrow -- the executor's operations are what suspend, not the acquisition), and `CapabilityProvider` is their
+conjunction. `Transaction` and `AutoTransaction` model the full concept, since their connection is already
+borrowed. `Session` models the sync half only: its `with_async(...)` overloads deliberately return a
+`boost::asio::awaitable` that suspends the caller until a connection frees, and its immediate async borrow is
+spelled `try_with_async(exec)`.
 
-- **`LockFreeSession`** (`session/free_lock/`) owns a `ConnectionPool`: a fixed-size vector of connection slots
-  acquired with a CAS scan from a hint cursor, no dynamic growth, and INACTIVE slots lazily promoted to FREE the
-  first time an acquire finds nothing free. A background `PoolJanitor` (a `std::jthread` with a `stop_token`)
-  periodically replaces DEAD slots and health-checks FREE ones past their `max_lifetime`. `with_sync()` /
-  `with_async(exec)` fail fast on exhaustion; the timed overloads (`with_sync(timeout)`,
-  `with_async(exec, timeout)`) retry acquisition against a bounded sleep-retry budget rather than parking on a
-  wait primitive. `LockFreeSession` is the session type that actually satisfies `CapabilityProvider`.
-- **`BlockingSession`** (`session/blocking/`) owns a `BlockingPool`: a classic mutex-guarded pool with a single
-  FIFO deque holding both blocking waiters (`Waiter`, parked on a condition variable) and async waiters
-  (`AsyncWaiter`, registered through `boost::asio::async_initiate` and resumed by the same release path) --
-  fairness holds regardless of which acquisition mode competing callers use. Each method has three variants:
-  `try_*` (non-blocking, fails immediately on exhaustion), a timed overload (bounded wait), and an unbounded
-  overload (waits until a slot frees or `shutdown()` drains every waiter). Because its unbounded and timed
-  `with_async(...)` overloads return a `boost::asio::awaitable` that suspends the caller's coroutine rather than
-  a synchronous `std::expected`, `BlockingSession` does not itself satisfy `CapabilityProvider`.
+**`Session`** (`session/`) owns the provider's one `ConnectionPool`: a mutex-guarded pool with a free deque,
+lazy connection creation up to `capacity()`, and a single FIFO deque holding both blocking waiters (`Waiter`,
+parked on a condition variable) and async waiters (`AsyncWaiter`, registered through
+`boost::asio::async_initiate` and resumed by the same release path) -- fairness holds regardless of which
+acquisition mode competing callers use, and a released connection is handed directly to the head waiter under
+the pool mutex rather than round-tripping through the free deque. Each borrowing method has three variants
+choosing the exhaustion policy per call site: `try_*` (non-blocking, fails immediately with `PoolExhausted`), a
+timed overload (bounded wait, `WaitTimeout` on expiry), and an unbounded overload (waits until a slot frees or
+`shutdown()` drains every waiter with `PoolShutdown`). Sync verbs park the calling thread; `with_async` verbs
+suspend the calling coroutine and never block an `io_context` thread.
 
-Both pools hand out a `std::weak_ptr<ConnectionHolder>` rather than a raw `PGconn*`. `ConnectionHolder`
-(`connection_holder/connection_holder.hpp`) is the polymorphic base every pool-managed connection handle
-implements; on a capability's destruction the weak pointer is locked to a temporary `shared_ptr` and `reset()` is
-called, which runs any pending cleanup SQL and then returns the connection through a path chosen by the owning
-pool (the lock-free pool's `SlotHolder` clears its slot bit; the blocking pool's `QueuedHolder` hands the
-connection straight to the head waiter under the pool mutex if one is waiting, rather than round-tripping through
-the free deque). The cleanup SQL is opt-in per borrow: `do_cleanup(CleanupQuery)` on an executor, transaction, or
+Connection lifecycle is owned by `Connection` (`connection_holder/connection.hpp`), a move-only wrapper around
+one `PGconn*` with an explicit FSM: `DISCONNECTED -> READY` via `open()`, `READY -> BROKEN` when `verify()` or
+the release-time cleanup finds the connection dead, and `close()` from any state. The pool hands out a
+`std::weak_ptr<ConnectionHolder>` rather than a raw `PGconn*`. `ConnectionHolder`
+(`connection_holder/connection_holder.hpp`) is the polymorphic base carrying a `Connection` through
+borrow/release cycles; on a capability's destruction the weak pointer is locked to a temporary `shared_ptr` and
+`reset()` is called, which runs cleanup SQL and returns the connection to the pool -- or drops it if it came
+back `BROKEN`. The cleanup SQL is opt-in per borrow: `do_cleanup(CleanupQuery)` on an executor, transaction, or
 auto-transaction sets one of `ResetAll` / `DeallocateAll` / `DiscardTemp` / `DiscardAll` to run on release; with
-no explicit choice, the pool's own configured cleanup runs instead.
+no explicit choice, the pool's configured `PoolConfig::cleanup_sql` runs instead.
 
 `SyncExecutor` and `AsyncExecutor` (`capabilities/executors/`) are the two capabilities implemented today; the
 `copier/`, `notifier/`, and `pipeline/` directories exist as empty scaffold headers for capabilities not yet
@@ -157,8 +157,8 @@ slot, not by rollback logic that belongs to the transaction's own destructor. `S
 scoped `SAVEPOINT` / `RELEASE SAVEPOINT` / `ROLLBACK TO SAVEPOINT` wrapper holding the raw `PGconn*` directly
 rather than another weak pointer, since a savepoint never outlives the transaction that created it.
 
-Pool sizing and connection parameters are configured through two builders: `PoolConfig::Builder` (`capacity` --
-validated as a power of two, `min_connections`, `connect_timeout`, `idle_timeout`, `health_check_interval`,
+Pool sizing and connection parameters are configured through two builders: `PoolConfig::Builder` (`capacity`,
+`min_connections`, `connect_timeout`, `idle_timeout`, `health_check_interval`,
 `max_lifetime`, `cleanup_sql`, with `minimal()`/`standard()`/`high_performance()` presets) and
 `ConnectionConfig::Builder` (host/port/dbname/user/password via `ConnectionCredentials`, SSL mode and
 certificates, statement/lock/idle-in-transaction timeouts, node `role`/`priority`/`cluster_name` for
@@ -184,7 +184,7 @@ auto config = ConnectionConfig::Builder{}
                   .password("secret")
                   .finalize();
 
-LockFreeSession session{config, PoolConfig::standard()};
+Session session{config, PoolConfig::standard()};
 
 using UsersTable = StaticTable<"users",
                                 StaticFieldSchema<int, "id", constraints::PrimaryKey>,
@@ -195,9 +195,9 @@ QueryCompiler<PostgresDialect> compiler;
 auto query = compiler.compile_dynamic<ParamMode::Inline>(
     select(users.column<"id">(), users.column<"name">()).from(users).where(users.column<"id">() == lit(42)));
 
-auto exec_outcome = session.with_sync();
+auto exec_outcome = session.try_with_sync();  // or with_sync(100ms), or co_await session.with_async(exec)
 if (!exec_outcome) {
-    // exec_outcome.error() -- PoolExhausted, WaitTimeout, ...
+    // exec_outcome.error() -- PoolExhausted, WaitTimeout, PoolShutdown, ...
     return;
 }
 auto exec = std::move(exec_outcome).value();
