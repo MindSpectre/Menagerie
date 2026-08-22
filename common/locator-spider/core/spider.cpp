@@ -15,6 +15,8 @@ namespace menagerie::spider {
         stop_.store(true, std::memory_order_relaxed);
         if (janitor_.joinable())
             janitor_.join();  // graceful
+        std::cout << "[Spider] Destructed\t" << cuckoo::LocalClock::current_time(cuckoo::clock_formats::iso8601)
+                  << "\n";
     }
 
     void Spider::clear() noexcept {
