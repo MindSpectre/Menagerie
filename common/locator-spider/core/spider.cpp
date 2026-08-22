@@ -17,7 +17,6 @@ namespace menagerie::spider {
             janitor_.join();  // graceful
         std::cout << "[Spider] Destructed\t" << cuckoo::LocalClock::current_time(cuckoo::clock_formats::iso8601)
                   << "\n";
-        // Todo: replace with logger?
     }
 
     void Spider::clear() noexcept {
