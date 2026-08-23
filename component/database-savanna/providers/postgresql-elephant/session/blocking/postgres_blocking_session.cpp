@@ -28,66 +28,66 @@ namespace menagerie::savanna::elephant {
 
     // -------- Sync --------
 
-    beaver::Outcome<SyncExecutor, ErrorContext> BlockingSession::try_with_sync() noexcept {
+    std::expected<SyncExecutor, ErrorContext> BlockingSession::try_with_sync() noexcept {
         auto holder = pool_.try_acquire();
         if (holder.expired()) {
-            return beaver::err(ErrorContext{ErrorCode{ClientErrorCode::PoolExhausted}});
+            return std::unexpected(ErrorContext{ErrorCode{ClientErrorCode::PoolExhausted}});
         }
         return SyncExecutor{std::move(holder)};
     }
 
-    beaver::Outcome<SyncExecutor, ErrorContext>
+    std::expected<SyncExecutor, ErrorContext>
     BlockingSession::with_sync(std::chrono::steady_clock::duration timeout) noexcept {
         auto holder = pool_.acquire(timeout);
         if (holder.expired()) {
-            return beaver::err(ErrorContext{ErrorCode{map_empty_weak_timed(pool_)}});
+            return std::unexpected(ErrorContext{ErrorCode{map_empty_weak_timed(pool_)}});
         }
         return SyncExecutor{std::move(holder)};
     }
 
-    beaver::Outcome<SyncExecutor, ErrorContext> BlockingSession::with_sync() noexcept {
+    std::expected<SyncExecutor, ErrorContext> BlockingSession::with_sync() noexcept {
         auto holder = pool_.acquire();
         if (holder.expired()) {
-            return beaver::err(ErrorContext{ErrorCode{ClientErrorCode::PoolShutdown}});
+            return std::unexpected(ErrorContext{ErrorCode{ClientErrorCode::PoolShutdown}});
         }
         return SyncExecutor{std::move(holder)};
     }
 
     // -------- Async --------
 
-    beaver::Outcome<AsyncExecutor, ErrorContext>
+    std::expected<AsyncExecutor, ErrorContext>
     BlockingSession::try_with_async(boost::asio::any_io_executor exec) noexcept {
         auto holder = pool_.try_acquire();
         if (holder.expired()) {
-            return beaver::err(ErrorContext{ErrorCode{ClientErrorCode::PoolExhausted}});
+            return std::unexpected(ErrorContext{ErrorCode{ClientErrorCode::PoolExhausted}});
         }
         return AsyncExecutor{std::move(holder), std::move(exec)};
     }
 
-    boost::asio::awaitable<beaver::Outcome<AsyncExecutor, ErrorContext>>
+    boost::asio::awaitable<std::expected<AsyncExecutor, ErrorContext>>
     BlockingSession::with_async(boost::asio::any_io_executor exec, std::chrono::steady_clock::duration timeout) {
         auto [ec, holder_sp] =
             co_await pool_.async_acquire(exec, timeout, boost::asio::as_tuple(boost::asio::use_awaitable));
 
         if (ec == boost::asio::error::operation_aborted) {
-            co_return beaver::err(ErrorContext{ErrorCode{ClientErrorCode::PoolShutdown}});
+            co_return std::unexpected(ErrorContext{ErrorCode{ClientErrorCode::PoolShutdown}});
         }
         if (ec) {
-            co_return beaver::err(ErrorContext{ErrorCode{ClientErrorCode::WaitTimeout}});
+            co_return std::unexpected(ErrorContext{ErrorCode{ClientErrorCode::WaitTimeout}});
         }
         if (!holder_sp) {
-            co_return beaver::err(ErrorContext{ErrorCode{ClientErrorCode::PoolShutdown}});
+            co_return std::unexpected(ErrorContext{ErrorCode{ClientErrorCode::PoolShutdown}});
         }
 
         co_return AsyncExecutor{std::weak_ptr<ConnectionHolder>{holder_sp}, std::move(exec)};
     }
 
-    boost::asio::awaitable<beaver::Outcome<AsyncExecutor, ErrorContext>>
+    boost::asio::awaitable<std::expected<AsyncExecutor, ErrorContext>>
     BlockingSession::with_async(boost::asio::any_io_executor exec) {
         auto [ec, holder_sp] = co_await pool_.async_acquire(exec, boost::asio::as_tuple(boost::asio::use_awaitable));
 
         if (ec || !holder_sp) {
-            co_return beaver::err(ErrorContext{ErrorCode{ClientErrorCode::PoolShutdown}});
+            co_return std::unexpected(ErrorContext{ErrorCode{ClientErrorCode::PoolShutdown}});
         }
 
         co_return AsyncExecutor{std::weak_ptr<ConnectionHolder>{holder_sp}, std::move(exec)};
@@ -95,68 +95,67 @@ namespace menagerie::savanna::elephant {
 
     // -------- Transactions --------
 
-    beaver::Outcome<Transaction, ErrorContext>
-    BlockingSession::try_begin_transaction(TransactionOptions opts) noexcept {
+    std::expected<Transaction, ErrorContext> BlockingSession::try_begin_transaction(TransactionOptions opts) noexcept {
         auto holder = pool_.try_acquire();
         if (holder.expired()) {
-            return beaver::err(ErrorContext{ErrorCode{ClientErrorCode::PoolExhausted}});
+            return std::unexpected(ErrorContext{ErrorCode{ClientErrorCode::PoolExhausted}});
         }
         return Transaction{std::move(holder), opts};
     }
 
-    beaver::Outcome<Transaction, ErrorContext>
+    std::expected<Transaction, ErrorContext>
     BlockingSession::begin_transaction(TransactionOptions opts, std::chrono::steady_clock::duration timeout) noexcept {
         auto holder = pool_.acquire(timeout);
         if (holder.expired()) {
-            return beaver::err(ErrorContext{ErrorCode{map_empty_weak_timed(pool_)}});
+            return std::unexpected(ErrorContext{ErrorCode{map_empty_weak_timed(pool_)}});
         }
         return Transaction{std::move(holder), opts};
     }
 
-    beaver::Outcome<Transaction, ErrorContext> BlockingSession::begin_transaction(TransactionOptions opts) noexcept {
+    std::expected<Transaction, ErrorContext> BlockingSession::begin_transaction(TransactionOptions opts) noexcept {
         auto holder = pool_.acquire();
         if (holder.expired()) {
-            return beaver::err(ErrorContext{ErrorCode{ClientErrorCode::PoolShutdown}});
+            return std::unexpected(ErrorContext{ErrorCode{ClientErrorCode::PoolShutdown}});
         }
         return Transaction{std::move(holder), opts};
     }
 
-    beaver::Outcome<AutoTransaction, ErrorContext>
+    std::expected<AutoTransaction, ErrorContext>
     BlockingSession::try_begin_auto_transaction(TransactionOptions opts) noexcept {
         auto tx_outcome = try_begin_transaction(opts);
-        if (!tx_outcome.is_success()) {
-            return beaver::err(tx_outcome.error<ErrorContext>());
+        if (!tx_outcome.has_value()) {
+            return std::unexpected(std::move(tx_outcome).error());
         }
         Transaction tx = std::move(tx_outcome).value();
-        if (auto b = tx.begin(); !b.is_success()) {
-            return beaver::err(b.error<ErrorContext>());
+        if (auto b = tx.begin(); !b.has_value()) {
+            return std::unexpected(std::move(b).error());
         }
         return AutoTransaction{std::move(tx)};
     }
 
-    beaver::Outcome<AutoTransaction, ErrorContext>
+    std::expected<AutoTransaction, ErrorContext>
     BlockingSession::begin_auto_transaction(TransactionOptions opts,
                                             std::chrono::steady_clock::duration timeout) noexcept {
         auto tx_outcome = begin_transaction(opts, timeout);
-        if (!tx_outcome.is_success()) {
-            return beaver::err(tx_outcome.error<ErrorContext>());
+        if (!tx_outcome.has_value()) {
+            return std::unexpected(std::move(tx_outcome).error());
         }
         Transaction tx = std::move(tx_outcome).value();
-        if (auto b = tx.begin(); !b.is_success()) {
-            return beaver::err(b.error<ErrorContext>());
+        if (auto b = tx.begin(); !b.has_value()) {
+            return std::unexpected(std::move(b).error());
         }
         return AutoTransaction{std::move(tx)};
     }
 
-    beaver::Outcome<AutoTransaction, ErrorContext>
+    std::expected<AutoTransaction, ErrorContext>
     BlockingSession::begin_auto_transaction(TransactionOptions opts) noexcept {
         auto tx_outcome = begin_transaction(opts);
-        if (!tx_outcome.is_success()) {
-            return beaver::err(tx_outcome.error<ErrorContext>());
+        if (!tx_outcome.has_value()) {
+            return std::unexpected(std::move(tx_outcome).error());
         }
         Transaction tx = std::move(tx_outcome).value();
-        if (auto b = tx.begin(); !b.is_success()) {
-            return beaver::err(b.error<ErrorContext>());
+        if (auto b = tx.begin(); !b.has_value()) {
+            return std::unexpected(std::move(b).error());
         }
         return AutoTransaction{std::move(tx)};
     }

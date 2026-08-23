@@ -3,6 +3,7 @@
 #include <fstream>
 #include <string>
 #include <string_view>
+#include <variant>
 #include <vector>
 
 #include <body.hpp>
@@ -50,7 +51,7 @@ TEST(LoadServerConfigTest, LoadsValidConfig) {
         ]
     })");
     auto outcome    = load_server_config(path);
-    ASSERT_TRUE(outcome.is_success());
+    ASSERT_TRUE(outcome.has_value());
     const auto& cfg = outcome.value();
     EXPECT_EQ(cfg.threads(), 4u);
     EXPECT_EQ(cfg.body_limit(), 65536u);
@@ -71,23 +72,23 @@ TEST(LoadServerConfigTest, LoadsValidConfig) {
 
 TEST(LoadServerConfigTest, MissingFileIsFileError) {
     auto outcome = load_server_config("/nonexistent/dir/server.json");
-    ASSERT_TRUE(outcome.is_error());
-    ASSERT_TRUE(outcome.holds_error<ConfigFileError>());
-    EXPECT_EQ(outcome.error<ConfigFileError>().path, "/nonexistent/dir/server.json");
+    ASSERT_FALSE(outcome.has_value());
+    ASSERT_TRUE(std::holds_alternative<ConfigFileError>(outcome.error()));
+    EXPECT_EQ(std::get<ConfigFileError>(outcome.error()).path, "/nonexistent/dir/server.json");
 }
 
 TEST(LoadServerConfigTest, DirectoryIsFileError) {
     auto outcome = load_server_config(std::filesystem::temp_directory_path().string());
-    ASSERT_TRUE(outcome.is_error());
-    EXPECT_TRUE(outcome.holds_error<ConfigFileError>());
+    ASSERT_FALSE(outcome.has_value());
+    EXPECT_TRUE(std::holds_alternative<ConfigFileError>(outcome.error()));
 }
 
 TEST(LoadServerConfigTest, MalformedJsonIsParseErrorWithLine) {
     const auto path = write_temp("malformed.json", R"({"threads": })");
     auto outcome    = load_server_config(path);
-    ASSERT_TRUE(outcome.is_error());
-    ASSERT_TRUE(outcome.holds_error<ConfigParseError>());
-    const auto& err = outcome.error<ConfigParseError>();
+    ASSERT_FALSE(outcome.has_value());
+    ASSERT_TRUE(std::holds_alternative<ConfigParseError>(outcome.error()));
+    const auto& err = std::get<ConfigParseError>(outcome.error());
     EXPECT_EQ(err.line, 1u);
     EXPECT_FALSE(err.detail.empty());
 }
@@ -95,32 +96,32 @@ TEST(LoadServerConfigTest, MalformedJsonIsParseErrorWithLine) {
 TEST(LoadServerConfigTest, NonObjectTopLevelIsSchemaError) {
     const auto path = write_temp("toplevel.json", "42");
     auto outcome    = load_server_config(path);
-    ASSERT_TRUE(outcome.is_error());
-    EXPECT_TRUE(outcome.holds_error<ConfigSchemaError>());
+    ASSERT_FALSE(outcome.has_value());
+    EXPECT_TRUE(std::holds_alternative<ConfigSchemaError>(outcome.error()));
 }
 
 TEST(LoadServerConfigTest, TypeMismatchIsSchemaError) {
     const auto path = write_temp("mismatch.json", R"({"threads": "four"})");
     auto outcome    = load_server_config(path);
-    ASSERT_TRUE(outcome.is_error());
-    ASSERT_TRUE(outcome.holds_error<ConfigSchemaError>());
-    EXPECT_NE(outcome.error<ConfigSchemaError>().detail.find("type mismatch"), std::string::npos);
+    ASSERT_FALSE(outcome.has_value());
+    ASSERT_TRUE(std::holds_alternative<ConfigSchemaError>(outcome.error()));
+    EXPECT_NE(std::get<ConfigSchemaError>(outcome.error()).detail.find("type mismatch"), std::string::npos);
 }
 
 TEST(LoadServerConfigTest, UnknownEnumStringIsSchemaErrorNamingField) {
     const auto path = write_temp("enum.json", R"({"path_normalization": "collapse_everything"})");
     auto outcome    = load_server_config(path);
-    ASSERT_TRUE(outcome.is_error());
-    ASSERT_TRUE(outcome.holds_error<ConfigSchemaError>());
-    EXPECT_NE(outcome.error<ConfigSchemaError>().detail.find("path_normalization"), std::string::npos);
+    ASSERT_FALSE(outcome.has_value());
+    ASSERT_TRUE(std::holds_alternative<ConfigSchemaError>(outcome.error()));
+    EXPECT_NE(std::get<ConfigSchemaError>(outcome.error()).detail.find("path_normalization"), std::string::npos);
 }
 
 TEST(LoadServerConfigTest, ValidateFailureIsSchemaErrorNamingField) {
     const auto path = write_temp("novalidate.json", R"({"listeners": [{"transport": "tls"}]})");
     auto outcome    = load_server_config(path);
-    ASSERT_TRUE(outcome.is_error());
-    ASSERT_TRUE(outcome.holds_error<ConfigSchemaError>());
-    EXPECT_NE(outcome.error<ConfigSchemaError>().detail.find("listener.tls"), std::string::npos);
+    ASSERT_FALSE(outcome.has_value());
+    ASSERT_TRUE(std::holds_alternative<ConfigSchemaError>(outcome.error()));
+    EXPECT_NE(std::get<ConfigSchemaError>(outcome.error()).detail.find("listener.tls"), std::string::npos);
 }
 
 TEST(LoadServerConfigTest, DumpLoadRoundTripIsAFixedPoint) {
@@ -131,7 +132,7 @@ TEST(LoadServerConfigTest, DumpLoadRoundTripIsAFixedPoint) {
     const Json::Value dumped = dump_server_config(cfg);
     const auto path          = write_temp("roundtrip.json", dumped.toStyledString());
     auto outcome             = load_server_config(path);
-    ASSERT_TRUE(outcome.is_success());
+    ASSERT_TRUE(outcome.has_value());
     EXPECT_EQ(dump_server_config(outcome.value()), dumped);
 }
 

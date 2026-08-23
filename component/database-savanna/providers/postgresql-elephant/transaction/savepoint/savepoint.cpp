@@ -31,33 +31,33 @@ namespace menagerie::savanna::elephant {
         return *this;
     }
 
-    beaver::Outcome<void, ErrorContext> Savepoint::rollback() {
+    std::expected<void, ErrorContext> Savepoint::rollback() {
         COMPONENT_LOG_ENTER_FUNCTION();
         if (!active_) {
-            return beaver::err(ErrorContext{ErrorCode{ClientErrorCode::InvalidState}});
+            return std::unexpected(ErrorContext{ErrorCode{ClientErrorCode::InvalidState}});
         }
         auto result = execute_control(std::format(R"(ROLLBACK TO SAVEPOINT "{}")", name_));
         return result;
     }
 
-    beaver::Outcome<void, ErrorContext> Savepoint::release() {
+    std::expected<void, ErrorContext> Savepoint::release() {
         COMPONENT_LOG_ENTER_FUNCTION();
         if (!active_) {
-            return beaver::err(ErrorContext{ErrorCode{ClientErrorCode::InvalidState}});
+            return std::unexpected(ErrorContext{ErrorCode{ClientErrorCode::InvalidState}});
         }
         auto result = execute_control(std::format(R"(RELEASE SAVEPOINT "{}")", name_));
-        if (result.is_success()) {
+        if (result.has_value()) {
             active_ = false;
         }
         return result;
     }
 
-    beaver::Outcome<void, ErrorContext> Savepoint::execute_control(const std::string& sql) const {
+    std::expected<void, ErrorContext> Savepoint::execute_control(const std::string& sql) const {
         const SyncExecutor exec{conn_};
-        if (auto result = exec.execute(sql); !result.is_success()) {
-            return beaver::err(result.error<ErrorContext>());
+        if (auto result = exec.execute(sql); !result.has_value()) {
+            return std::unexpected(std::move(result).error());
         }
-        return beaver::ok();
+        return {};
     }
 
 }  // namespace menagerie::savanna::elephant

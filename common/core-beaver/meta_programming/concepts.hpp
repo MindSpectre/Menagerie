@@ -57,11 +57,4 @@ namespace menagerie::beaver {
     } || std::is_convertible_v<std::remove_cvref_t<T>, const char*>;
 
 
-    // Forward declaration so the detail helpers can refer to Outcome.
-    template <typename T, typename... Errors>
-    class Outcome;
-
-    /// Concept for callables whose return type is some `Outcome<...>`.
-    template <typename T>
-    concept IsOutcome = is_specialization_of_v<std::remove_cvref_t<T>, Outcome>;
 }  // namespace menagerie::beaver

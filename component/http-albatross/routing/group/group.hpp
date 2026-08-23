@@ -17,7 +17,7 @@ namespace menagerie::albatross {
      * This is what Server::in_group(prefix) returns, constructed over the
      * Server's registry + controller list. add_controller() runs the bake
      * step: configure_routes() once, prefix concat, middleware composition,
-     * Outcome-to-Response wiring, conflict recording - and records the
+     * AsyncOutcome-to-Response wiring, conflict recording - and records the
      * controller in the caller-owned sink (the Server keeps them alive for
      * the routes' lifetime; controllers are RAII).
      */

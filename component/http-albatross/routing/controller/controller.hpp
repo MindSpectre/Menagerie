@@ -1,6 +1,7 @@
 #pragma once
 
 #include <concepts>
+#include <expected>
 #include <functional>
 #include <memory>
 #include <menagerie/beaver>
@@ -11,6 +12,7 @@
 #include <string>
 #include <type_traits>
 #include <utility>
+#include <variant>
 #include <vector>
 
 #include <async_outcome.hpp>
@@ -27,7 +29,7 @@ namespace menagerie::albatross {
 
     namespace detail {
 
-        /// A typed error usable in a handler's Outcome: it must collapse to a
+        /// A typed error usable in a handler's AsyncOutcome: it must collapse to a
         /// Response via an ADL-found to_http_response(const E&). A missing
         /// overload fails this concept - the compile error names E.
         template <typename E>
@@ -44,25 +46,26 @@ namespace menagerie::albatross {
         template <>
         struct RouteHandlerTraits<boost::asio::awaitable<Response, Strand>> {
             static constexpr bool valid       = true;   ///< Always valid: this shape needs no error collapsing.
-            static constexpr bool has_outcome = false;  ///< No Outcome to collapse; the Response is used as-is.
+            static constexpr bool has_outcome = false;  ///< No AsyncOutcome to collapse; the Response is used as-is.
         };
-        /// Specialization for a handler returning AsyncOutcome<Response, Es...>.
+        /// Specialization for a handler returning AsyncOutcome<Response, Es...>,
+        /// i.e. awaitable<std::expected<Response, std::variant<Es...>>, Strand>.
         template <typename... Es>
-        struct RouteHandlerTraits<boost::asio::awaitable<beaver::Outcome<Response, Es...>, Strand>> {
+        struct RouteHandlerTraits<boost::asio::awaitable<std::expected<Response, std::variant<Es...>>, Strand>> {
             static constexpr bool valid =
                 (HasToHttpResponse<Es> && ...);  ///< Valid only when every Es has an ADL to_http_response.
             static constexpr bool has_outcome =
                 true;  ///< Signals callable_route/member_outcome_route to collapse via to_http_response.
         };
 
-        /// Collapse Outcome<Response, Es...> to Response via ADL. The exact
-        /// Response&& lambda beats the template in overload resolution, so
-        /// errors land in the generic branch.
-        template <typename OutcomeT>
-        Response collapse_outcome(OutcomeT&& outcome) {
-            return std::forward<OutcomeT>(outcome).visit(
-                [](Response&& r) -> Response { return std::move(r); },
-                []<typename E>(E&& e) -> Response { return to_http_response(e); });
+        /// Collapse expected<Response, variant<Es...>> to Response: a held
+        /// Response passes through; a held error converts via the ADL
+        /// to_http_response of whichever alternative is active.
+        template <typename... Es>
+        Response collapse_outcome(std::expected<Response, std::variant<Es...>>&& outcome) {
+            if (outcome) [[likely]]
+                return std::move(*outcome);
+            return std::visit([]<typename E>(const E& e) -> Response { return to_http_response(e); }, outcome.error());
         }
 
         /// Compose middlewares around `inner`, right-to-left, so the FIRST
@@ -77,13 +80,13 @@ namespace menagerie::albatross {
 
         /// The bake step: runs configure_routes() exactly once, then drains
         /// the controller's local routes into `registry` with `prefix`
-        /// applied and the controller's middleware chain + Outcome collapse
+        /// applied and the controller's middleware chain + AsyncOutcome collapse
         /// composed in. Called by GroupBinding and by Server::add_controller.
         /// @throw std::invalid_argument if `ctrl` is null.
         /// @throw std::logic_error on a second bake of the same controller.
         struct ControllerBaker {
             /// Runs `ctrl`'s configure_routes() once, then drains its local
-            /// routes into `registry` with `prefix` and middleware/Outcome
+            /// routes into `registry` with `prefix` and middleware/AsyncOutcome
             /// collapse composed in.
             static void
             bake_into(RouteRegistry& registry, const std::shared_ptr<HttpController>& ctrl, std::string_view prefix);
@@ -102,7 +105,7 @@ namespace menagerie::albatross {
      * @brief Application base class. Subclasses register routes in
      *        configure_routes() via the protected verb DSL; GroupBinding bakes
      *        them into the server-wide registry with prefix + middleware +
-     *        Outcome-to-Response conversion pre-composed.
+     *        AsyncOutcome-to-Response conversion pre-composed.
      *
      * Lifecycle: construct, then add_middleware()*, then bake (via
      * GroupBinding::add_controller, which calls configure_routes() once),
@@ -153,7 +156,7 @@ namespace menagerie::albatross {
         }
 
         /// Registers a GET route at `path` calling member function `m`,
-        /// collapsing its typed-error Outcome result.
+        /// collapsing its typed-error AsyncOutcome result.
         template <beaver::IsStringLike StringTp, std::derived_from<HttpController> ControllerT, typename... Es>
         void Get(StringTp&& path, AsyncOutcome<Response, Es...> (ControllerT::*m)(RequestContext)) {
             member_outcome_route(HttpMethod::get, std::forward<StringTp>(path), m);
@@ -173,7 +176,7 @@ namespace menagerie::albatross {
         }
 
         /// Registers a POST route at `path` calling member function `m`,
-        /// collapsing its typed-error Outcome result.
+        /// collapsing its typed-error AsyncOutcome result.
         template <beaver::IsStringLike StringTp, std::derived_from<HttpController> ControllerT, typename... Es>
         void Post(StringTp&& path, AsyncOutcome<Response, Es...> (ControllerT::*m)(RequestContext)) {
             member_outcome_route(HttpMethod::post, std::forward<StringTp>(path), m);
@@ -193,7 +196,7 @@ namespace menagerie::albatross {
         }
 
         /// Registers a PUT route at `path` calling member function `m`,
-        /// collapsing its typed-error Outcome result.
+        /// collapsing its typed-error AsyncOutcome result.
         template <beaver::IsStringLike StringTp, std::derived_from<HttpController> ControllerT, typename... Es>
         void Put(StringTp&& path, AsyncOutcome<Response, Es...> (ControllerT::*m)(RequestContext)) {
             member_outcome_route(HttpMethod::put, std::forward<StringTp>(path), m);
@@ -213,7 +216,7 @@ namespace menagerie::albatross {
         }
 
         /// Registers a PATCH route at `path` calling member function `m`,
-        /// collapsing its typed-error Outcome result.
+        /// collapsing its typed-error AsyncOutcome result.
         template <beaver::IsStringLike StringTp, std::derived_from<HttpController> ControllerT, typename... Es>
         void Patch(StringTp&& path, AsyncOutcome<Response, Es...> (ControllerT::*m)(RequestContext)) {
             member_outcome_route(HttpMethod::patch, std::forward<StringTp>(path), m);
@@ -233,7 +236,7 @@ namespace menagerie::albatross {
         }
 
         /// Registers a DELETE route at `path` calling member function `m`,
-        /// collapsing its typed-error Outcome result.
+        /// collapsing its typed-error AsyncOutcome result.
         template <beaver::IsStringLike StringTp, std::derived_from<HttpController> ControllerT, typename... Es>
         void Delete(StringTp&& path, AsyncOutcome<Response, Es...> (ControllerT::*m)(RequestContext)) {
             member_outcome_route(HttpMethod::del, std::forward<StringTp>(path), m);
@@ -253,7 +256,7 @@ namespace menagerie::albatross {
         }
 
         /// Registers a HEAD route at `path` calling member function `m`,
-        /// collapsing its typed-error Outcome result.
+        /// collapsing its typed-error AsyncOutcome result.
         template <beaver::IsStringLike StringTp, std::derived_from<HttpController> ControllerT, typename... Es>
         void Head(StringTp&& path, AsyncOutcome<Response, Es...> (ControllerT::*m)(RequestContext)) {
             member_outcome_route(HttpMethod::head, std::forward<StringTp>(path), m);
@@ -273,7 +276,7 @@ namespace menagerie::albatross {
         }
 
         /// Registers an OPTIONS route at `path` calling member function `m`,
-        /// collapsing its typed-error Outcome result.
+        /// collapsing its typed-error AsyncOutcome result.
         template <beaver::IsStringLike StringTp, std::derived_from<HttpController> ControllerT, typename... Es>
         void Options(StringTp&& path, AsyncOutcome<Response, Es...> (ControllerT::*m)(RequestContext)) {
             member_outcome_route(HttpMethod::options, std::forward<StringTp>(path), m);

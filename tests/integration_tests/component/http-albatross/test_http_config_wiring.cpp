@@ -47,7 +47,7 @@ TEST_F(ConfigWiringTest, TcpListenerFromJsonServesAndEnforcesBodyLimit) {
         ]
     })");
     auto loaded     = load_server_config(path);
-    ASSERT_TRUE(loaded.is_success());
+    ASSERT_TRUE(loaded.has_value());
 
     start_server(
         [](Server& s) {
@@ -81,7 +81,7 @@ TEST_F(ConfigWiringTest, TlsListenerFromJsonNegotiatesH1) {
     })";
     const auto path = http_tls_test::write_temp("wiring_tls.json", json);
     auto loaded     = load_server_config(path);
-    ASSERT_TRUE(loaded.is_success());
+    ASSERT_TRUE(loaded.has_value());
 
     start_server(
         [](Server& s) {

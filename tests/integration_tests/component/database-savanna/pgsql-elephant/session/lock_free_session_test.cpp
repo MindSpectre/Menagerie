@@ -1,6 +1,7 @@
 // PostgreSQL LockFreeSession Functional Tests
 // Tests LockFreeSession, ConnectionPool, PoolJanitor, SyncExecutor, AsyncExecutor
 
+#include <expected>
 #include <thread>
 #include <vector>
 
@@ -124,17 +125,17 @@ protected:
                 value INTEGER DEFAULT 0
             )
         )");
-        ASSERT_TRUE(result.is_success()) << "Setup failed: " << result.error<ErrorContext>().format();
+        ASSERT_TRUE(result.has_value()) << "Setup failed: " << result.error().format();
 
         auto truncate = exec.execute("TRUNCATE TABLE session_test_users RESTART IDENTITY CASCADE");
-        ASSERT_TRUE(truncate.is_success()) << "Truncate failed: " << truncate.error<ErrorContext>().format();
+        ASSERT_TRUE(truncate.has_value()) << "Truncate failed: " << truncate.error().format();
     }
 
     void TearDown() override {
         if (!session_ || session_->is_shutdown()) {
             return;
         }
-        if (auto exec = session_->with_sync(); exec.is_success()) {
+        if (auto exec = session_->with_sync(); exec.has_value()) {
             std::ignore = std::move(exec).value().execute("DROP TABLE IF EXISTS session_test_users CASCADE");
         }
         session_->shutdown();
@@ -150,7 +151,7 @@ TEST_F(LockFreeSessionTest, WithSyncExecutesSimpleQuery) {
     auto exec   = session_->with_sync().value();
     auto result = exec.execute("SELECT 1 AS n");
 
-    ASSERT_TRUE(result.is_success()) << result.error<ErrorContext>().format();
+    ASSERT_TRUE(result.has_value()) << result.error().format();
     EXPECT_EQ(result.value().rows(), 1);
 }
 
@@ -158,13 +159,13 @@ TEST_F(LockFreeSessionTest, WithSyncInsertsAndSelects) {
     {
         auto exec   = session_->with_sync().value();
         auto result = exec.execute("INSERT INTO session_test_users (name, value) VALUES ('Alice', 42)");
-        ASSERT_TRUE(result.is_success()) << result.error<ErrorContext>().format();
+        ASSERT_TRUE(result.has_value()) << result.error().format();
     }
 
     auto exec   = session_->with_sync().value();
     auto result = exec.execute("SELECT name, value FROM session_test_users WHERE name = 'Alice'");
 
-    ASSERT_TRUE(result.is_success()) << result.error<ErrorContext>().format();
+    ASSERT_TRUE(result.has_value()) << result.error().format();
     ASSERT_EQ(result.value().rows(), 1);
     EXPECT_EQ(result.value().get<std::string>(0, 0), "Alice");
     EXPECT_EQ(result.value().get<int>(0, 1), 42);
@@ -174,10 +175,10 @@ TEST_F(LockFreeSessionTest, WithSyncVariadicParameters) {
     auto exec   = session_->with_sync().value();
     auto result = exec.execute("INSERT INTO session_test_users (name, value) VALUES ($1, $2)", std::string{"Bob"}, 99);
 
-    ASSERT_TRUE(result.is_success()) << result.error<ErrorContext>().format();
+    ASSERT_TRUE(result.has_value()) << result.error().format();
 
     auto select = exec.execute("SELECT value FROM session_test_users WHERE name = $1", std::string{"Bob"});
-    ASSERT_TRUE(select.is_success());
+    ASSERT_TRUE(select.has_value());
     EXPECT_EQ(select.value().get<int>(0, 0), 99);
 }
 
@@ -185,8 +186,8 @@ TEST_F(LockFreeSessionTest, WithSyncReturnsErrorOnBadQuery) {
     auto exec   = session_->with_sync().value();
     auto result = exec.execute("SELCT 1");  // typo
 
-    ASSERT_FALSE(result.is_success());
-    EXPECT_EQ(result.error<ErrorContext>().sqlstate.substr(0, 2), "42");
+    ASSERT_FALSE(result.has_value());
+    EXPECT_EQ(result.error().sqlstate.substr(0, 2), "42");
 }
 
 TEST_F(LockFreeSessionTest, WithSyncReleasesConnectionAfterScope) {
@@ -195,7 +196,7 @@ TEST_F(LockFreeSessionTest, WithSyncReleasesConnectionAfterScope) {
     {
         auto exec         = session_->with_sync().value();
         const auto result = exec.execute("SELECT 1");
-        ASSERT_TRUE(result.is_success());
+        ASSERT_TRUE(result.has_value());
         // Connection is USED inside this scope
     }
     // Connection released here (slot reset by SyncExecutor destructor)
@@ -207,7 +208,7 @@ TEST_F(LockFreeSessionTest, WithSyncMultipleSequentialCalls) {
     for (int i = 0; i < 5; ++i) {
         auto exec   = session_->with_sync().value();
         auto result = exec.execute("SELECT $1::integer AS n", i);
-        ASSERT_TRUE(result.is_success()) << "Iteration " << i << " failed: " << result.error<ErrorContext>().format();
+        ASSERT_TRUE(result.has_value()) << "Iteration " << i << " failed: " << result.error().format();
         EXPECT_EQ(result.value().get<int>(0, 0), i);
     }
 }
@@ -215,51 +216,49 @@ TEST_F(LockFreeSessionTest, WithSyncMultipleSequentialCalls) {
 // ============== with_async() Tests ==============
 
 TEST_F(LockFreeSessionTest, WithAsyncExecutesSimpleQuery) {
-    auto result =
-        run_async(io_, [this]() -> boost::asio::awaitable<menagerie::beaver::Outcome<ResultBlock, ErrorContext>> {
-            auto exec = session_->with_async(io_.get_executor()).value();
-            co_return co_await exec.execute("SELECT 42 AS answer");
-        });
+    auto result = run_async(io_, [this]() -> boost::asio::awaitable<std::expected<ResultBlock, ErrorContext>> {
+        auto exec = session_->with_async(io_.get_executor()).value();
+        co_return co_await exec.execute("SELECT 42 AS answer");
+    });
 
     ASSERT_TRUE(result.has_value());
-    ASSERT_TRUE(result->is_success()) << result->error<ErrorContext>().format();
+    ASSERT_TRUE(result->has_value()) << result->error().format();
     EXPECT_EQ(result->value().get<int>(0, 0), 42);
 }
 
 TEST_F(LockFreeSessionTest, WithAsyncInsertsAndSelects) {
     // Insert via async
     auto insert_result =
-        run_async(io_, [this]() -> boost::asio::awaitable<menagerie::beaver::Outcome<ResultBlock, ErrorContext>> {
+        run_async(io_, [this]() -> boost::asio::awaitable<std::expected<ResultBlock, ErrorContext>> {
             auto exec = session_->with_async(io_.get_executor()).value();
             co_return co_await exec.execute(
                 "INSERT INTO session_test_users (name, value) VALUES ($1, $2)", std::string{"Charlie"}, 7);
         });
     ASSERT_TRUE(insert_result.has_value());
-    ASSERT_TRUE(insert_result->is_success()) << insert_result->error<ErrorContext>().format();
+    ASSERT_TRUE(insert_result->has_value()) << insert_result->error().format();
 
     // Select via sync to verify
     auto exec   = session_->with_sync().value();
     auto select = exec.execute("SELECT value FROM session_test_users WHERE name = 'Charlie'");
-    ASSERT_TRUE(select.is_success());
+    ASSERT_TRUE(select.has_value());
     EXPECT_EQ(select.value().get<int>(0, 0), 7);
 }
 
 TEST_F(LockFreeSessionTest, WithAsyncReturnsErrorOnBadQuery) {
-    auto result =
-        run_async(io_, [this]() -> boost::asio::awaitable<menagerie::beaver::Outcome<ResultBlock, ErrorContext>> {
-            auto exec = session_->with_async(io_.get_executor()).value();
-            co_return co_await exec.execute("INVALID SYNTAX !!!");
-        });
+    auto result = run_async(io_, [this]() -> boost::asio::awaitable<std::expected<ResultBlock, ErrorContext>> {
+        auto exec = session_->with_async(io_.get_executor()).value();
+        co_return co_await exec.execute("INVALID SYNTAX !!!");
+    });
 
     ASSERT_TRUE(result.has_value());
-    ASSERT_FALSE(result->is_success());
-    EXPECT_FALSE(result->error<ErrorContext>().sqlstate.empty());
+    ASSERT_FALSE(result->has_value());
+    EXPECT_FALSE(result->error().sqlstate.empty());
 }
 
 TEST_F(LockFreeSessionTest, WithAsyncReleasesConnectionAfterScope) {
     const auto free_before = session_->pool_free_count();
 
-    run_async(io_, [this]() -> boost::asio::awaitable<menagerie::beaver::Outcome<ResultBlock, ErrorContext>> {
+    run_async(io_, [this]() -> boost::asio::awaitable<std::expected<ResultBlock, ErrorContext>> {
         auto exec = session_->with_async(io_.get_executor()).value();
         // exec holds connection during co_await
         co_return co_await exec.execute("SELECT 1");
@@ -272,14 +271,13 @@ TEST_F(LockFreeSessionTest, WithAsyncReleasesConnectionAfterScope) {
 TEST_F(LockFreeSessionTest, WithAsyncMultipleSequentialCalls) {
     for (int i = 0; i < 5; ++i) {
         const auto n = i;
-        auto result  = run_async(
-            io_, [this, n]() -> boost::asio::awaitable<menagerie::beaver::Outcome<ResultBlock, ErrorContext>> {
-                auto exec = session_->with_async(io_.get_executor()).value();
-                co_return co_await exec.execute("SELECT $1::integer AS n", n);
-            });
+        auto result  = run_async(io_, [this, n]() -> boost::asio::awaitable<std::expected<ResultBlock, ErrorContext>> {
+            auto exec = session_->with_async(io_.get_executor()).value();
+            co_return co_await exec.execute("SELECT $1::integer AS n", n);
+        });
 
         ASSERT_TRUE(result.has_value());
-        ASSERT_TRUE(result->is_success()) << "Iteration " << i;
+        ASSERT_TRUE(result->has_value()) << "Iteration " << i;
         EXPECT_EQ(result->value().get<int>(0, 0), i);
     }
 }
@@ -317,7 +315,7 @@ TEST_F(LockFreeSessionTest, SyncExecutorIsInvalidWhenPoolExhausted) {
 
     // Pool fully exhausted (all 4 slots USED)
     const auto exec5 = session_->with_sync();
-    EXPECT_FALSE(exec5.is_success());
+    EXPECT_FALSE(exec5.has_value());
 
     // After releasing one, next acquire should succeed
 }
@@ -330,7 +328,7 @@ TEST_F(LockFreeSessionTest, WithSyncTimeoutSucceedsWhenSlotImmediatelyAvailable)
     auto exec          = session_->with_sync(10s);
     const auto elapsed = std::chrono::steady_clock::now() - start;
 
-    ASSERT_TRUE(exec.is_success());
+    ASSERT_TRUE(exec.has_value());
     // 10 sleeps of 1s would take ~10s; success path must be under 1s
     EXPECT_LT(elapsed, 1s);
 }
@@ -347,8 +345,8 @@ TEST_F(LockFreeSessionTest, WithSyncTimeoutReturnsErrorAfterFullBudget) {
     const auto result  = session_->with_sync(200ms);
     const auto elapsed = std::chrono::steady_clock::now() - start;
 
-    EXPECT_FALSE(result.is_success());
-    EXPECT_EQ(result.error<ErrorContext>().code.value(), static_cast<int>(ClientErrorCode::PoolExhausted));
+    EXPECT_FALSE(result.has_value());
+    EXPECT_EQ(result.error().code.value(), static_cast<int>(ClientErrorCode::PoolExhausted));
     // Full budget should elapse: 10 × 20ms = 200ms, allow jitter
     EXPECT_GE(elapsed, 180ms);
     EXPECT_LT(elapsed, 400ms);
@@ -374,7 +372,7 @@ TEST_F(LockFreeSessionTest, WithSyncTimeoutAcquiresSlotReleasedDuringWait) {
 
     releaser.join();
 
-    ASSERT_TRUE(result.is_success());
+    ASSERT_TRUE(result.has_value());
     EXPECT_LT(elapsed, 500ms) << "waiter should pick up the slot shortly after release";
     EXPECT_GE(elapsed, 100ms) << "waiter must wait at least for the release";
 }
@@ -386,8 +384,8 @@ TEST_F(LockFreeSessionTest, BeginTransactionTimeoutReturnsErrorWhenExhausted) {
     [[maybe_unused]] auto e4 = session_->with_sync().value();
 
     const auto result = session_->begin_transaction(TransactionOptions{}, 100ms);
-    EXPECT_FALSE(result.is_success());
-    EXPECT_EQ(result.error<ErrorContext>().code.value(), static_cast<int>(ClientErrorCode::PoolExhausted));
+    EXPECT_FALSE(result.has_value());
+    EXPECT_EQ(result.error().code.value(), static_cast<int>(ClientErrorCode::PoolExhausted));
 }
 
 TEST_F(LockFreeSessionTest, BeginAutoTransactionTimeoutReturnsErrorWhenExhausted) {
@@ -397,8 +395,8 @@ TEST_F(LockFreeSessionTest, BeginAutoTransactionTimeoutReturnsErrorWhenExhausted
     [[maybe_unused]] auto e4 = session_->with_sync().value();
 
     const auto result = session_->begin_auto_transaction(TransactionOptions{}, 100ms);
-    EXPECT_FALSE(result.is_success());
-    EXPECT_EQ(result.error<ErrorContext>().code.value(), static_cast<int>(ClientErrorCode::PoolExhausted));
+    EXPECT_FALSE(result.has_value());
+    EXPECT_EQ(result.error().code.value(), static_cast<int>(ClientErrorCode::PoolExhausted));
 }
 
 TEST_F(LockFreeSessionTest, WithAsyncTimeoutReturnsErrorWhenExhausted) {
@@ -408,8 +406,8 @@ TEST_F(LockFreeSessionTest, WithAsyncTimeoutReturnsErrorWhenExhausted) {
     [[maybe_unused]] auto e4 = session_->with_sync().value();
 
     const auto result = session_->with_async(io_.get_executor(), 100ms);
-    EXPECT_FALSE(result.is_success());
-    EXPECT_EQ(result.error<ErrorContext>().code.value(), static_cast<int>(ClientErrorCode::PoolExhausted));
+    EXPECT_FALSE(result.has_value());
+    EXPECT_EQ(result.error().code.value(), static_cast<int>(ClientErrorCode::PoolExhausted));
 }
 
 TEST_F(LockFreeSessionTest, WithSyncZeroTimeoutBehavesLikeImmediate) {
@@ -423,7 +421,7 @@ TEST_F(LockFreeSessionTest, WithSyncZeroTimeoutBehavesLikeImmediate) {
     const auto result  = session_->with_sync(std::chrono::milliseconds::zero());
     const auto elapsed = std::chrono::steady_clock::now() - start;
 
-    EXPECT_FALSE(result.is_success());
+    EXPECT_FALSE(result.has_value());
     EXPECT_LT(elapsed, 20ms) << "zero timeout must not sleep";
 }
 
@@ -439,7 +437,7 @@ TEST_F(LockFreeSessionTest, ConcurrentSyncExecutorsOnSeparateConnections) {
         threads.emplace_back([&] {
             auto exec = session_->with_sync().value();
             if (const auto result = exec.execute("SELECT pg_sleep(0.01), pg_backend_pid() AS pid");
-                result.is_success()) {
+                result.has_value()) {
                 ++success_count;
             }
         });
@@ -466,7 +464,7 @@ TEST_F(LockFreeSessionTest, ShutdownMarksPoolAsShutdown) {
 TEST_F(LockFreeSessionTest, AcquireAfterShutdownReturnsInvalidExecutor) {
     session_->shutdown();
     const auto exec = session_->with_sync();
-    EXPECT_FALSE(exec.is_success());
+    EXPECT_FALSE(exec.has_value());
 }
 
 TEST_F(LockFreeSessionTest, ShutdownIsIdempotent) {
@@ -484,7 +482,7 @@ TEST_F(LockFreeSessionTest, ConnectionIsCleanedAfterRelease) {
 
         // Set a temporary table (wiped by DISCARD ALL)
         auto result = exec.execute("CREATE TEMP TABLE _session_marker (x INT)");
-        ASSERT_TRUE(result.is_success()) << result.error<ErrorContext>().format();
+        ASSERT_TRUE(result.has_value()) << result.error().format();
     }
     // After release, slot reset sends DISCARD ALL -- temp table is gone
 
@@ -493,7 +491,7 @@ TEST_F(LockFreeSessionTest, ConnectionIsCleanedAfterRelease) {
     // If the pool returned the same cleaned connection, the temp table must not exist
     // Query succeeds (0 rows) or fails with schema-not-found -- either way _session_marker is gone
     if (auto result = exec.execute("SELECT 1 FROM pg_temp.pg_class WHERE relname = '_session_marker'");
-        result.is_success()) {
+        result.has_value()) {
         EXPECT_EQ(result.value().rows(), 0);
     }
 }

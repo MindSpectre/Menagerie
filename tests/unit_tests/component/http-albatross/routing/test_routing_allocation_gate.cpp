@@ -113,7 +113,7 @@ TEST(RoutingAllocationGateTest, ExactMatchIsAllocationFree) {
     const std::size_t allocs = region.finish();
 
     EXPECT_EQ(allocs, 0u) << "exact find_route touched the global heap";
-    ASSERT_TRUE(resolved.is_success());
+    ASSERT_TRUE(resolved.has_value());
 }
 
 TEST(RoutingAllocationGateTest, ParametricMatchWithTrailingSlashIsAllocationFree) {
@@ -127,7 +127,7 @@ TEST(RoutingAllocationGateTest, ParametricMatchWithTrailingSlashIsAllocationFree
     const std::size_t allocs = region.finish();
 
     EXPECT_EQ(allocs, 0u) << "parametric find_route touched the global heap";
-    ASSERT_TRUE(resolved.is_success());
+    ASSERT_TRUE(resolved.has_value());
     ASSERT_EQ(resolved.value().path_params.size(), 2u);
     EXPECT_EQ(resolved.value().path_params[0].second, "12345");  // zero-copy capture
     EXPECT_EQ(resolved.value().path_params[1].second, "678");
@@ -144,7 +144,7 @@ TEST(RoutingAllocationGateTest, PercentDecodedCaptureStaysInTheArena) {
     const std::size_t allocs = region.finish();
 
     EXPECT_EQ(allocs, 0u) << "capture decode escaped the arena";
-    ASSERT_TRUE(resolved.is_success());
+    ASSERT_TRUE(resolved.has_value());
     EXPECT_EQ(resolved.value().path_params[0].second, "report 2026");
 }
 

@@ -69,8 +69,8 @@ private:
 
     static http::AsyncOutcome<http::Response, http::BodyLimitExceeded> echo(http::RequestContext ctx) {
         auto body = co_await ctx.body().read_to_string(64 * 1024);
-        if (body.is_error()) {
-            co_return menagerie::beaver::err(body.error<http::BodyLimitExceeded>());
+        if (!body) {
+            co_return std::unexpected(std::move(body).error());
         }
         co_return ctx.ok(std::move(body).value());
     }
@@ -78,13 +78,13 @@ private:
 ```
 
 **3. Load or build a config.** `ServerConfig::Builder{}.finalize()` gives you defaults; a JSON file goes
-through `load_server_config`, which returns an `Outcome` rather than throwing on a malformed file:
+through `load_server_config`, which returns a `std::expected` rather than throwing on a malformed file:
 
 ```cpp
 http::ServerConfig cfg = http::ServerConfig::Builder{}.finalize();
 if (argc > 1) {
     auto loaded = http::load_server_config(argv[1]);
-    if (loaded.is_error()) {
+    if (!loaded) {
         return report_config_error(loaded);
     }
     cfg = std::move(loaded).value();
@@ -219,12 +219,12 @@ Key by key:
   force-cancelling stragglers.
 - `path_normalization`: `"none"`, `"collapse_trailing_slash"` (default), or `"collapse_multi_slash"`.
 
-Loading it is one call, returning an `Outcome` instead of throwing on a bad file:
+Loading it is one call, returning a `std::expected` instead of throwing on a bad file:
 
 ```cpp
 auto loaded = http::load_server_config("server.json");
-if (loaded.is_error()) {
-    // loaded.holds_error<http::ConfigFileError>() / ConfigParseError / ConfigSchemaError
+if (!loaded) {
+    // loaded.error() is std::variant<http::ConfigFileError, http::ConfigParseError, http::ConfigSchemaError>
     return 1;
 }
 http::ServerConfig cfg = std::move(loaded).value();
@@ -250,7 +250,7 @@ transports, the config declares.
 
 ## Error handling
 
-A handler can fail two ways: a typed `Outcome` error, or a thrown exception.
+A handler can fail two ways: a typed error (an `AsyncOutcome` alternative), or a thrown exception.
 
 **Typed errors.** A handler returning `AsyncOutcome<Response, E1, E2, ...>` gets each `Ei` converted to
 a `Response` through an ADL-found `to_http_response(const Ei&)` - this is a compile-time contract, so a
@@ -274,9 +274,29 @@ A handler never has to build the error response itself:
 static http::AsyncOutcome<http::Response, http::NotFoundError> get_thing(http::RequestContext ctx) {
     const auto id = ctx.path_param<std::string>("id").value_or("");
     if (id.empty()) {
-        co_return menagerie::beaver::err(http::NotFoundError{"thing", id});
+        co_return std::unexpected(http::NotFoundError{"thing", id});
     }
     co_return ctx.ok("thing:" + id);
+}
+```
+
+`std::unexpected(e)` converts into any `AsyncOutcome` whose error set contains `E`'s type, and a callee with
+the *same* error set is forwarded with `co_return std::unexpected(std::move(r).error());` (the `echo` handler
+above). The error side is always a `std::variant`, even for a single error type, so inspect it with
+`std::holds_alternative<E>(r.error())` / `std::get<E>(r.error())` (the replacements for v1.0's
+`holds_error<E>()` / `error<E>()`), and an `AsyncOutcome` needs at least one error type — use `AsyncResponse`
+for the no-error case. Error sets do not widen on their own: to forward a callee whose set is a *subset* of the
+handler's, re-raise the active alternative into the handler's variant:
+
+```cpp
+static http::AsyncOutcome<http::Response, http::NotFoundError, http::JsonParseError, http::BodyLimitExceeded>
+update_thing(http::RequestContext ctx) {
+    using Errors = std::variant<http::NotFoundError, http::JsonParseError, http::BodyLimitExceeded>;
+    auto body = co_await ctx.body().read_json(64 * 1024);  // JsonParseError | BodyLimitExceeded
+    if (!body) {
+        co_return std::visit([](auto& e) { return std::unexpected(Errors{std::move(e)}); }, body.error());
+    }
+    co_return ctx.ok("updated");
 }
 ```
 

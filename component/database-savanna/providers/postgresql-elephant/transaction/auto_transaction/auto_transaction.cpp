@@ -8,19 +8,19 @@ namespace menagerie::savanna::elephant {
         : tx_{std::move(tx)} {
     }
 
-    beaver::Outcome<void, ErrorContext> AutoTransaction::commit() {
+    std::expected<void, ErrorContext> AutoTransaction::commit() {
         return tx_.commit();
     }
 
-    beaver::Outcome<SyncExecutor, ErrorContext> AutoTransaction::with_sync() const {
+    std::expected<SyncExecutor, ErrorContext> AutoTransaction::with_sync() const {
         return tx_.with_sync();
     }
 
-    beaver::Outcome<AsyncExecutor, ErrorContext> AutoTransaction::with_async(boost::asio::any_io_executor exec) const {
+    std::expected<AsyncExecutor, ErrorContext> AutoTransaction::with_async(boost::asio::any_io_executor exec) const {
         return tx_.with_async(std::move(exec));
     }
 
-    beaver::Outcome<Savepoint, ErrorContext> AutoTransaction::savepoint(std::string name) const {
+    std::expected<Savepoint, ErrorContext> AutoTransaction::savepoint(std::string name) const {
         return tx_.savepoint(std::move(name));
     }
 

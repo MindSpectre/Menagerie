@@ -40,7 +40,7 @@ namespace {
         EXPECT_TRUE(registry.freeze().empty());
 
         http::RequestArena arena{1024};
-        EXPECT_TRUE(registry.find_route(http::HttpMethod::get, "/smoke", arena.allocator()).is_success());
+        EXPECT_TRUE(registry.find_route(http::HttpMethod::get, "/smoke", arena.allocator()).has_value());
 
         std::pmr::string arena_backed{"arena-backed", arena.allocator()};
         EXPECT_EQ(arena_backed, "arena-backed");

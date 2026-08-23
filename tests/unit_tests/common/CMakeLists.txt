@@ -103,19 +103,6 @@ target_link_libraries(${UNIT_TESTING_TARGET}.Bowerbird
 ##############################################################################
 
 ##############################################################################
-# Test Beaver Result (Outcome)
-##############################################################################
-add_unit_test(${UNIT_TESTING_TARGET}.Beaver.Outcome
-        core-beaver/test_outcome.cpp
-)
-target_link_libraries(${UNIT_TESTING_TARGET}.Beaver.Outcome
-        PRIVATE
-        Menagerie::Common::Beaver
-        ${TEST_LIBS}
-)
-##############################################################################
-
-##############################################################################
 # Test Beaver InlineString
 ##############################################################################
 add_unit_test(${UNIT_TESTING_TARGET}.Beaver.Strings.InlineString

@@ -34,7 +34,7 @@ TEST_F(CompiledSelectTest, BasicSelect) {
         compile_query(select(schemas().users.column<"id">(), schemas().users.column<"name">()).from(schemas().users));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
     auto& block = result.value();
     EXPECT_EQ(block.rows(), 3);
     EXPECT_EQ(block.cols(), 2);  // id, name
@@ -46,7 +46,7 @@ TEST_F(CompiledSelectTest, SelectAllColumns) {
     auto query  = compile_query(select(all("users")).from(schemas().users));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
     auto& block = result.value();
     EXPECT_EQ(block.rows(), 3);
 }
@@ -61,7 +61,7 @@ TEST_F(CompiledSelectTest, SelectDistinct) {
         select_distinct(schemas().users.column<"name">(), schemas().users.column<"age">()).from(schemas().users));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
     auto& block = result.value();
     EXPECT_EQ(block.rows(), 2);  // Only 2 distinct (name, age) combinations
 }
@@ -73,7 +73,7 @@ TEST_F(CompiledSelectTest, SelectWithWhere) {
         select(schemas().users.column<"name">()).from(schemas().users).where(schemas().users.column<"age">() > 18));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
     auto& block = result.value();
     EXPECT_GE(block.rows(), 1);  // Users with age > 18
 }
@@ -91,7 +91,7 @@ TEST_F(CompiledSelectTest, SelectWithJoin) {
                                    .on(schemas().posts.column<"user_id">() == schemas().users.column<"id">()));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
     auto& block = result.value();
     EXPECT_EQ(block.rows(), 2);  // Two users with posts
 }
@@ -105,7 +105,7 @@ TEST_F(CompiledSelectTest, SelectWithGroupBy) {
                           .group_by(schemas().users.column<"active">()));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
     auto& block = result.value();
     EXPECT_EQ(block.rows(), 2);  // Two groups: active=true, active=false
 }
@@ -125,7 +125,7 @@ TEST_F(CompiledSelectTest, SelectWithHaving) {
                           .having(count(schemas().users.column<"id">()) > 5));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
     auto& block = result.value();
     EXPECT_EQ(block.rows(), 1);  // Only group with count > 5
 }
@@ -140,7 +140,7 @@ TEST_F(CompiledSelectTest, SelectWithOrderBy) {
         select(schemas().users.column<"name">()).from(schemas().users).order_by(asc(schemas().users.column<"name">())));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
     auto& block = result.value();
     EXPECT_EQ(block.rows(), 3);
     // Results should be ordered: Alpha, Beta, Zebra
@@ -156,7 +156,7 @@ TEST_F(CompiledSelectTest, SelectWithLimit) {
     auto query  = compile_query(select(schemas().users.column<"name">()).from(schemas().users).limit(10));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
     auto& block = result.value();
     EXPECT_LE(block.rows(), 10);  // Limited to 10
 }
@@ -170,7 +170,7 @@ TEST_F(CompiledSelectTest, SelectMixedTypes) {
             .group_by(schemas().users.column<"name">()));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
     auto& block = result.value();
     EXPECT_EQ(block.rows(), 3);  // One row per unique name (Alice, Bob, Charlie)
     EXPECT_EQ(block.cols(), 3);  // name, constant, total
@@ -184,7 +184,7 @@ TEST_F(CompiledSelectTest, SelectEmptyResult) {
         compile_query(select(schemas().users.column<"id">(), schemas().users.column<"name">()).from(schemas().users));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
     auto& block = result.value();
     EXPECT_EQ(block.rows(), 0);
     EXPECT_TRUE(block.empty());

@@ -34,7 +34,7 @@ TEST_F(CompiledJoinTest, InnerJoin) {
                                    .on(schemas().posts.column<"user_id">() == schemas().users.column<"id">()));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
     auto& block = result.value();
     EXPECT_GE(block.rows(), 1);
 }
@@ -46,7 +46,7 @@ TEST_F(CompiledJoinTest, LeftJoin) {
                                    .on(schemas().posts.column<"user_id">() == schemas().users.column<"id">()));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
     auto& block = result.value();
     // Left join should include all users, even those without posts
     EXPECT_GE(block.rows(), 3);
@@ -59,7 +59,7 @@ TEST_F(CompiledJoinTest, RightJoin) {
                                    .on(schemas().posts.column<"user_id">() == schemas().users.column<"id">()));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
     auto& block = result.value();
     // Right join should include all posts
     EXPECT_GE(block.rows(), 1);
@@ -72,7 +72,7 @@ TEST_F(CompiledJoinTest, MultipleJoins) {
                                    .on(schemas().posts.column<"user_id">() == schemas().users.column<"id">()));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
 }
 
 TEST_F(CompiledJoinTest, JoinComplexCondition) {
@@ -83,7 +83,7 @@ TEST_F(CompiledJoinTest, JoinComplexCondition) {
                                        schemas().posts.column<"published">() == true));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
 }
 
 TEST_F(CompiledJoinTest, JoinWithWhere) {
@@ -94,7 +94,7 @@ TEST_F(CompiledJoinTest, JoinWithWhere) {
                                    .where(schemas().users.column<"active">() == true));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
 }
 
 TEST_F(CompiledJoinTest, JoinWithAggregates) {
@@ -106,7 +106,7 @@ TEST_F(CompiledJoinTest, JoinWithAggregates) {
                           .group_by(schemas().users.column<"name">()));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
 }
 
 TEST_F(CompiledJoinTest, JoinWithOrderBy) {
@@ -118,5 +118,5 @@ TEST_F(CompiledJoinTest, JoinWithOrderBy) {
                           .order_by(asc(schemas().users.column<"name">()), desc(schemas().posts.column<"title">())));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
 }

@@ -43,13 +43,13 @@ namespace menagerie::savanna::elephant {
         return *this;
     }
 
-    beaver::Outcome<void, ErrorContext> Transaction::begin() {
+    std::expected<void, ErrorContext> Transaction::begin() {
         COMPONENT_LOG_ENTER_FUNCTION();
         if (status_ != TransactionStatus::IDLE) {
-            return beaver::err(ErrorContext{ErrorCode{ClientErrorCode::InvalidState}});
+            return std::unexpected(ErrorContext{ErrorCode{ClientErrorCode::InvalidState}});
         }
         auto result = execute_control(options_.to_begin_sql());
-        if (result.is_success()) {
+        if (result.has_value()) {
             status_ = TransactionStatus::ACTIVE;
         } else {
             status_ = TransactionStatus::FAILED;
@@ -57,13 +57,13 @@ namespace menagerie::savanna::elephant {
         return result;
     }
 
-    beaver::Outcome<void, ErrorContext> Transaction::commit() {
+    std::expected<void, ErrorContext> Transaction::commit() {
         COMPONENT_LOG_ENTER_FUNCTION();
         if (status_ != TransactionStatus::ACTIVE) {
-            return beaver::err(ErrorContext{ErrorCode{ClientErrorCode::InvalidState}});
+            return std::unexpected(ErrorContext{ErrorCode{ClientErrorCode::InvalidState}});
         }
         auto result = execute_control("COMMIT");
-        if (result.is_success()) {
+        if (result.has_value()) {
             status_ = TransactionStatus::COMMITTED;
         } else {
             status_ = TransactionStatus::FAILED;
@@ -71,13 +71,13 @@ namespace menagerie::savanna::elephant {
         return result;
     }
 
-    beaver::Outcome<void, ErrorContext> Transaction::rollback() {
+    std::expected<void, ErrorContext> Transaction::rollback() {
         COMPONENT_LOG_ENTER_FUNCTION();
         if (status_ != TransactionStatus::ACTIVE) {
-            return beaver::err(ErrorContext{ErrorCode{ClientErrorCode::InvalidState}});
+            return std::unexpected(ErrorContext{ErrorCode{ClientErrorCode::InvalidState}});
         }
         auto result = execute_control("ROLLBACK");
-        if (result.is_success()) {
+        if (result.has_value()) {
             status_ = TransactionStatus::ROLLED_BACK;
         } else {
             status_ = TransactionStatus::FAILED;
@@ -85,33 +85,33 @@ namespace menagerie::savanna::elephant {
         return result;
     }
 
-    beaver::Outcome<SyncExecutor, ErrorContext> Transaction::with_sync() const {
+    std::expected<SyncExecutor, ErrorContext> Transaction::with_sync() const {
         if (status_ != TransactionStatus::ACTIVE) {
-            return beaver::err(ErrorContext{ErrorCode{ClientErrorCode::InvalidState}});
+            return std::unexpected(ErrorContext{ErrorCode{ClientErrorCode::InvalidState}});
         }
         return SyncExecutor{conn_};
     }
 
-    beaver::Outcome<AsyncExecutor, ErrorContext> Transaction::with_async(boost::asio::any_io_executor exec) const {
+    std::expected<AsyncExecutor, ErrorContext> Transaction::with_async(boost::asio::any_io_executor exec) const {
         if (status_ != TransactionStatus::ACTIVE) {
-            return beaver::err(ErrorContext{ErrorCode{ClientErrorCode::InvalidState}});
+            return std::unexpected(ErrorContext{ErrorCode{ClientErrorCode::InvalidState}});
         }
         return AsyncExecutor{conn_, std::move(exec)};
     }
 
-    beaver::Outcome<Savepoint, ErrorContext> Transaction::savepoint(std::string name) const {
+    std::expected<Savepoint, ErrorContext> Transaction::savepoint(std::string name) const {
         COMPONENT_LOG_ENTER_FUNCTION();
         if (status_ != TransactionStatus::ACTIVE) {
-            return beaver::err(ErrorContext{ErrorCode{ClientErrorCode::InvalidState}});
+            return std::unexpected(ErrorContext{ErrorCode{ClientErrorCode::InvalidState}});
         }
         if (!is_valid_identifier(name)) {
             auto err    = ErrorContext{ErrorCode{ClientErrorCode::InvalidArgument}};
             err.message = std::format("Invalid savepoint name: '{}'", name);
-            return beaver::err(std::move(err));
+            return std::unexpected(std::move(err));
         }
         const std::string sql = std::format(R"(SAVEPOINT "{}")", name);
-        if (auto result = execute_control(sql); !result.is_success()) {
-            return beaver::err(result.error<ErrorContext>());
+        if (auto result = execute_control(sql); !result.has_value()) {
+            return std::unexpected(std::move(result).error());
         }
         return Savepoint{conn_, std::move(name)};
     }
@@ -126,12 +126,12 @@ namespace menagerie::savanna::elephant {
         COMPONENT_LOG_INF() << "Transaction created";
     }
 
-    beaver::Outcome<void, ErrorContext> Transaction::execute_control(const std::string& sql) const {
+    std::expected<void, ErrorContext> Transaction::execute_control(const std::string& sql) const {
         const SyncExecutor inner{conn_};
-        if (auto result = inner.execute(sql); !result.is_success()) {
-            return beaver::err(result.error<ErrorContext>());
+        if (auto result = inner.execute(sql); !result.has_value()) {
+            return std::unexpected(std::move(result).error());
         }
-        return beaver::ok();
+        return {};
     }
 
 }  // namespace menagerie::savanna::elephant

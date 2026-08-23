@@ -1,5 +1,6 @@
 #include "body.hpp"
 
+#include <expected>
 #include <menagerie/beaver>
 #include <sstream>
 
@@ -91,15 +92,17 @@ namespace menagerie::albatross {
 
     // -- Buffered helpers --
     namespace {
-        boost::asio::awaitable<beaver::Outcome<std::string, BodyLimitExceeded>, Strand>
-        drain(Body& body, const std::size_t limit) {
+        /// Internal: bare-E result; converts implicitly into the public
+        /// AsyncOutcome<..., BodyLimitExceeded> (std::variant) shape.
+        boost::asio::awaitable<std::expected<std::string, BodyLimitExceeded>, Strand> drain(Body& body,
+                                                                                            const std::size_t limit) {
             std::string out;
             while (true) {
                 const auto chunk = co_await body.read_chunk();
                 if (!chunk)
                     break;
                 if (out.size() + chunk->size() > limit)
-                    co_return beaver::err(BodyLimitExceeded{limit});
+                    co_return std::unexpected(BodyLimitExceeded{limit});
                 out.append(reinterpret_cast<const char*>(chunk->data()), chunk->size());
             }
             co_return out;
@@ -112,21 +115,21 @@ namespace menagerie::albatross {
 
     AsyncOutcome<Json::Value, JsonParseError, BodyLimitExceeded> Body::read_json(std::size_t limit) {
         auto d = co_await drain(*this, limit);
-        if (!d.is_success())
-            co_return beaver::err(d.error<BodyLimitExceeded>());
+        if (!d)
+            co_return std::unexpected(std::move(d).error());
         Json::Value root;
         std::string err;
         Json::CharReaderBuilder builder;
         if (std::istringstream stream{std::move(d).value()}; !Json::parseFromStream(builder, stream, &root, &err))
-            co_return beaver::err(JsonParseError{std::move(err)});
+            co_return std::unexpected(JsonParseError{std::move(err)});
         co_return root;
     }
 
     AsyncOutcome<std::unordered_map<std::string, std::string>, FormParseError, BodyLimitExceeded>
     Body::read_form(std::size_t limit) {
         auto d = co_await drain(*this, limit);
-        if (!d.is_success())
-            co_return beaver::err(d.error<BodyLimitExceeded>());
+        if (!d)
+            co_return std::unexpected(std::move(d).error());
         const std::string body = std::move(d).value();
         std::unordered_map<std::string, std::string> out;
         std::size_t i = 0;
@@ -137,11 +140,11 @@ namespace menagerie::albatross {
             std::string_view rk = eq == std::string_view::npos ? pair : pair.substr(0, eq);
             std::string_view rv = eq == std::string_view::npos ? std::string_view{} : pair.substr(eq + 1);
             if (rk.empty())
-                co_return beaver::err(FormParseError{"empty key"});
+                co_return std::unexpected(FormParseError{"empty key"});
             auto k = url_decode(rk);
             auto v = url_decode(rv);
             if (!k || !v)
-                co_return beaver::err(FormParseError{"invalid percent-escape"});
+                co_return std::unexpected(FormParseError{"invalid percent-escape"});
             out[*std::move(k)] = *std::move(v);
             if (amp == std::string::npos)
                 break;
@@ -153,17 +156,17 @@ namespace menagerie::albatross {
     AsyncOutcome<std::vector<MultipartField>, MultipartParseError, BodyLimitExceeded>
     Body::read_multipart(std::size_t limit, std::string_view boundary) {
         if (boundary.empty())
-            co_return beaver::err(MultipartParseError{"empty boundary"});
+            co_return std::unexpected(MultipartParseError{"empty boundary"});
         auto d = co_await drain(*this, limit);
-        if (!d.is_success())
-            co_return beaver::err(d.error<BodyLimitExceeded>());
+        if (!d)
+            co_return std::unexpected(std::move(d).error());
         const std::string body  = std::move(d).value();
         const std::string delim = "--" + std::string{boundary};
         std::vector<MultipartField> out;
 
         std::size_t pos = body.find(delim);
         if (pos == std::string::npos)
-            co_return beaver::err(MultipartParseError{"no boundary found"});
+            co_return std::unexpected(MultipartParseError{"no boundary found"});
         pos += delim.size();
         while (pos < body.size()) {
             if (pos + 2 <= body.size() && body[pos] == '-' && body[pos + 1] == '-')
@@ -172,12 +175,12 @@ namespace menagerie::albatross {
                 pos += 2;
             std::size_t header_end = body.find("\r\n\r\n", pos);
             if (header_end == std::string::npos)
-                co_return beaver::err(MultipartParseError{"unterminated headers"});
+                co_return std::unexpected(MultipartParseError{"unterminated headers"});
             std::string_view header_block{body.data() + pos, header_end - pos};
             std::size_t body_start = header_end + 4;
             std::size_t next       = body.find("\r\n" + delim, body_start);
             if (next == std::string::npos)
-                co_return beaver::err(MultipartParseError{"unterminated part"});
+                co_return std::unexpected(MultipartParseError{"unterminated part"});
             std::string_view part_body{body.data() + body_start, next - body_start};
 
             MultipartField field;

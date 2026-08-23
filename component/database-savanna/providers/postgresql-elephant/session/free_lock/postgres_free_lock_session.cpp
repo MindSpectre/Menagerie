@@ -17,40 +17,39 @@ namespace menagerie::savanna::elephant {
         COMPONENT_LOG_INF() << "Session destroyed";
     }
 
-    beaver::Outcome<SyncExecutor, ErrorContext> LockFreeSession::with_sync() {
+    std::expected<SyncExecutor, ErrorContext> LockFreeSession::with_sync() {
         COMPONENT_LOG_ENTER_FUNCTION();
         auto holder = pool_.acquire_slot();
         if (holder.expired()) {
-            return beaver::err(ErrorContext{ErrorCode{ClientErrorCode::PoolExhausted}});
+            return std::unexpected(ErrorContext{ErrorCode{ClientErrorCode::PoolExhausted}});
         }
         return SyncExecutor{std::move(holder)};
     }
 
-    beaver::Outcome<SyncExecutor, ErrorContext>
-    LockFreeSession::with_sync(std::chrono::steady_clock::duration timeout) {
+    std::expected<SyncExecutor, ErrorContext> LockFreeSession::with_sync(std::chrono::steady_clock::duration timeout) {
         COMPONENT_LOG_ENTER_FUNCTION();
         auto holder = pool_.acquire_slot_wait(timeout);
         if (holder.expired()) {
-            return beaver::err(ErrorContext{ErrorCode{ClientErrorCode::PoolExhausted}});
+            return std::unexpected(ErrorContext{ErrorCode{ClientErrorCode::PoolExhausted}});
         }
         return SyncExecutor{std::move(holder)};
     }
 
-    beaver::Outcome<AsyncExecutor, ErrorContext> LockFreeSession::with_async(boost::asio::any_io_executor exec) {
+    std::expected<AsyncExecutor, ErrorContext> LockFreeSession::with_async(boost::asio::any_io_executor exec) {
         COMPONENT_LOG_ENTER_FUNCTION();
         auto holder = pool_.acquire_slot();
         if (holder.expired()) {
-            return beaver::err(ErrorContext{ErrorCode{ClientErrorCode::PoolExhausted}});
+            return std::unexpected(ErrorContext{ErrorCode{ClientErrorCode::PoolExhausted}});
         }
         return AsyncExecutor{std::move(holder), std::move(exec)};
     }
 
-    beaver::Outcome<AsyncExecutor, ErrorContext>
+    std::expected<AsyncExecutor, ErrorContext>
     LockFreeSession::with_async(boost::asio::any_io_executor exec, std::chrono::steady_clock::duration timeout) {
         COMPONENT_LOG_ENTER_FUNCTION();
         auto holder = pool_.acquire_slot_wait(timeout);
         if (holder.expired()) {
-            return beaver::err(ErrorContext{ErrorCode{ClientErrorCode::PoolExhausted}});
+            return std::unexpected(ErrorContext{ErrorCode{ClientErrorCode::PoolExhausted}});
         }
         return AsyncExecutor{std::move(holder), std::move(exec)};
     }
@@ -78,53 +77,53 @@ namespace menagerie::savanna::elephant {
         return pool_.is_shutdown();
     }
 
-    beaver::Outcome<Transaction, ErrorContext> LockFreeSession::begin_transaction(const TransactionOptions opts) {
+    std::expected<Transaction, ErrorContext> LockFreeSession::begin_transaction(const TransactionOptions opts) {
         COMPONENT_LOG_ENTER_FUNCTION();
         auto holder = pool_.acquire_slot();
         if (holder.expired()) {
-            return beaver::err(ErrorContext{ErrorCode{ClientErrorCode::PoolExhausted}});
+            return std::unexpected(ErrorContext{ErrorCode{ClientErrorCode::PoolExhausted}});
         }
         return Transaction{std::move(holder), opts};
     }
 
-    beaver::Outcome<Transaction, ErrorContext>
+    std::expected<Transaction, ErrorContext>
     LockFreeSession::begin_transaction(const TransactionOptions opts, std::chrono::steady_clock::duration timeout) {
         COMPONENT_LOG_ENTER_FUNCTION();
         auto holder = pool_.acquire_slot_wait(timeout);
         if (holder.expired()) {
-            return beaver::err(ErrorContext{ErrorCode{ClientErrorCode::PoolExhausted}});
+            return std::unexpected(ErrorContext{ErrorCode{ClientErrorCode::PoolExhausted}});
         }
         return Transaction{std::move(holder), opts};
     }
 
-    beaver::Outcome<AutoTransaction, ErrorContext>
+    std::expected<AutoTransaction, ErrorContext>
     LockFreeSession::begin_auto_transaction(const TransactionOptions opts) {
         COMPONENT_LOG_ENTER_FUNCTION();
         auto holder = pool_.acquire_slot();
         if (holder.expired()) {
-            return beaver::err(ErrorContext{ErrorCode{ClientErrorCode::PoolExhausted}});
+            return std::unexpected(ErrorContext{ErrorCode{ClientErrorCode::PoolExhausted}});
         }
 
         Transaction tx{std::move(holder), opts};
-        if (auto begin_result = tx.begin(); !begin_result.is_success()) {
-            return beaver::err(begin_result.error<ErrorContext>());
+        if (auto begin_result = tx.begin(); !begin_result.has_value()) {
+            return std::unexpected(std::move(begin_result).error());
         }
 
         return AutoTransaction{std::move(tx)};
     }
 
-    beaver::Outcome<AutoTransaction, ErrorContext>
+    std::expected<AutoTransaction, ErrorContext>
     LockFreeSession::begin_auto_transaction(const TransactionOptions opts,
                                             std::chrono::steady_clock::duration timeout) {
         COMPONENT_LOG_ENTER_FUNCTION();
         auto holder = pool_.acquire_slot_wait(timeout);
         if (holder.expired()) {
-            return beaver::err(ErrorContext{ErrorCode{ClientErrorCode::PoolExhausted}});
+            return std::unexpected(ErrorContext{ErrorCode{ClientErrorCode::PoolExhausted}});
         }
 
         Transaction tx{std::move(holder), opts};
-        if (auto begin_result = tx.begin(); !begin_result.is_success()) {
-            return beaver::err(begin_result.error<ErrorContext>());
+        if (auto begin_result = tx.begin(); !begin_result.has_value()) {
+            return std::unexpected(std::move(begin_result).error());
         }
 
         return AutoTransaction{std::move(tx)};
