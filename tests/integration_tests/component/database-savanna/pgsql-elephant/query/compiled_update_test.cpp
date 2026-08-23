@@ -36,10 +36,10 @@ TEST_F(CompiledUpdateTest, UpdateSingleColumn) {
 
     auto result = executor().execute(compiled_query);
 
-    ASSERT_TRUE(result.is_success()) << "Update failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Update failed: " << result.error();
 
     auto select_result = executor().execute("SELECT age FROM users WHERE name = 'Alice'");
-    ASSERT_TRUE(select_result.is_success());
+    ASSERT_TRUE(select_result.has_value());
     auto& block = select_result.value();
     EXPECT_EQ(block.rows(), 1);
     EXPECT_EQ(block.get<int>(0, 0), 31);
@@ -54,10 +54,10 @@ TEST_F(CompiledUpdateTest, UpdateMultipleColumns) {
 
     auto result = executor().execute(compiled_query);
 
-    ASSERT_TRUE(result.is_success()) << "Update failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Update failed: " << result.error();
 
     auto select_result = executor().execute("SELECT age, active FROM users WHERE name = 'Bob'");
-    ASSERT_TRUE(select_result.is_success());
+    ASSERT_TRUE(select_result.has_value());
     auto& block = select_result.value();
     EXPECT_EQ(block.rows(), 1);
     EXPECT_EQ(block.get<int>(0, 0), 26);
@@ -77,10 +77,10 @@ TEST_F(CompiledUpdateTest, UpdateWithInitializerList) {
 
     auto result = executor().execute(compiled_query);
 
-    ASSERT_TRUE(result.is_success()) << "Update failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Update failed: " << result.error();
 
     auto select_result = executor().execute("SELECT age, active FROM users WHERE name = 'Charlie'");
-    ASSERT_TRUE(select_result.is_success());
+    ASSERT_TRUE(select_result.has_value());
     auto& block = select_result.value();
     EXPECT_EQ(block.rows(), 1);
     EXPECT_EQ(block.get<int>(0, 0), 36);
@@ -99,10 +99,10 @@ TEST_F(CompiledUpdateTest, UpdateWithSimpleWhere) {
 
     auto result = executor().execute(compiled_query);
 
-    ASSERT_TRUE(result.is_success()) << "Update failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Update failed: " << result.error();
 
     auto select_result = executor().execute("SELECT COUNT(*) FROM users WHERE active = false");
-    ASSERT_TRUE(select_result.is_success());
+    ASSERT_TRUE(select_result.has_value());
     EXPECT_EQ(select_result.value().get<int>(0, 0), 2);
 }
 
@@ -117,10 +117,10 @@ TEST_F(CompiledUpdateTest, UpdateWithComplexWhere) {
 
     auto result = executor().execute(compiled_query);
 
-    ASSERT_TRUE(result.is_success()) << "Update failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Update failed: " << result.error();
 
     auto select_result = executor().execute("SELECT COUNT(*) FROM users WHERE age = 40");
-    ASSERT_TRUE(select_result.is_success());
+    ASSERT_TRUE(select_result.has_value());
     EXPECT_EQ(select_result.value().get<int>(0, 0), 2);
 }
 
@@ -135,10 +135,10 @@ TEST_F(CompiledUpdateTest, UpdateWithOrCondition) {
 
     auto result = executor().execute(compiled_query);
 
-    ASSERT_TRUE(result.is_success()) << "Update failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Update failed: " << result.error();
 
     auto select_result = executor().execute("SELECT COUNT(*) FROM users WHERE age = 50");
-    ASSERT_TRUE(select_result.is_success());
+    ASSERT_TRUE(select_result.has_value());
     EXPECT_EQ(select_result.value().get<int>(0, 0), 2);
 }
 
@@ -152,10 +152,10 @@ TEST_F(CompiledUpdateTest, UpdateAllRows) {
     auto query  = compile_query(update(schemas().users).set("active", true));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Update failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Update failed: " << result.error();
 
     auto select_result = executor().execute("SELECT COUNT(*) FROM users WHERE active = true");
-    ASSERT_TRUE(select_result.is_success());
+    ASSERT_TRUE(select_result.has_value());
     EXPECT_EQ(select_result.value().get<int>(0, 0), 3);
 }
 
@@ -169,10 +169,10 @@ TEST_F(CompiledUpdateTest, UpdateString) {
 
     auto result = executor().execute(compiled_query);
 
-    ASSERT_TRUE(result.is_success()) << "Update failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Update failed: " << result.error();
 
     auto select_result = executor().execute("SELECT name FROM users WHERE age = 30");
-    ASSERT_TRUE(select_result.is_success());
+    ASSERT_TRUE(select_result.has_value());
     auto& block = select_result.value();
     EXPECT_EQ(block.rows(), 1);
     EXPECT_EQ(block.get<std::string>(0, 0), "NewName");
@@ -187,10 +187,10 @@ TEST_F(CompiledUpdateTest, UpdateBoolean) {
 
     auto result = executor().execute(compiled_query);
 
-    ASSERT_TRUE(result.is_success()) << "Update failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Update failed: " << result.error();
 
     auto select_result = executor().execute("SELECT active FROM users WHERE name = 'TestUser'");
-    ASSERT_TRUE(select_result.is_success());
+    ASSERT_TRUE(select_result.has_value());
     auto& block = select_result.value();
     EXPECT_EQ(block.rows(), 1);
     EXPECT_EQ(block.get<bool>(0, 0), false);
@@ -204,10 +204,10 @@ TEST_F(CompiledUpdateTest, UpdateInteger) {
 
     auto result = executor().execute(compiled_query);
 
-    ASSERT_TRUE(result.is_success()) << "Update failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Update failed: " << result.error();
 
     auto select_result = executor().execute("SELECT age FROM users WHERE name = 'TestUser'");
-    ASSERT_TRUE(select_result.is_success());
+    ASSERT_TRUE(select_result.has_value());
     auto& block = select_result.value();
     EXPECT_EQ(block.rows(), 1);
     EXPECT_EQ(block.get<int>(0, 0), 50);
@@ -224,10 +224,10 @@ TEST_F(CompiledUpdateTest, UpdateToNull) {
 
     auto result = executor().execute(compiled_query);
 
-    ASSERT_TRUE(result.is_success()) << "Update to NULL failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Update to NULL failed: " << result.error();
 
     auto select_result = executor().execute("SELECT age FROM users WHERE name = 'TestUser'");
-    ASSERT_TRUE(select_result.is_success());
+    ASSERT_TRUE(select_result.has_value());
     auto& block = select_result.value();
     EXPECT_EQ(block.rows(), 1);
     auto age_opt = block.get_opt<int>(0, 0);
@@ -245,10 +245,10 @@ TEST_F(CompiledUpdateTest, UpdateWithTableName) {
 
     auto result = executor().execute(compiled_query);
 
-    ASSERT_TRUE(result.is_success()) << "Update failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Update failed: " << result.error();
 
     auto select_result = executor().execute("SELECT age FROM users WHERE name = 'TestUser'");
-    ASSERT_TRUE(select_result.is_success());
+    ASSERT_TRUE(select_result.has_value());
     EXPECT_EQ(select_result.value().get<int>(0, 0), 35);
 }
 
@@ -262,10 +262,10 @@ TEST_F(CompiledUpdateTest, UpdateNoMatch) {
 
     auto result = executor().execute(compiled_query);
 
-    ASSERT_TRUE(result.is_success()) << "Update failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Update failed: " << result.error();
 
     auto select_result = executor().execute("SELECT age FROM users WHERE name = 'TestUser'");
-    ASSERT_TRUE(select_result.is_success());
+    ASSERT_TRUE(select_result.has_value());
     EXPECT_EQ(select_result.value().get<int>(0, 0), 25);  // Original value
 }
 
@@ -275,10 +275,10 @@ TEST_F(CompiledUpdateTest, UpdateEmptyTable) {
 
     auto result = executor().execute(compiled_query);
 
-    ASSERT_TRUE(result.is_success()) << "Update failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Update failed: " << result.error();
 
     auto select_result = executor().execute("SELECT COUNT(*) FROM users");
-    ASSERT_TRUE(select_result.is_success());
+    ASSERT_TRUE(select_result.has_value());
     EXPECT_EQ(select_result.value().get<int>(0, 0), 0);
 }
 
@@ -290,9 +290,9 @@ TEST_F(CompiledUpdateTest, UpdateToSameValue) {
 
     auto result = executor().execute(compiled_query);
 
-    ASSERT_TRUE(result.is_success()) << "Update failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Update failed: " << result.error();
 
     auto select_result = executor().execute("SELECT age FROM users WHERE name = 'TestUser'");
-    ASSERT_TRUE(select_result.is_success());
+    ASSERT_TRUE(select_result.has_value());
     EXPECT_EQ(select_result.value().get<int>(0, 0), 30);
 }

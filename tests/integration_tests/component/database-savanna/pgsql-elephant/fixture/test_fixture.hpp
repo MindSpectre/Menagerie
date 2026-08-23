@@ -8,6 +8,7 @@
 #include <menagerie/crow>
 #include <menagerie/spider>
 #include <string>
+#include <tuple>
 
 #include <gtest/gtest.h>
 #include <libpq-fe.h>
@@ -94,34 +95,34 @@ namespace menagerie::test {
         // Table creation helpers using SchemaDDL
         void CreateUsersTable() const {
             const auto result = executor_->execute(std::string(SchemaDDL::users_table(savanna::Providers::PostgreSQL)));
-            ASSERT_TRUE(result.is_success()) << "Failed to create users table";
+            ASSERT_TRUE(result.has_value()) << "Failed to create users table";
         }
 
         void CreateUsersExtendedTable() const {
             const auto result =
                 executor_->execute(std::string(SchemaDDL::users_extended_table(savanna::Providers::PostgreSQL)));
-            ASSERT_TRUE(result.is_success()) << "Failed to create users_extended table";
+            ASSERT_TRUE(result.has_value()) << "Failed to create users_extended table";
         }
 
         void CreatePostsTable() const {
             const auto result = executor_->execute(std::string(SchemaDDL::posts_table(savanna::Providers::PostgreSQL)));
-            ASSERT_TRUE(result.is_success()) << "Failed to create posts table";
+            ASSERT_TRUE(result.has_value()) << "Failed to create posts table";
         }
 
         void CreateOrdersTable() const {
             const auto result = executor_->execute(std::string(SchemaDDL::orders_table(savanna::Providers::PostgreSQL)));
-            ASSERT_TRUE(result.is_success()) << "Failed to create orders table";
+            ASSERT_TRUE(result.has_value()) << "Failed to create orders table";
         }
 
         void CreateOrdersExtendedTable() const {
             const auto result =
                 executor_->execute(std::string(SchemaDDL::orders_extended_table(savanna::Providers::PostgreSQL)));
-            ASSERT_TRUE(result.is_success()) << "Failed to create orders_extended table";
+            ASSERT_TRUE(result.has_value()) << "Failed to create orders_extended table";
         }
 
         void CreateCommentsTable() const {
             const auto result = executor_->execute(std::string(SchemaDDL::comments_table(savanna::Providers::PostgreSQL)));
-            ASSERT_TRUE(result.is_success()) << "Failed to create comments table";
+            ASSERT_TRUE(result.has_value()) << "Failed to create comments table";
         }
 
         // Create standard test tables (users + posts)
@@ -162,28 +163,28 @@ namespace menagerie::test {
                 value INTEGER
             )
         )");
-            ASSERT_TRUE(result.is_success()) << "Failed to create test_table";
+            ASSERT_TRUE(result.has_value()) << "Failed to create test_table";
         }
 
         // Drop helpers
         void DropUsersTable() const {
-            (void)executor_->execute("DROP TABLE IF EXISTS users CASCADE");
+            std::ignore = executor_->execute("DROP TABLE IF EXISTS users CASCADE");
         }
 
         void DropPostsTable() const {
-            (void)executor_->execute("DROP TABLE IF EXISTS posts CASCADE");
+            std::ignore = executor_->execute("DROP TABLE IF EXISTS posts CASCADE");
         }
 
         void DropOrdersTable() const {
-            (void)executor_->execute("DROP TABLE IF EXISTS orders CASCADE");
+            std::ignore = executor_->execute("DROP TABLE IF EXISTS orders CASCADE");
         }
 
         void DropCommentsTable() const {
-            (void)executor_->execute("DROP TABLE IF EXISTS comments CASCADE");
+            std::ignore = executor_->execute("DROP TABLE IF EXISTS comments CASCADE");
         }
 
         void DropTestTable() const {
-            (void)executor_->execute("DROP TABLE IF EXISTS test_table CASCADE");
+            std::ignore = executor_->execute("DROP TABLE IF EXISTS test_table CASCADE");
         }
 
         void DropStandardTables() const {
@@ -206,19 +207,19 @@ namespace menagerie::test {
 
         // Truncate helpers (faster than drop+create)
         void TruncateUsersTable() const {
-            (void)executor_->execute("TRUNCATE TABLE users RESTART IDENTITY CASCADE");
+            std::ignore = executor_->execute("TRUNCATE TABLE users RESTART IDENTITY CASCADE");
         }
 
         void TruncatePostsTable() const {
-            (void)executor_->execute("TRUNCATE TABLE posts RESTART IDENTITY CASCADE");
+            std::ignore = executor_->execute("TRUNCATE TABLE posts RESTART IDENTITY CASCADE");
         }
 
         void TruncateOrdersTable() const {
-            (void)executor_->execute("TRUNCATE TABLE orders RESTART IDENTITY CASCADE");
+            std::ignore = executor_->execute("TRUNCATE TABLE orders RESTART IDENTITY CASCADE");
         }
 
         void TruncateCommentsTable() const {
-            (void)executor_->execute("TRUNCATE TABLE comments RESTART IDENTITY CASCADE");
+            std::ignore = executor_->execute("TRUNCATE TABLE comments RESTART IDENTITY CASCADE");
         }
 
         void TruncateStandardTables() const {
@@ -372,7 +373,7 @@ namespace menagerie::test {
 
         // Row counting helpers
         [[nodiscard]] int CountUsersRows() const {
-            if (auto result = executor_->execute("SELECT COUNT(*) FROM users"); result.is_success()) {
+            if (auto result = executor_->execute("SELECT COUNT(*) FROM users"); result.has_value()) {
                 if (const auto& block = result.value(); block.rows() > 0) {
                     return block.get<int>(0, 0);
                 }
@@ -381,7 +382,7 @@ namespace menagerie::test {
         }
 
         [[nodiscard]] int CountPostsRows() const {
-            if (auto result = executor_->execute("SELECT COUNT(*) FROM posts"); result.is_success()) {
+            if (auto result = executor_->execute("SELECT COUNT(*) FROM posts"); result.has_value()) {
                 if (const auto& block = result.value(); block.rows() > 0) {
                     return block.get<int>(0, 0);
                 }
@@ -390,7 +391,7 @@ namespace menagerie::test {
         }
 
         [[nodiscard]] int CountOrdersRows() const {
-            if (auto result = executor_->execute("SELECT COUNT(*) FROM orders"); result.is_success()) {
+            if (auto result = executor_->execute("SELECT COUNT(*) FROM orders"); result.has_value()) {
                 if (const auto& block = result.value(); block.rows() > 0) {
                     return block.get<int>(0, 0);
                 }

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <expected>
 #include <memory>
 #include <menagerie/beaver>
 #include <menagerie/crow>
@@ -99,7 +100,7 @@ namespace menagerie::savanna::elephant {
          * @return Awaitable result
          */
         template <beaver::IsNullTerminatedString StringQueryT>
-        [[nodiscard]] boost::asio::awaitable<beaver::Outcome<ResultBlock, ErrorContext>>
+        [[nodiscard]] boost::asio::awaitable<std::expected<ResultBlock, ErrorContext>>
         execute(const StringQueryT& query) const {
             co_return co_await execute_impl(beaver::as_c_str(query), nullptr);
         }
@@ -111,7 +112,7 @@ namespace menagerie::savanna::elephant {
          * @return Awaitable result
          */
         template <beaver::IsNullTerminatedString StringQueryT>
-        [[nodiscard]] boost::asio::awaitable<beaver::Outcome<ResultBlock, ErrorContext>>
+        [[nodiscard]] boost::asio::awaitable<std::expected<ResultBlock, ErrorContext>>
         execute(const StringQueryT& query, const Params& params) const {
             co_return co_await execute_impl(beaver::as_c_str(query), &params);
         }
@@ -130,8 +131,8 @@ namespace menagerie::savanna::elephant {
          */
         template <beaver::IsNullTerminatedString StringQueryT, typename... Args>
             requires(savanna::IsFieldValueType<std::remove_cvref_t<Args>> && ...)
-        [[nodiscard]] boost::asio::awaitable<beaver::Outcome<ResultBlock, ErrorContext>> execute(StringQueryT query,
-                                                                                                  Args... args) const {
+        [[nodiscard]] boost::asio::awaitable<std::expected<ResultBlock, ErrorContext>> execute(StringQueryT query,
+                                                                                               Args... args) const {
             std::array<std::byte, 2048> stack_buffer{};
             std::pmr::monotonic_buffer_resource pool{stack_buffer.data(), stack_buffer.size()};
 
@@ -155,7 +156,7 @@ namespace menagerie::savanna::elephant {
          */
         template <beaver::IsNullTerminatedString StringQueryT, typename... Args>
             requires(savanna::IsFieldValueType<Args> && ...)
-        [[nodiscard]] boost::asio::awaitable<beaver::Outcome<ResultBlock, ErrorContext>>
+        [[nodiscard]] boost::asio::awaitable<std::expected<ResultBlock, ErrorContext>>
         execute(StringQueryT query, std::tuple<Args...> args) const {
             co_return co_await std::apply([&](Args&... a) { return execute(std::move(query), std::move(a)...); }, args);
         }
@@ -169,7 +170,7 @@ namespace menagerie::savanna::elephant {
          */
         template <typename SqlStringT, typename... Params>
             requires(savanna::IsFieldValueType<Params> && ...)
-        [[nodiscard]] boost::asio::awaitable<beaver::Outcome<ResultBlock, ErrorContext>>
+        [[nodiscard]] boost::asio::awaitable<std::expected<ResultBlock, ErrorContext>>
         execute(CompiledStaticQuery<SqlStringT, Params...> query) const {
             co_return co_await execute(query.c_sql(), query.params());
         }
@@ -179,7 +180,7 @@ namespace menagerie::savanna::elephant {
          * @param query CompiledQuery object
          * @return Awaitable result
          */
-        [[nodiscard]] boost::asio::awaitable<beaver::Outcome<ResultBlock, ErrorContext>>
+        [[nodiscard]] boost::asio::awaitable<std::expected<ResultBlock, ErrorContext>>
         execute(const CompiledDynamicQuery& query) const;
 
         // Accessors
@@ -203,7 +204,7 @@ namespace menagerie::savanna::elephant {
         std::weak_ptr<ConnectionHolder> holder_;
 
         // Core implementation
-        [[nodiscard]] boost::asio::awaitable<beaver::Outcome<ResultBlock, ErrorContext>>
+        [[nodiscard]] boost::asio::awaitable<std::expected<ResultBlock, ErrorContext>>
         execute_impl(const char* query, const Params* params) const;
 
         // Async primitives
@@ -211,7 +212,7 @@ namespace menagerie::savanna::elephant {
         [[nodiscard]] boost::asio::awaitable<std::optional<ErrorContext>> async_consume_until_ready() const;
 
         // Result collection
-        [[nodiscard]] beaver::Outcome<ResultBlock, ErrorContext> collect_single_result() const;
+        [[nodiscard]] std::expected<ResultBlock, ErrorContext> collect_single_result() const;
 
         // Validation
         [[nodiscard]] std::optional<ErrorContext> validate_state() const;

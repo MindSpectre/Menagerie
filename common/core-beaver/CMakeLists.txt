@@ -1,20 +1,6 @@
 set(BEAVER ${COMMON}.Beaver)
 
 ##############################################################################
-# Outcome class for convenient handling
-##############################################################################
-add_library(${BEAVER}.Outcome INTERFACE
-        outcome/outcome.hpp
-)
-target_include_directories(${BEAVER}.Outcome INTERFACE
-        outcome/
-)
-target_link_libraries(${BEAVER}.Outcome INTERFACE
-        ${BEAVER}.MetaProgramming
-)
-##############################################################################
-
-##############################################################################
 # Custom string library
 ##############################################################################
 add_library(${BEAVER}.Strings INTERFACE
@@ -65,7 +51,6 @@ add_combined_library(${BEAVER}
         SOURCES
         export/menagerie/beaver
         LIBRARIES
-        ${BEAVER}.Outcome
         ${BEAVER}.MetaProgramming
         ${BEAVER}.Utilities
         ${BEAVER}.Strings

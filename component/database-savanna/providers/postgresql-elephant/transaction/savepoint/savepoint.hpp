@@ -1,5 +1,6 @@
 #pragma once
 
+#include <expected>
 #include <menagerie/beaver>
 #include <menagerie/crow>
 #include <string>
@@ -27,9 +28,9 @@ namespace menagerie::savanna::elephant {
         Savepoint& operator=(Savepoint&& other) noexcept;
 
         /// Rolls back to this savepoint, undoing work done since it was created; stays active on success.
-        [[nodiscard]] beaver::Outcome<void, ErrorContext> rollback();
+        [[nodiscard]] std::expected<void, ErrorContext> rollback();
         /// Releases this savepoint, folding its work into the enclosing transaction; becomes inactive on success.
-        [[nodiscard]] beaver::Outcome<void, ErrorContext> release();
+        [[nodiscard]] std::expected<void, ErrorContext> release();
 
         /// Name this savepoint was created with.
         [[nodiscard]] constexpr std::string_view name() const noexcept {
@@ -57,7 +58,7 @@ namespace menagerie::savanna::elephant {
             COMPONENT_LOG_INF() << "Savepoint '" << name_ << "' created";
         }
 
-        [[nodiscard]] beaver::Outcome<void, ErrorContext> execute_control(const std::string& sql) const;
+        [[nodiscard]] std::expected<void, ErrorContext> execute_control(const std::string& sql) const;
     };
 
 }  // namespace menagerie::savanna::elephant

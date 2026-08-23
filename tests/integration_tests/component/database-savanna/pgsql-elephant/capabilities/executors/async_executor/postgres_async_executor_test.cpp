@@ -3,6 +3,8 @@
 
 #include "postgres_async_executor.hpp"
 
+#include <expected>
+
 #include <boost/asio.hpp>
 #include <compiled_query/compiled_static_query.hpp>
 #include <gtest/gtest.h>
@@ -129,7 +131,7 @@ TEST_F(AsyncExecutorTest, ExecuteSimpleSelect) {
     auto result = run_async([this]() { return executor_->execute("SELECT 1 AS number, 'hello' AS text"); });
 
     ASSERT_TRUE(result.has_value());
-    ASSERT_TRUE(result->is_success()) << "Query failed: " << result->error<ErrorContext>().format();
+    ASSERT_TRUE(result->has_value()) << "Query failed: " << result->error().format();
 
     const auto& block = result->value();
     EXPECT_EQ(block.rows(), 1);
@@ -142,12 +144,12 @@ TEST_F(AsyncExecutorTest, ExecuteSimpleInsert) {
     });
 
     ASSERT_TRUE(result.has_value());
-    ASSERT_TRUE(result->is_success()) << "Insert failed: " << result->error<ErrorContext>().format();
+    ASSERT_TRUE(result->has_value()) << "Insert failed: " << result->error().format();
 
     // Verify insertion
     auto select_result = run_async([this]() { return executor_->execute("SELECT COUNT(*) FROM test_users"); });
     ASSERT_TRUE(select_result.has_value());
-    ASSERT_TRUE(select_result->is_success());
+    ASSERT_TRUE(select_result->has_value());
     EXPECT_EQ(select_result->value().rows(), 1);
 }
 
@@ -155,34 +157,34 @@ TEST_F(AsyncExecutorTest, ExecuteSimpleUpdate) {
     // Insert test data
     auto insert_result =
         run_async([this]() { return executor_->execute("INSERT INTO test_users (name, age) VALUES ('Bob', 25)"); });
-    EXPECT_TRUE(insert_result.has_value() && insert_result->is_success());
+    EXPECT_TRUE(insert_result.has_value() && insert_result->has_value());
 
     // Update
     auto result =
         run_async([this]() { return executor_->execute("UPDATE test_users SET age = 26 WHERE name = 'Bob'"); });
 
     ASSERT_TRUE(result.has_value());
-    ASSERT_TRUE(result->is_success()) << "Update failed: " << result->error<ErrorContext>().format();
+    ASSERT_TRUE(result->has_value()) << "Update failed: " << result->error().format();
 }
 
 TEST_F(AsyncExecutorTest, ExecuteSimpleDelete) {
     // Insert test data
     auto insert_result =
         run_async([this]() { return executor_->execute("INSERT INTO test_users (name, age) VALUES ('Charlie', 35)"); });
-    EXPECT_TRUE(insert_result.has_value() && insert_result->is_success());
+    EXPECT_TRUE(insert_result.has_value() && insert_result->has_value());
 
     // Delete
     auto result = run_async([this]() { return executor_->execute("DELETE FROM test_users WHERE name = 'Charlie'"); });
 
     ASSERT_TRUE(result.has_value());
-    ASSERT_TRUE(result->is_success()) << "Delete failed: " << result->error<ErrorContext>().format();
+    ASSERT_TRUE(result->has_value()) << "Delete failed: " << result->error().format();
 }
 
 TEST_F(AsyncExecutorTest, ExecuteEmptyResultSet) {
     auto result = run_async([this]() { return executor_->execute("SELECT * FROM test_users WHERE id = -1"); });
 
     ASSERT_TRUE(result.has_value());
-    ASSERT_TRUE(result->is_success()) << "Query failed: " << result->error<ErrorContext>().format();
+    ASSERT_TRUE(result->has_value()) << "Query failed: " << result->error().format();
 
     const auto& block = result->value();
     EXPECT_EQ(block.rows(), 0);
@@ -206,14 +208,14 @@ TEST_F(AsyncExecutorTest, ExecuteParameterizedInsert) {
     });
 
     ASSERT_TRUE(result.has_value());
-    ASSERT_TRUE(result->is_success()) << "Parameterized insert failed: " << result->error<ErrorContext>().format();
+    ASSERT_TRUE(result->has_value()) << "Parameterized insert failed: " << result->error().format();
 }
 
 TEST_F(AsyncExecutorTest, ExecuteParameterizedSelect) {
     // Insert test data
     auto insert_result =
         run_async([this]() { return executor_->execute("INSERT INTO test_users (name, age) VALUES ('Eve', 28)"); });
-    EXPECT_TRUE(insert_result.has_value() && insert_result->is_success());
+    EXPECT_TRUE(insert_result.has_value() && insert_result->has_value());
 
     // Query with parameter
     std::pmr::unsynchronized_pool_resource pool;
@@ -225,7 +227,7 @@ TEST_F(AsyncExecutorTest, ExecuteParameterizedSelect) {
         [this, &params]() { return executor_->execute("SELECT name, age FROM test_users WHERE name = $1", *params); });
 
     ASSERT_TRUE(result.has_value());
-    ASSERT_TRUE(result->is_success()) << "Parameterized select failed: " << result->error<ErrorContext>().format();
+    ASSERT_TRUE(result->has_value()) << "Parameterized select failed: " << result->error().format();
 
     const auto& block = result->value();
     EXPECT_EQ(block.rows(), 1);
@@ -250,7 +252,7 @@ TEST_F(AsyncExecutorTest, ExecuteMultipleParameters) {
     });
 
     ASSERT_TRUE(result.has_value());
-    ASSERT_TRUE(result->is_success()) << "Multi-parameter query failed: " << result->error<ErrorContext>().format();
+    ASSERT_TRUE(result->has_value()) << "Multi-parameter query failed: " << result->error().format();
 
     auto& block = result->value();
     EXPECT_EQ(block.rows(), 1);  // Only User2 is between 25 and 40
@@ -270,8 +272,7 @@ TEST_F(AsyncExecutorTest, ExecuteNullParameter) {
     });
 
     ASSERT_TRUE(result.has_value());
-    ASSERT_TRUE(result->is_success()) << "Insert with NULL parameter failed: "
-                                      << result->error<ErrorContext>().format();
+    ASSERT_TRUE(result->has_value()) << "Insert with NULL parameter failed: " << result->error().format();
 }
 
 // ============== Variadic Execute Tests ==============
@@ -280,7 +281,7 @@ TEST_F(AsyncExecutorTest, ExecuteVariadicSingleParameter) {
     // Insert test data
     auto insert_result =
         run_async([this]() { return executor_->execute("INSERT INTO test_users (name, age) VALUES ('Frank', 33)"); });
-    EXPECT_TRUE(insert_result.has_value() && insert_result->is_success());
+    EXPECT_TRUE(insert_result.has_value() && insert_result->has_value());
 
     // Query with single variadic parameter
     auto result = run_async([this]() {
@@ -288,7 +289,7 @@ TEST_F(AsyncExecutorTest, ExecuteVariadicSingleParameter) {
     });
 
     ASSERT_TRUE(result.has_value());
-    ASSERT_TRUE(result->is_success()) << "Variadic single parameter failed: " << result->error<ErrorContext>().format();
+    ASSERT_TRUE(result->has_value()) << "Variadic single parameter failed: " << result->error().format();
 
     const auto& block = result->value();
     EXPECT_EQ(block.rows(), 1);
@@ -304,14 +305,14 @@ TEST_F(AsyncExecutorTest, ExecuteVariadicMultipleTypes) {
     });
 
     ASSERT_TRUE(result.has_value());
-    ASSERT_TRUE(result->is_success()) << "Variadic insert failed: " << result->error<ErrorContext>().format();
+    ASSERT_TRUE(result->has_value()) << "Variadic insert failed: " << result->error().format();
 
     // Verify insertion
     auto select_result = run_async([this]() {
         return executor_->execute("SELECT name, age FROM test_users WHERE email = $1", std::string{"grace@test.com"});
     });
     ASSERT_TRUE(select_result.has_value());
-    ASSERT_TRUE(select_result->is_success());
+    ASSERT_TRUE(select_result->has_value());
     EXPECT_EQ(select_result->value().rows(), 1);
 }
 
@@ -326,7 +327,7 @@ TEST_F(AsyncExecutorTest, ExecuteVariadicIntegerTypes) {
         [this]() { return executor_->execute("SELECT * FROM test_users WHERE age BETWEEN $1 AND $2", 25, 40); });
 
     ASSERT_TRUE(result.has_value());
-    ASSERT_TRUE(result->is_success()) << "Variadic int parameters failed: " << result->error<ErrorContext>().format();
+    ASSERT_TRUE(result->has_value()) << "Variadic int parameters failed: " << result->error().format();
 
     const auto& block = result->value();
     EXPECT_EQ(block.rows(), 1);  // Only User2 is between 25 and 40
@@ -340,14 +341,14 @@ TEST_F(AsyncExecutorTest, ExecuteVariadicWithNull) {
     });
 
     ASSERT_TRUE(result.has_value());
-    ASSERT_TRUE(result->is_success()) << "Variadic NULL parameter failed: " << result->error<ErrorContext>().format();
+    ASSERT_TRUE(result->has_value()) << "Variadic NULL parameter failed: " << result->error().format();
 
     // Verify NULL was inserted
     auto select_result = run_async([this]() {
         return executor_->execute("SELECT name, email FROM test_users WHERE name = $1", std::string{"NullEmailUser2"});
     });
     ASSERT_TRUE(select_result.has_value());
-    ASSERT_TRUE(select_result->is_success());
+    ASSERT_TRUE(select_result->has_value());
     auto& block = select_result->value();
     EXPECT_EQ(block.rows(), 1);
     auto email_opt = block.get_opt<std::string>(0, 1);
@@ -362,14 +363,13 @@ TEST_F(AsyncExecutorTest, ExecuteVariadicBooleanType) {
     });
 
     ASSERT_TRUE(result.has_value());
-    ASSERT_TRUE(result->is_success()) << "Variadic boolean parameter failed: "
-                                      << result->error<ErrorContext>().format();
+    ASSERT_TRUE(result->has_value()) << "Variadic boolean parameter failed: " << result->error().format();
 
     // Verify boolean value
     auto select_result = run_async(
         [this]() { return executor_->execute("SELECT active FROM test_users WHERE name = $1", std::string{"Helen"}); });
     ASSERT_TRUE(select_result.has_value());
-    ASSERT_TRUE(select_result->is_success());
+    ASSERT_TRUE(select_result->has_value());
     EXPECT_EQ(select_result->value().rows(), 1);
 }
 
@@ -384,7 +384,7 @@ TEST_F(AsyncExecutorTest, ExecuteVariadicManyParameters) {
     });
 
     ASSERT_TRUE(result.has_value());
-    ASSERT_TRUE(result->is_success()) << "Variadic many parameters failed: " << result->error<ErrorContext>().format();
+    ASSERT_TRUE(result->has_value()) << "Variadic many parameters failed: " << result->error().format();
 
     // Verify with multiple query parameters
     auto select_result = run_async([this]() {
@@ -395,7 +395,7 @@ TEST_F(AsyncExecutorTest, ExecuteVariadicManyParameters) {
     });
 
     ASSERT_TRUE(select_result.has_value());
-    ASSERT_TRUE(select_result->is_success());
+    ASSERT_TRUE(select_result->has_value());
     EXPECT_EQ(select_result->value().rows(), 1);
 }
 
@@ -421,7 +421,7 @@ TEST_F(AsyncExecutorTest, ExecuteVariadicComplexQuery) {
     });
 
     ASSERT_TRUE(result.has_value());
-    ASSERT_TRUE(result->is_success()) << "Variadic complex query failed: " << result->error<ErrorContext>().format();
+    ASSERT_TRUE(result->has_value()) << "Variadic complex query failed: " << result->error().format();
 
     const auto& block = result->value();
     EXPECT_EQ(block.rows(), 2);  // ActiveUser1 and ActiveUser2
@@ -440,7 +440,7 @@ TEST_F(AsyncExecutorTest, ExecuteTupleSingleParameter) {
     });
 
     ASSERT_TRUE(result.has_value());
-    ASSERT_TRUE(result->is_success()) << "Tuple single parameter failed: " << result->error<ErrorContext>().format();
+    ASSERT_TRUE(result->has_value()) << "Tuple single parameter failed: " << result->error().format();
 
     const auto& block = result->value();
     EXPECT_EQ(block.rows(), 1);
@@ -454,7 +454,7 @@ TEST_F(AsyncExecutorTest, ExecuteTupleMultipleParameters) {
     });
 
     ASSERT_TRUE(result.has_value());
-    ASSERT_TRUE(result->is_success()) << "Tuple insert failed: " << result->error<ErrorContext>().format();
+    ASSERT_TRUE(result->has_value()) << "Tuple insert failed: " << result->error().format();
 
     // Verify
     auto select_result = run_async([this]() {
@@ -462,7 +462,7 @@ TEST_F(AsyncExecutorTest, ExecuteTupleMultipleParameters) {
                                   std::tuple{std::string{"tuple@test.com"}});
     });
     ASSERT_TRUE(select_result.has_value());
-    ASSERT_TRUE(select_result->is_success());
+    ASSERT_TRUE(select_result->has_value());
     EXPECT_EQ(select_result->value().rows(), 1);
 }
 
@@ -476,7 +476,7 @@ TEST_F(AsyncExecutorTest, ExecuteTupleRangeQuery) {
     });
 
     ASSERT_TRUE(result.has_value());
-    ASSERT_TRUE(result->is_success()) << "Tuple range query failed: " << result->error<ErrorContext>().format();
+    ASSERT_TRUE(result->has_value()) << "Tuple range query failed: " << result->error().format();
 
     const auto& block = result->value();
     EXPECT_EQ(block.rows(), 1);  // Only User2 is between 25 and 40
@@ -489,7 +489,7 @@ TEST_F(AsyncExecutorTest, ExecuteTupleWithNull) {
     });
 
     ASSERT_TRUE(result.has_value());
-    ASSERT_TRUE(result->is_success()) << "Tuple NULL parameter failed: " << result->error<ErrorContext>().format();
+    ASSERT_TRUE(result->has_value()) << "Tuple NULL parameter failed: " << result->error().format();
 
     // Verify NULL was inserted
     auto select_result = run_async([this]() {
@@ -497,7 +497,7 @@ TEST_F(AsyncExecutorTest, ExecuteTupleWithNull) {
                                   std::tuple{std::string{"TupleNullUser"}});
     });
     ASSERT_TRUE(select_result.has_value());
-    ASSERT_TRUE(select_result->is_success());
+    ASSERT_TRUE(select_result->has_value());
     auto& block = select_result->value();
     EXPECT_EQ(block.rows(), 1);
     auto email_opt = block.get_opt<std::string>(0, 0);
@@ -508,7 +508,7 @@ TEST_F(AsyncExecutorTest, ExecuteTupleEmptyTuple) {
     auto result = run_async([this]() { return executor_->execute("SELECT 1 AS number", std::tuple<>{}); });
 
     ASSERT_TRUE(result.has_value());
-    ASSERT_TRUE(result->is_success()) << "Empty tuple query failed: " << result->error<ErrorContext>().format();
+    ASSERT_TRUE(result->has_value()) << "Empty tuple query failed: " << result->error().format();
 
     const auto& block = result->value();
     EXPECT_EQ(block.rows(), 1);
@@ -526,8 +526,7 @@ TEST_F(AsyncExecutorTest, ExecuteCompiledStaticQuerySelect) {
     auto result = run_async([this, &query]() { return executor_->execute(query); });
 
     ASSERT_TRUE(result.has_value());
-    ASSERT_TRUE(result->is_success()) << "CompiledStaticQuery select failed: "
-                                      << result->error<ErrorContext>().format();
+    ASSERT_TRUE(result->has_value()) << "CompiledStaticQuery select failed: " << result->error().format();
 
     const auto& block = result->value();
     EXPECT_EQ(block.rows(), 1);
@@ -542,15 +541,14 @@ TEST_F(AsyncExecutorTest, ExecuteCompiledStaticQueryInsert) {
     auto result = run_async([this, &query]() { return executor_->execute(query); });
 
     ASSERT_TRUE(result.has_value());
-    ASSERT_TRUE(result->is_success()) << "CompiledStaticQuery insert failed: "
-                                      << result->error<ErrorContext>().format();
+    ASSERT_TRUE(result->has_value()) << "CompiledStaticQuery insert failed: " << result->error().format();
 
     // Verify
     auto select_result = run_async([this]() {
         return executor_->execute("SELECT name FROM test_users WHERE email = $1", std::string{"static@test.com"});
     });
     ASSERT_TRUE(select_result.has_value());
-    ASSERT_TRUE(select_result->is_success());
+    ASSERT_TRUE(select_result->has_value());
     EXPECT_EQ(select_result->value().rows(), 1);
 }
 
@@ -573,8 +571,7 @@ TEST_F(AsyncExecutorTest, ExecuteCompiledStaticQueryMultipleParams) {
     auto result = run_async([this, &query]() { return executor_->execute(query); });
 
     ASSERT_TRUE(result.has_value());
-    ASSERT_TRUE(result->is_success()) << "CompiledStaticQuery multi-param failed: "
-                                      << result->error<ErrorContext>().format();
+    ASSERT_TRUE(result->has_value()) << "CompiledStaticQuery multi-param failed: " << result->error().format();
 
     const auto& block = result->value();
     EXPECT_EQ(block.rows(), 2);  // CSQ1 and CSQ2
@@ -588,8 +585,7 @@ TEST_F(AsyncExecutorTest, ExecuteCompiledStaticQueryNoParams) {
     auto result = run_async([this, &query]() { return executor_->execute(query); });
 
     ASSERT_TRUE(result.has_value());
-    ASSERT_TRUE(result->is_success()) << "CompiledStaticQuery no-param failed: "
-                                      << result->error<ErrorContext>().format();
+    ASSERT_TRUE(result->has_value()) << "CompiledStaticQuery no-param failed: " << result->error().format();
 
     const auto& block = result->value();
     EXPECT_EQ(block.rows(), 1);
@@ -601,9 +597,9 @@ TEST_F(AsyncExecutorTest, SyntaxError) {
     auto result = run_async([this]() { return executor_->execute("SELCT * FROM test_users"); });  // Typo: SELCT
 
     ASSERT_TRUE(result.has_value());
-    ASSERT_FALSE(result->is_success()) << "Should have failed with syntax error";
+    ASSERT_FALSE(result->has_value()) << "Should have failed with syntax error";
 
-    const auto& error = result->error<ErrorContext>();
+    const auto& error = result->error();
     EXPECT_FALSE(error.sqlstate.empty());
     EXPECT_EQ(error.sqlstate.substr(0, 2), "42");  // Class 42 = Syntax Error or Access Rule Violation
     EXPECT_FALSE(error.message.empty());
@@ -614,7 +610,7 @@ TEST_F(AsyncExecutorTest, UniqueConstraintViolation) {
     auto insert_result = run_async([this]() {
         return executor_->execute("INSERT INTO test_users (name, email) VALUES ('User1', 'duplicate@test.com')");
     });
-    EXPECT_TRUE(insert_result.has_value() && insert_result->is_success());
+    EXPECT_TRUE(insert_result.has_value() && insert_result->has_value());
 
     // Try to insert duplicate email
     auto result = run_async([this]() {
@@ -622,9 +618,9 @@ TEST_F(AsyncExecutorTest, UniqueConstraintViolation) {
     });
 
     ASSERT_TRUE(result.has_value());
-    ASSERT_FALSE(result->is_success()) << "Should have failed with unique constraint violation";
+    ASSERT_FALSE(result->has_value()) << "Should have failed with unique constraint violation";
 
-    const auto& error = result->error<ErrorContext>();
+    const auto& error = result->error();
     EXPECT_EQ(error.sqlstate, "23505");  // Unique violation
     EXPECT_TRUE(error.code.is_server_error());
     EXPECT_EQ(error.code, ServerErrorCode::UniqueViolation);
@@ -635,9 +631,9 @@ TEST_F(AsyncExecutorTest, NotNullConstraintViolation) {
         [this]() { return executor_->execute("INSERT INTO test_users (age) VALUES (25)"); });  // name is NOT NULL
 
     ASSERT_TRUE(result.has_value());
-    ASSERT_FALSE(result->is_success()) << "Should have failed with NOT NULL constraint violation";
+    ASSERT_FALSE(result->has_value()) << "Should have failed with NOT NULL constraint violation";
 
-    const auto& error = result->error<ErrorContext>();
+    const auto& error = result->error();
     EXPECT_EQ(error.sqlstate, "23502");  // NOT NULL violation
     EXPECT_EQ(error.code, ServerErrorCode::NotNullViolation);
 }
@@ -646,9 +642,9 @@ TEST_F(AsyncExecutorTest, TableNotFound) {
     auto result = run_async([this]() { return executor_->execute("SELECT * FROM non_existent_table"); });
 
     ASSERT_TRUE(result.has_value());
-    ASSERT_FALSE(result->is_success()) << "Should have failed with table not found error";
+    ASSERT_FALSE(result->has_value()) << "Should have failed with table not found error";
 
-    const auto& error = result->error<ErrorContext>();
+    const auto& error = result->error();
     EXPECT_EQ(error.sqlstate, "42P01");  // Undefined table
     EXPECT_EQ(error.code, ServerErrorCode::TableNotFound);
 }
@@ -670,7 +666,7 @@ TEST_F(AsyncExecutorTest, MultipleRowsResult) {
     auto result = run_async([this]() { return executor_->execute("SELECT name, age FROM test_users ORDER BY age"); });
 
     ASSERT_TRUE(result.has_value());
-    ASSERT_TRUE(result->is_success()) << "Query failed: " << result->error<ErrorContext>().format();
+    ASSERT_TRUE(result->has_value()) << "Query failed: " << result->error().format();
 
     const auto& block = result->value();
     EXPECT_EQ(block.rows(), 3);
@@ -680,13 +676,13 @@ TEST_F(AsyncExecutorTest, MultipleRowsResult) {
 TEST_F(AsyncExecutorTest, NullValuesInResult) {
     auto insert_result = run_async(
         [this]() { return executor_->execute("INSERT INTO test_users (name, age) VALUES ('NullAge', NULL)"); });
-    EXPECT_TRUE(insert_result.has_value() && insert_result->is_success());
+    EXPECT_TRUE(insert_result.has_value() && insert_result->has_value());
 
     auto result =
         run_async([this]() { return executor_->execute("SELECT name, age FROM test_users WHERE name = 'NullAge'"); });
 
     ASSERT_TRUE(result.has_value());
-    ASSERT_TRUE(result->is_success()) << "Query failed: " << result->error<ErrorContext>().format();
+    ASSERT_TRUE(result->has_value()) << "Query failed: " << result->error().format();
 
     const auto& block = result->value();
     EXPECT_EQ(block.rows(), 1);
@@ -703,8 +699,8 @@ TEST_F(AsyncExecutorTest, EmptyQuery) {
 
     ASSERT_TRUE(result.has_value());
     // Empty query should result in error
-    ASSERT_FALSE(result->is_success()) << "Empty query should fail";
-    const auto& error = result->error<ErrorContext>();
+    ASSERT_FALSE(result->has_value()) << "Empty query should fail";
+    const auto& error = result->error();
 
     // PGRES_EMPTY_QUERY doesn't provide SQLSTATE, falls back to status-based mapping
     EXPECT_TRUE(error.sqlstate.empty()) << "Empty query has no SQLSTATE";
@@ -718,13 +714,13 @@ TEST_F(AsyncExecutorTest, LargeResultSet) {
         std::string query = "INSERT INTO test_users (name, age) VALUES ('User" + std::to_string(i) + "', " +
                             std::to_string(20 + i % 50) + ")";
         auto result = run_async([this, &query]() { return executor_->execute(query); });
-        ASSERT_TRUE(result.has_value() && result->is_success()) << "Insert failed at iteration " << i;
+        ASSERT_TRUE(result.has_value() && result->has_value()) << "Insert failed at iteration " << i;
     }
 
     auto result = run_async([this]() { return executor_->execute("SELECT * FROM test_users"); });
 
     ASSERT_TRUE(result.has_value());
-    ASSERT_TRUE(result->is_success()) << "Large query failed: " << result->error<ErrorContext>().format();
+    ASSERT_TRUE(result->has_value()) << "Large query failed: " << result->error().format();
 
     auto& block = result->value();
     EXPECT_EQ(block.rows(), 100);
@@ -758,7 +754,7 @@ TEST_F(AsyncExecutorTest, ExecutorMoveSemantics) {
     // Verify moved executor still works
     auto result = run_async([&executor3]() { return executor3.execute("SELECT 1"); });
     ASSERT_TRUE(result.has_value());
-    ASSERT_TRUE(result->is_success());
+    ASSERT_TRUE(result->has_value());
 
     // Restore executor_ for TearDown (or just set to nullptr and handle in TearDown)
     executor_ = std::make_unique<AsyncExecutor>(std::move(executor3));
@@ -770,21 +766,21 @@ TEST_F(AsyncExecutorTest, SequentialOperations) {
     // Multiple sequential operations on the same executor
     auto result1 =
         run_async([this]() { return executor_->execute("INSERT INTO test_users (name, age) VALUES ('Seq1', 30)"); });
-    ASSERT_TRUE(result1.has_value() && result1->is_success());
+    ASSERT_TRUE(result1.has_value() && result1->has_value());
 
     auto result2 =
         run_async([this]() { return executor_->execute("INSERT INTO test_users (name, age) VALUES ('Seq2', 31)"); });
-    ASSERT_TRUE(result2.has_value() && result2->is_success());
+    ASSERT_TRUE(result2.has_value() && result2->has_value());
 
     auto result3 = run_async([this]() { return executor_->execute("SELECT COUNT(*) FROM test_users"); });
-    ASSERT_TRUE(result3.has_value() && result3->is_success());
+    ASSERT_TRUE(result3.has_value() && result3->has_value());
     EXPECT_EQ(result3->value().rows(), 1);
 }
 
 TEST_F(AsyncExecutorTest, MultipleQueriesInSingleCoroutine) {
-    const auto results = run_async(
-        [this]() -> boost::asio::awaitable<std::vector<menagerie::beaver::Outcome<ResultBlock, ErrorContext>>> {
-            std::vector<menagerie::beaver::Outcome<ResultBlock, ErrorContext>> results_;
+    const auto results =
+        run_async([this]() -> boost::asio::awaitable<std::vector<std::expected<ResultBlock, ErrorContext>>> {
+            std::vector<std::expected<ResultBlock, ErrorContext>> results_;
             results_.push_back(co_await executor_->execute("INSERT INTO test_users (name) VALUES ('A')"));
             results_.push_back(co_await executor_->execute("INSERT INTO test_users (name) VALUES ('B')"));
             results_.push_back(co_await executor_->execute("SELECT COUNT(*) FROM test_users"));
@@ -793,6 +789,6 @@ TEST_F(AsyncExecutorTest, MultipleQueriesInSingleCoroutine) {
 
     // Verify all succeeded
     for (const auto& r : *results) {
-        ASSERT_TRUE(r.is_success());
+        ASSERT_TRUE(r.has_value());
     }
 }

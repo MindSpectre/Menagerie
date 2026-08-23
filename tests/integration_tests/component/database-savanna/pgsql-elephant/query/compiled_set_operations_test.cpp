@@ -34,7 +34,7 @@ TEST_F(CompiledSetOperationsTest, UnionBasic) {
     auto query        = compile_query(union_query(active_users, young_users));
     auto result       = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
     auto& block = result.value();
     // UNION removes duplicates
     EXPECT_GE(block.rows(), 1);
@@ -49,7 +49,7 @@ TEST_F(CompiledSetOperationsTest, UnionAll) {
     auto query  = compile_query(union_all(completed_orders, pending_orders));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
     auto& block = result.value();
     // UNION ALL keeps all rows including duplicates
     EXPECT_GE(block.rows(), 1);
@@ -64,7 +64,7 @@ TEST_F(CompiledSetOperationsTest, Intersect) {
     auto query             = compile_query(intersect(active_users, users_with_orders));
     auto result            = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
     // Returns only rows that appear in both result sets
 }
 
@@ -77,7 +77,7 @@ TEST_F(CompiledSetOperationsTest, Except) {
     auto query            = compile_query(except(all_users, users_with_posts));
     auto result           = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
     // Returns rows in first set but not in second
 }
 
@@ -94,7 +94,7 @@ TEST_F(CompiledSetOperationsTest, UnionWithOrderBy) {
     auto query  = compile_query(union_query(active_users, senior_users).order_by(desc(col("age"))));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
     auto& block = result.value();
     EXPECT_GE(block.rows(), 1);
 }
@@ -110,7 +110,7 @@ TEST_F(CompiledSetOperationsTest, UnionWithLimit) {
     auto query  = compile_query(union_query(small_orders, large_orders).limit(10));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
     auto& block = result.value();
     EXPECT_LE(block.rows(), 10);  // Limited to 10 rows
 }
@@ -125,7 +125,7 @@ TEST_F(CompiledSetOperationsTest, MultipleUnions) {
     auto query  = compile_query(union_query(union_query(young, middle), senior));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
 }
 
 TEST_F(CompiledSetOperationsTest, MixedSetOps) {
@@ -137,5 +137,5 @@ TEST_F(CompiledSetOperationsTest, MixedSetOps) {
     auto query      = compile_query(except(union_query(active, with_orders), with_posts));
     auto result     = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
 }

@@ -10,13 +10,13 @@ Apply to:
 
 - All const getters and query methods (`is_*`, `has_*`, `supports_*`)
 - Factory methods and builders
-- Methods returning `Outcome<T, E>` or result types
+- Methods returning `std::expected<T, E>` or other result types
 - Any function where ignoring the return value is likely a bug
 
 ```cpp
 [[nodiscard]] constexpr bool is_success() const noexcept;
 [[nodiscard]] static std::shared_ptr<Table> make_ptr(std::string name);
-[[nodiscard]] beaver::Outcome<ResultBlock, ErrorCode> execute(std::string_view query);
+[[nodiscard]] std::expected<ResultBlock, ErrorContext> execute(std::string_view query);
 ```
 
 ### `[[maybe_unused]]`
@@ -231,7 +231,7 @@ Use for template constructors:
 
 ```cpp
 template <typename U>
-constexpr explicit(!std::is_convertible_v<U, T>) Outcome(U&& value);
+constexpr explicit(!std::is_convertible_v<U, T>) Box(U&& value);
 ```
 
 ## Ref-Qualifiers
@@ -285,7 +285,7 @@ constexpr uint16_t value() const noexcept;
 Use conditional noexcept for templates:
 
 ```cpp
-constexpr Outcome() noexcept(std::is_nothrow_constructible_v<T>)
+constexpr Box() noexcept(std::is_nothrow_constructible_v<T>)
     requires std::default_initializable<T>;
 ```
 
@@ -338,17 +338,18 @@ public:
 
 ## Error Handling
 
-### Hot Path: `Outcome<T, ErrorCode>`
+### Hot Path: `std::expected<T, E>`
 
-Use `Outcome` only in performance-critical, hot-path code:
+Use `std::expected` only in performance-critical, hot-path code. A function with several distinct failure modes
+uses `std::expected<T, std::variant<E1, E2, ...>>`; build failures with `std::unexpected(e)`:
 
 ```cpp
 // Async executor - called thousands of times per second
-[[nodiscard]] boost::asio::awaitable<beaver::Outcome<ResultBlock, ErrorCode>>
+[[nodiscard]] boost::asio::awaitable<std::expected<ResultBlock, ErrorContext>>
 execute(std::string_view query);
 
 // Tight loop processing
-[[nodiscard]] beaver::Outcome<Row, ParseError> parse_row(std::span<const std::byte> data);
+[[nodiscard]] std::expected<Row, ParseError> parse_row(std::span<const std::byte> data);
 ```
 
 ### Setup/Rare/Cold Path: Exceptions
@@ -631,7 +632,7 @@ Order (separated by blank lines):
 Use angle brackets for library/component headers, quotes for same-directory:
 
 ```cpp
-#include <outcome.hpp>   // Component header
+#include <strings.hpp>   // Component header
 #include "local_impl.hpp"      // Same directory
 ```
 

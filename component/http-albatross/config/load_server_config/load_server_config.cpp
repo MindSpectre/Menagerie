@@ -27,36 +27,39 @@ namespace menagerie::albatross {
         }
     }  // namespace
 
-    beaver::Outcome<ServerConfig, ConfigFileError, ConfigParseError, ConfigSchemaError>
+    std::expected<ServerConfig, std::variant<ConfigFileError, ConfigParseError, ConfigSchemaError>>
     load_server_config(const std::string_view path) {
         std::string path_str{path};
 
         if (std::error_code fs_ec; !std::filesystem::is_regular_file(path_str, fs_ec)) {
-            return beaver::err(ConfigFileError{std::move(path_str), fs_ec ? fs_ec.message() : "not a regular file"});
+            return std::unexpected(
+                ConfigFileError{std::move(path_str), fs_ec ? fs_ec.message() : "not a regular file"});
         }
 
         std::ifstream file{path_str, std::ios::binary};
         if (!file.is_open()) {
             const std::error_code open_ec{errno, std::generic_category()};
-            return beaver::err(ConfigFileError{std::move(path_str), open_ec.message()});
+            return std::unexpected(ConfigFileError{std::move(path_str), open_ec.message()});
         }
 
         Json::Value root;
         std::string errs;
         if (Json::CharReaderBuilder reader; !Json::parseFromStream(reader, file, &root, &errs)) {
             const std::size_t line = parse_error_line(errs);
-            return beaver::err(ConfigParseError{std::move(path_str), line, std::move(errs)});
+            return std::unexpected(ConfigParseError{std::move(path_str), line, std::move(errs)});
         }
         if (!root.isObject()) {
-            return beaver::err(ConfigSchemaError{std::move(path_str), "", "top-level JSON value must be an object"});
+            return std::unexpected(
+                ConfigSchemaError{std::move(path_str), "", "top-level JSON value must be an object"});
         }
 
         try {
             return ServerConfig::deserialize<Json::Value>(root);
         } catch (const Json::Exception& e) {  // asString()/asInt64()/... type mismatch
-            return beaver::err(ConfigSchemaError{std::move(path_str), "", std::string{"type mismatch: "} + e.what()});
+            return std::unexpected(
+                ConfigSchemaError{std::move(path_str), "", std::string{"type mismatch: "} + e.what()});
         } catch (const std::invalid_argument& e) {  // enum codec / validate()
-            return beaver::err(ConfigSchemaError{std::move(path_str), "", e.what()});
+            return std::unexpected(ConfigSchemaError{std::move(path_str), "", e.what()});
         }
     }
 

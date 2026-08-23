@@ -11,6 +11,7 @@
 #include <numeric>
 #include <string>
 #include <string_view>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -77,7 +78,7 @@ namespace {
 
     void setup_tables(SyncExecutor& executor) {
         // Drop and recreate tables for clean state
-        (void)executor.execute("DROP TABLE IF EXISTS bench_users CASCADE");
+        std::ignore = executor.execute("DROP TABLE IF EXISTS bench_users CASCADE");
 
         auto result = executor.execute(R"(
             CREATE TABLE bench_users (
@@ -88,7 +89,7 @@ namespace {
             )
         )");
 
-        if (!result.is_success()) {
+        if (!result.has_value()) {
             std::cerr << "Failed to create bench_users table\n";
             return;
         }
@@ -101,7 +102,7 @@ namespace {
                             i,
                             20 + (i % 50),
                             (i % 2 == 0) ? "true" : "false"));
-            if (!insert_result.is_success()) {
+            if (!insert_result.has_value()) {
                 std::cerr << "Failed to insert test data\n";
             }
         }
@@ -180,13 +181,13 @@ namespace {
 
             // Warmup
             for (std::size_t i = 0; i < WARMUP_ITERATIONS; ++i) {
-                (void)executor.execute(std::string(bench.raw_sql));
+                std::ignore = executor.execute(std::string(bench.raw_sql));
             }
 
             // Benchmark
             for (std::size_t i = 0; i < BENCHMARK_ITERATIONS; ++i) {
                 auto elapsed = menagerie::cuckoo::Stopwatch<std::chrono::nanoseconds>::measure(
-                    [&] { (void)executor.execute(std::string(bench.raw_sql)); });
+                    [&] { std::ignore = executor.execute(std::string(bench.raw_sql)); });
                 timings.push_back(elapsed);
             }
 
@@ -266,14 +267,14 @@ namespace {
             // Warmup
             for (std::size_t i = 0; i < WARMUP_ITERATIONS; ++i) {
                 auto compiled = make_query();
-                (void)executor.execute(compiled);
+                std::ignore   = executor.execute(compiled);
             }
 
             // Benchmark
             for (std::size_t i = 0; i < BENCHMARK_ITERATIONS; ++i) {
                 auto elapsed = menagerie::cuckoo::Stopwatch<std::chrono::nanoseconds>::measure([&] {
                     auto compiled = make_query();
-                    (void)executor.execute(compiled);
+                    std::ignore   = executor.execute(compiled);
                 });
                 timings.push_back(elapsed);
             }
@@ -352,7 +353,7 @@ int main(int argc, char* argv[]) {
     }
 
     // Cleanup
-    (void)executor.execute("DROP TABLE IF EXISTS bench_users CASCADE");
+    std::ignore = executor.execute("DROP TABLE IF EXISTS bench_users CASCADE");
     PQfinish(conn);
 
     std::cout << "\nBenchmark completed.\n";

@@ -49,13 +49,13 @@ namespace {
 
         boost::asio::awaitable<bool> run_query(int id, boost::asio::any_io_executor e) {
             auto acquired = session_.try_with_async(e);
-            if (!acquired.is_success()) {
+            if (!acquired.has_value()) {
                 co_return false;
             }
             auto ae     = std::move(acquired).value();
             auto result = co_await ae.execute(std::string{query_}, id);
             benchmark::DoNotOptimize(result);
-            co_return result.is_success();
+            co_return result.has_value();
         }
 
         void wait_and_shutdown() {

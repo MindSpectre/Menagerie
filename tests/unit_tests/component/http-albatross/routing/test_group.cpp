@@ -68,15 +68,15 @@ TEST_F(GroupTest, PrefixAppliedToEveryRoute) {
     root().in_group("/api/v1").add_controller(std::make_shared<UsersController>());
     ASSERT_TRUE(registry_.freeze().empty());
 
-    EXPECT_TRUE(registry_.find_route(HttpMethod::get, "/api/v1/users", alloc_).is_success());
-    EXPECT_TRUE(registry_.find_route(HttpMethod::get, "/api/v1/users/7", alloc_).is_success());
-    EXPECT_TRUE(registry_.find_route(HttpMethod::get, "/users", alloc_).is_error());
+    EXPECT_TRUE(registry_.find_route(HttpMethod::get, "/api/v1/users", alloc_).has_value());
+    EXPECT_TRUE(registry_.find_route(HttpMethod::get, "/api/v1/users/7", alloc_).has_value());
+    EXPECT_FALSE(registry_.find_route(HttpMethod::get, "/users", alloc_).has_value());
 }
 
 TEST_F(GroupTest, NestedGroupsConcatenatePrefixes) {
     root().in_group("/api").in_group("/v2").add_controller(std::make_shared<UsersController>());
     ASSERT_TRUE(registry_.freeze().empty());
-    EXPECT_TRUE(registry_.find_route(HttpMethod::get, "/api/v2/users", alloc_).is_success());
+    EXPECT_TRUE(registry_.find_route(HttpMethod::get, "/api/v2/users", alloc_).has_value());
 }
 
 TEST_F(GroupTest, MultipleControllersOneGroupAndChaining) {
@@ -86,15 +86,15 @@ TEST_F(GroupTest, MultipleControllersOneGroupAndChaining) {
         .add_controller(std::make_shared<HealthController>());
     ASSERT_TRUE(registry_.freeze().empty());
 
-    EXPECT_TRUE(registry_.find_route(HttpMethod::get, "/api/users", alloc_).is_success());
-    EXPECT_TRUE(registry_.find_route(HttpMethod::get, "/api/health", alloc_).is_success());
+    EXPECT_TRUE(registry_.find_route(HttpMethod::get, "/api/users", alloc_).has_value());
+    EXPECT_TRUE(registry_.find_route(HttpMethod::get, "/api/health", alloc_).has_value());
     EXPECT_EQ(controllers_.size(), 2u);  // sink records ownership for PR 5 lifecycle
 }
 
 TEST_F(GroupTest, EmptyPrefixMountsAtRoot) {
     root().add_controller(std::make_shared<HealthController>());
     ASSERT_TRUE(registry_.freeze().empty());
-    EXPECT_TRUE(registry_.find_route(HttpMethod::get, "/health", alloc_).is_success());
+    EXPECT_TRUE(registry_.find_route(HttpMethod::get, "/health", alloc_).has_value());
 }
 
 TEST_F(GroupTest, CrossControllerConflictSurfacesAtFreeze) {
@@ -115,8 +115,8 @@ TEST_F(GroupTest, InGroupDoesNotMutateParent) {
     ASSERT_TRUE(registry_.freeze().empty());
 
     EXPECT_EQ(api.prefix(), "/api");  // descents did not mutate the parent
-    EXPECT_TRUE(registry_.find_route(HttpMethod::get, "/api/v1/users", alloc_).is_success());
-    EXPECT_TRUE(registry_.find_route(HttpMethod::get, "/api/v2/health", alloc_).is_success());
+    EXPECT_TRUE(registry_.find_route(HttpMethod::get, "/api/v1/users", alloc_).has_value());
+    EXPECT_TRUE(registry_.find_route(HttpMethod::get, "/api/v2/health", alloc_).has_value());
 }
 
 TEST_F(GroupTest, SameControllerInTwoGroupsThrows) {

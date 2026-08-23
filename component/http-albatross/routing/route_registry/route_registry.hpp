@@ -2,6 +2,7 @@
 
 #include <array>
 #include <cstddef>
+#include <expected>
 #include <functional>
 #include <memory_resource>
 #include <menagerie/beaver>
@@ -9,6 +10,7 @@
 #include <string>
 #include <string_view>
 #include <utility>
+#include <variant>
 #include <vector>
 
 #include <boost/container/small_vector.hpp>
@@ -125,7 +127,7 @@ namespace menagerie::albatross {
         /// match wins over parametric. A known path with no handler for
         /// `method` yields MethodNotAllowedError carrying the populated verb
         /// set, rather than NotFoundError.
-        [[nodiscard]] beaver::Outcome<ResolvedRoute, NotFoundError, MethodNotAllowedError>
+        [[nodiscard]] std::expected<ResolvedRoute, std::variant<NotFoundError, MethodNotAllowedError>>
         find_route(HttpMethod method, std::string_view path, std::pmr::polymorphic_allocator<> arena_alloc) const;
 
     private:

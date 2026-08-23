@@ -9,7 +9,7 @@
 namespace menagerie::albatross {
 
     /// The baked, ready-to-call form of one route: prefix applied, middleware
-    /// chain composed, Outcome-to-Response collapse wired. Stored in the
+    /// chain composed, AsyncOutcome-to-Response collapse wired. Stored in the
     /// frozen RouteRegistry; the Router invokes it through a pointer - never
     /// a copy (copying a std::function may heap-allocate).
     using ContextHandler = std::function<AsyncResponse(RequestContext)>;

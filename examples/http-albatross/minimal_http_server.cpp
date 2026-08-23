@@ -15,12 +15,14 @@
  * the worker threads, and the stop -> wait -> teardown sequence.
  */
 #include <cstddef>
+#include <expected>
 #include <iostream>
 #include <memory>
-#include <menagerie/beaver>
 #include <menagerie/albatross>
+#include <menagerie/beaver>
 #include <string>
 #include <utility>
+#include <variant>
 
 namespace {
 
@@ -53,8 +55,8 @@ namespace {
         /// to_http_response — the handler never builds an error response.
         static http::AsyncOutcome<http::Response, http::BodyLimitExceeded> echo(http::RequestContext ctx) {
             auto body = co_await ctx.body().read_to_string(64_kb);
-            if (body.is_error()) {
-                co_return menagerie::beaver::err(body.error<http::BodyLimitExceeded>());
+            if (!body) {
+                co_return std::unexpected(std::move(body).error());
             }
             co_return ctx.ok(std::move(body).value());
         }
@@ -70,21 +72,24 @@ namespace {
         };
     }
 
-    /// Report whichever config error alternative the Outcome holds.
-    [[nodiscard]] int report_config_error(const menagerie::beaver::Outcome<http::ServerConfig,
-                                                                            http::ConfigFileError,
-                                                                            http::ConfigParseError,
-                                                                            http::ConfigSchemaError>& loaded) {
-        if (loaded.holds_error<http::ConfigFileError>()) {
-            const auto& [path, reason] = loaded.error<http::ConfigFileError>();
-            std::cerr << "config: cannot read " << path << ": " << reason << '\n';
-        } else if (loaded.holds_error<http::ConfigParseError>()) {
-            const auto& [path, line, detail] = loaded.error<http::ConfigParseError>();
-            std::cerr << "config: parse error at " << path << ':' << line << ": " << detail << '\n';
-        } else {
-            const auto& e = loaded.error<http::ConfigSchemaError>();
-            std::cerr << "config: invalid value in " << e.path << ": " << e.detail << '\n';
-        }
+    /// Report whichever config error alternative `loaded` holds.
+    [[nodiscard]] int report_config_error(
+        const std::expected<http::ServerConfig,
+                            std::variant<http::ConfigFileError, http::ConfigParseError, http::ConfigSchemaError>>&
+            loaded) {
+        std::visit(menagerie::beaver::overloaded{
+                       [](const http::ConfigFileError& e) {
+                           std::cerr << "config: cannot read " << e.path << ": " << e.reason << '\n';
+                       },
+                       [](const http::ConfigParseError& e) {
+                           std::cerr << "config: parse error at " << e.path << ':' << e.line << ": " << e.detail
+                                     << '\n';
+                       },
+                       [](const http::ConfigSchemaError& e) {
+                           std::cerr << "config: invalid value in " << e.path << ": " << e.detail << '\n';
+                       },
+                   },
+                   loaded.error());
         return 1;
     }
 
@@ -96,7 +101,7 @@ int main(const int argc, char* argv[]) {
     http::ServerConfig cfg = http::ServerConfig::Builder{}.finalize();
     if (argc > 1) {
         auto loaded = http::load_server_config(argv[1]);
-        if (loaded.is_error()) {
+        if (!loaded) {
             return report_config_error(loaded);
         }
         cfg = std::move(loaded).value();

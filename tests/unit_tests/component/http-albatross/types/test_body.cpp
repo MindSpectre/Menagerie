@@ -1,13 +1,13 @@
 #include <cstddef>
 #include <span>
 #include <string>
+#include <variant>
 
 #include <body.hpp>
 #include <boost/asio/co_spawn.hpp>
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/use_future.hpp>
 #include <gtest/gtest.h>
-#include <outcome.hpp>
 
 using namespace menagerie::albatross;
 
@@ -67,32 +67,32 @@ TEST(BodyTest, MoveAssignDestroysOldPayload) {
 TEST(BodyTest, ReadToStringSucceeds) {
     Body b = Body::owned("hello");
     auto o = run_awaitable(b.read_to_string(100));
-    ASSERT_TRUE(o.is_success());
+    ASSERT_TRUE(o.has_value());
     EXPECT_EQ(o.value(), "hello");
 }
 TEST(BodyTest, ReadToStringLimitExceeded) {
     Body b = Body::owned("hello");
     auto o = run_awaitable(b.read_to_string(3));
-    ASSERT_TRUE(o.is_error());
-    EXPECT_TRUE(o.holds_error<BodyLimitExceeded>());
+    ASSERT_FALSE(o.has_value());
+    EXPECT_TRUE(std::holds_alternative<BodyLimitExceeded>(o.error()));
 }
 TEST(BodyTest, ReadJsonSucceeds) {
     Body b = Body::owned(R"({"a":1,"b":"two"})");
     auto o = run_awaitable(b.read_json(1024));
-    ASSERT_TRUE(o.is_success());
+    ASSERT_TRUE(o.has_value());
     EXPECT_EQ(o.value()["a"].asInt(), 1);
     EXPECT_EQ(o.value()["b"].asString(), "two");
 }
 TEST(BodyTest, ReadJsonMalformed) {
     Body b = Body::owned("not json");
     auto o = run_awaitable(b.read_json(1024));
-    ASSERT_TRUE(o.is_error());
-    EXPECT_TRUE(o.holds_error<JsonParseError>());
+    ASSERT_FALSE(o.has_value());
+    EXPECT_TRUE(std::holds_alternative<JsonParseError>(o.error()));
 }
 TEST(BodyTest, ReadFormUrlDecodes) {
     Body b = Body::owned("name=John%20Doe&city=New+York&empty=");
     auto o = run_awaitable(b.read_form(1024));
-    ASSERT_TRUE(o.is_success());
+    ASSERT_TRUE(o.has_value());
     EXPECT_EQ(o.value().at("name"), "John Doe");
     EXPECT_EQ(o.value().at("city"), "New York");
     EXPECT_EQ(o.value().at("empty"), "");
@@ -100,21 +100,21 @@ TEST(BodyTest, ReadFormUrlDecodes) {
 TEST(BodyTest, ReadFormEmptyKeyIsError) {
     Body b = Body::owned("=value");
     auto o = run_awaitable(b.read_form(1024));
-    ASSERT_TRUE(o.is_error());
-    EXPECT_TRUE(o.holds_error<FormParseError>());
+    ASSERT_FALSE(o.has_value());
+    EXPECT_TRUE(std::holds_alternative<FormParseError>(o.error()));
 }
 TEST(BodyTest, ReadMultipartNoBoundaryIsError) {
     Body b = Body::owned("x");
     auto o = run_awaitable(b.read_multipart(1024, ""));
-    ASSERT_TRUE(o.is_error());
-    EXPECT_TRUE(o.holds_error<MultipartParseError>());
+    ASSERT_FALSE(o.has_value());
+    EXPECT_TRUE(std::holds_alternative<MultipartParseError>(o.error()));
 }
 TEST(BodyTest, ReadMultipartWellFormed) {
     const std::string boundary = "X";
     std::string body           = "--X\r\nContent-Disposition: form-data; name=\"field\"\r\n\r\nvalue\r\n--X--\r\n";
     Body b                     = Body::owned(body);
     auto o                     = run_awaitable(b.read_multipart(4096, boundary));
-    ASSERT_TRUE(o.is_success());
+    ASSERT_TRUE(o.has_value());
     ASSERT_EQ(o.value().size(), 1u);
     EXPECT_EQ(o.value()[0].name, "field");
     EXPECT_EQ(o.value()[0].value, "value");
@@ -126,7 +126,7 @@ TEST(BodyTest, ReadMultipartFilenameDoesNotLeakIntoName) {
                                  "Content-Type: text/plain\r\n\r\nDATA\r\n--X--\r\n";
     Body b                     = Body::owned(body);
     auto o                     = run_awaitable(b.read_multipart(4096, boundary));
-    ASSERT_TRUE(o.is_success());
+    ASSERT_TRUE(o.has_value());
     ASSERT_EQ(o.value().size(), 1u);
     EXPECT_EQ(o.value()[0].name, "file");
     EXPECT_EQ(o.value()[0].filename, "doc.txt");

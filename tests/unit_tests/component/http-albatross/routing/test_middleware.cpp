@@ -61,7 +61,7 @@ protected:
 
     Response invoke(const std::string& path) {
         auto resolved = registry_.find_route(HttpMethod::get, path, alloc_);
-        EXPECT_TRUE(resolved.is_success());
+        EXPECT_TRUE(resolved.has_value());
         return run_awaitable((*resolved.value().handler)(make_ctx(HttpMethod::get, path)));
     }
 };

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <expected>
 #include <memory>
 #include <menagerie/beaver>
 #include <menagerie/crow>
@@ -78,7 +79,7 @@ namespace menagerie::savanna::elephant {
          * @return ResultBlock on success, ErrorContext on failure
          */
         template <beaver::IsNullTerminatedString QueryT>
-        [[nodiscard]] beaver::Outcome<ResultBlock, ErrorContext> execute(const QueryT& query) const {
+        [[nodiscard]] std::expected<ResultBlock, ErrorContext> execute(const QueryT& query) const {
             return execute_impl(beaver::as_c_str(query), nullptr);
         }
 
@@ -89,8 +90,8 @@ namespace menagerie::savanna::elephant {
          * @return ResultBlock on success, ErrorContext on failure
          */
         template <beaver::IsNullTerminatedString QueryT>
-        [[nodiscard]] beaver::Outcome<ResultBlock, ErrorContext> execute(const QueryT& query,
-                                                                          const Params& params) const {
+        [[nodiscard]] std::expected<ResultBlock, ErrorContext> execute(const QueryT& query,
+                                                                       const Params& params) const {
             return execute_impl(beaver::as_c_str(query), &params);
         }
 
@@ -107,7 +108,7 @@ namespace menagerie::savanna::elephant {
          */
         template <beaver::IsNullTerminatedString QueryT, typename... Args>
             requires(savanna::IsFieldValueType<Args> && ...)
-        [[nodiscard]] beaver::Outcome<ResultBlock, ErrorContext> execute(const QueryT& query, Args&&... args) const {
+        [[nodiscard]] std::expected<ResultBlock, ErrorContext> execute(const QueryT& query, Args&&... args) const {
             // Stack buffer for small parameter sets (avoids heap allocation)
             std::array<std::byte, 2048> stack_buffer{};
             std::pmr::monotonic_buffer_resource pool{stack_buffer.data(), stack_buffer.size()};
@@ -133,8 +134,8 @@ namespace menagerie::savanna::elephant {
          */
         template <beaver::IsNullTerminatedString QueryT, typename... Args>
             requires(savanna::IsFieldValueType<Args> && ...)
-        [[nodiscard]] beaver::Outcome<ResultBlock, ErrorContext> execute(const QueryT& query,
-                                                                          const std::tuple<Args...>& args) const {
+        [[nodiscard]] std::expected<ResultBlock, ErrorContext> execute(const QueryT& query,
+                                                                       const std::tuple<Args...>& args) const {
             return std::apply([&](const Args&... a) { return execute(query, a...); }, args);
         }
 
@@ -151,7 +152,7 @@ namespace menagerie::savanna::elephant {
          */
         template <typename SqlStringT, typename... Params>
             requires(savanna::IsFieldValueType<Params> && ...)
-        [[nodiscard]] beaver::Outcome<ResultBlock, ErrorContext>
+        [[nodiscard]] std::expected<ResultBlock, ErrorContext>
         execute(const CompiledStaticQuery<SqlStringT, Params...>& query) const {
             return execute(query.c_sql(), query.params());
         }
@@ -161,7 +162,7 @@ namespace menagerie::savanna::elephant {
          * @param query Compiled query object
          * @return ResultBlock on success, ErrorContext on failure
          */
-        [[nodiscard]] beaver::Outcome<ResultBlock, ErrorContext> execute(const CompiledDynamicQuery& query) const;
+        [[nodiscard]] std::expected<ResultBlock, ErrorContext> execute(const CompiledDynamicQuery& query) const;
 
         /// Returns the underlying libpq connection handle.
         [[nodiscard]] PGconn* native_handle() const noexcept {
@@ -174,8 +175,8 @@ namespace menagerie::savanna::elephant {
         PGconn* conn_ = nullptr;
         std::weak_ptr<ConnectionHolder> holder_;
 
-        [[nodiscard]] beaver::Outcome<ResultBlock, ErrorContext> execute_impl(const char* query,
-                                                                               const Params* params) const;
+        [[nodiscard]] std::expected<ResultBlock, ErrorContext> execute_impl(const char* query,
+                                                                            const Params* params) const;
     };
 
     static_assert(IsExecutor<SyncExecutor>);

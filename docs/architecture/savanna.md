@@ -6,7 +6,7 @@ into parameterized SQL text without knowing which database engine will run it. A
 engine-facing half: today that is `providers/postgresql-elephant/` only, built whenever `BUILD_POSTGRESQL` is on (the
 default). The dividing line is deliberate: everything above the provider layer can be type-checked and, for
 schemas known at compile time, evaluated at compile time; everything in the provider layer talks to libpq,
-manages real sockets, and returns `beaver::Outcome<T, ErrorContext>` instead of throwing on the ordinary failure
+manages real sockets, and returns `std::expected<T, ErrorContext>` instead of throwing on the ordinary failure
 paths (pool exhaustion, a bad connection, a constraint violation). Two independent connection-pooling strategies
 live side by side in the PostgreSQL provider -- a lock-free ring-buffer pool for the fail-fast path and a classic
 mutex-plus-FIFO pool for strict waiter fairness -- both exposed through the same small `CapabilityProvider`
@@ -100,9 +100,9 @@ auto compiled = compiler.compile_dynamic<ParamMode::Inline>(query);
 ## PostgreSQL provider
 
 `CapabilityProvider` (`capabilities/provider/capability_provider.hpp`) is a concept, not a base class: a type
-satisfies it by providing `with_sync() -> Outcome<SyncExecutor, ErrorContext>` and
-`with_async(exec) -> Outcome<AsyncExecutor, ErrorContext>`. Two session types implement it against two different
-pools:
+satisfies it by providing `with_sync() -> std::expected<SyncExecutor, ErrorContext>` and
+`with_async(exec) -> std::expected<AsyncExecutor, ErrorContext>`. Two session types implement it against two
+different pools:
 
 - **`LockFreeSession`** (`session/free_lock/`) owns a `ConnectionPool`: a fixed-size vector of connection slots
   acquired with a CAS scan from a hint cursor, no dynamic growth, and INACTIVE slots lazily promoted to FREE the
@@ -118,7 +118,7 @@ pools:
   `try_*` (non-blocking, fails immediately on exhaustion), a timed overload (bounded wait), and an unbounded
   overload (waits until a slot frees or `shutdown()` drains every waiter). Because its unbounded and timed
   `with_async(...)` overloads return a `boost::asio::awaitable` that suspends the caller's coroutine rather than
-  a synchronous `Outcome`, `BlockingSession` does not itself satisfy `CapabilityProvider`.
+  a synchronous `std::expected`, `BlockingSession` does not itself satisfy `CapabilityProvider`.
 
 Both pools hand out a `std::weak_ptr<ConnectionHolder>` rather than a raw `PGconn*`. `ConnectionHolder`
 (`connection_holder/connection_holder.hpp`) is the polymorphic base every pool-managed connection handle
@@ -196,14 +196,14 @@ auto query = compiler.compile_dynamic<ParamMode::Inline>(
     select(users.column<"id">(), users.column<"name">()).from(users).where(users.column<"id">() == lit(42)));
 
 auto exec_outcome = session.with_sync();
-if (!exec_outcome.is_success()) {
-    // exec_outcome.error<ErrorContext>() -- PoolExhausted, WaitTimeout, ...
+if (!exec_outcome) {
+    // exec_outcome.error() -- PoolExhausted, WaitTimeout, ...
     return;
 }
 auto exec = std::move(exec_outcome).value();
 
 auto result = exec.execute(query);
-if (result.is_success()) {
+if (result) {
     const auto& block = result.value();
     for (std::size_t row = 0; row < block.rows(); ++row) {
         auto name = block.get<std::string>(row, 1);

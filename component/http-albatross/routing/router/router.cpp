@@ -1,6 +1,7 @@
 #include "router.hpp"
 
 #include <utility>
+#include <variant>
 
 #include <errors.hpp>
 
@@ -23,8 +24,7 @@ namespace menagerie::albatross {
         auto resolved = registry_->find_route(ctx.method(), ctx.path(), ctx.arena_alloc());
         if (!resolved) [[unlikely]]
             return ready_response(
-                std::move(resolved).visit([](ResolvedRoute&&) -> Response { std::unreachable(); },
-                                          []<typename E>(E&& e) -> Response { return to_http_response(e); }));
+                std::visit([]<typename E>(const E& e) -> Response { return to_http_response(e); }, resolved.error()));
         auto& [handler, path_params] = resolved.value();
         for (const auto& [name, value] : path_params)
             ctx.set_path_param(name, value);
@@ -42,8 +42,8 @@ namespace menagerie::albatross {
 
         auto resolved = registry_->find_route(ctx.method(), ctx.path(), ctx.arena_alloc());
         if (!resolved) {
-            Response r = std::move(resolved).visit([](ResolvedRoute&&) -> Response { std::unreachable(); },
-                                                   []<typename E>(E&& e) -> Response { return to_http_response(e); });
+            Response r =
+                std::visit([]<typename E>(const E& e) -> Response { return to_http_response(e); }, resolved.error());
             if (hooks_.on_response)
                 hooks_.on_response(info, r);
             co_return r;

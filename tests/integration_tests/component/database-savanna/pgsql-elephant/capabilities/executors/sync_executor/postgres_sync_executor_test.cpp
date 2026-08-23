@@ -51,7 +51,7 @@ protected:
             )
         )");
 
-        ASSERT_TRUE(result.is_success()) << "Failed to create test table: " << result.error<ErrorContext>().format();
+        ASSERT_TRUE(result.has_value()) << "Failed to create test table: " << result.error().format();
 
         // Clean table
         CleanTestTable();
@@ -69,7 +69,7 @@ protected:
 
     void CleanTestTable() const {
         auto result = executor_->execute("TRUNCATE TABLE test_users RESTART IDENTITY CASCADE");
-        ASSERT_TRUE(result.is_success()) << "Failed to clean test table: " << result.error<ErrorContext>().format();
+        ASSERT_TRUE(result.has_value()) << "Failed to clean test table: " << result.error().format();
     }
 
     PGconn* conn_{nullptr};
@@ -81,7 +81,7 @@ protected:
 TEST_F(SyncExecutorTest, ExecuteSimpleSelect) {
     auto result = executor_->execute("SELECT 1 AS number, 'hello' AS text");
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>().format();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error().format();
 
     const auto& block = result.value();
     EXPECT_EQ(block.rows(), 1);
@@ -92,11 +92,11 @@ TEST_F(SyncExecutorTest, ExecuteSimpleInsert) {
     auto result =
         executor_->execute("INSERT INTO test_users (name, age, email) VALUES ('Alice', 30, 'alice@test.com')");
 
-    ASSERT_TRUE(result.is_success()) << "Insert failed: " << result.error<ErrorContext>().format();
+    ASSERT_TRUE(result.has_value()) << "Insert failed: " << result.error().format();
 
     // Verify insertion
     auto select_result = executor_->execute("SELECT COUNT(*) FROM test_users");
-    ASSERT_TRUE(select_result.is_success());
+    ASSERT_TRUE(select_result.has_value());
     EXPECT_EQ(select_result.value().rows(), 1);
 }
 
@@ -106,7 +106,7 @@ TEST_F(SyncExecutorTest, ExecuteSimpleUpdate) {
     // Update
     auto result = executor_->execute("UPDATE test_users SET age = 26 WHERE name = 'Bob'");
 
-    ASSERT_TRUE(result.is_success()) << "Update failed: " << result.error<ErrorContext>().format();
+    ASSERT_TRUE(result.has_value()) << "Update failed: " << result.error().format();
 }
 
 TEST_F(SyncExecutorTest, ExecuteSimpleDelete) {
@@ -116,13 +116,13 @@ TEST_F(SyncExecutorTest, ExecuteSimpleDelete) {
     // Delete
     auto result = executor_->execute("DELETE FROM test_users WHERE name = 'Charlie'");
 
-    ASSERT_TRUE(result.is_success()) << "Delete failed: " << result.error<ErrorContext>().format();
+    ASSERT_TRUE(result.has_value()) << "Delete failed: " << result.error().format();
 }
 
 TEST_F(SyncExecutorTest, ExecuteEmptyResultSet) {
     auto result = executor_->execute("SELECT * FROM test_users WHERE id = -1");
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>().format();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error().format();
 
     const auto& block = result.value();
     EXPECT_EQ(block.rows(), 0);
@@ -143,7 +143,7 @@ TEST_F(SyncExecutorTest, ExecuteParameterizedInsert) {
 
     auto result = executor_->execute("INSERT INTO test_users (name, age, email) VALUES ($1, $2, $3)", *params);
 
-    ASSERT_TRUE(result.is_success()) << "Parameterized insert failed: " << result.error<ErrorContext>().format();
+    ASSERT_TRUE(result.has_value()) << "Parameterized insert failed: " << result.error().format();
 }
 
 TEST_F(SyncExecutorTest, ExecuteParameterizedSelect) {
@@ -158,7 +158,7 @@ TEST_F(SyncExecutorTest, ExecuteParameterizedSelect) {
 
     auto result = executor_->execute("SELECT name, age FROM test_users WHERE name = $1", *params);
 
-    ASSERT_TRUE(result.is_success()) << "Parameterized select failed: " << result.error<ErrorContext>().format();
+    ASSERT_TRUE(result.has_value()) << "Parameterized select failed: " << result.error().format();
 
     const auto& block = result.value();
     EXPECT_EQ(block.rows(), 1);
@@ -180,7 +180,7 @@ TEST_F(SyncExecutorTest, ExecuteMultipleParameters) {
 
     auto result = executor_->execute("SELECT * FROM test_users WHERE age BETWEEN $1 AND $2", *params);
 
-    ASSERT_TRUE(result.is_success()) << "Multi-parameter query failed: " << result.error<ErrorContext>().format();
+    ASSERT_TRUE(result.has_value()) << "Multi-parameter query failed: " << result.error().format();
 
     auto& block = result.value();
     EXPECT_EQ(block.rows(), 1);  // Only User2 is between 25 and 40
@@ -197,7 +197,7 @@ TEST_F(SyncExecutorTest, ExecuteNullParameter) {
 
     auto result = executor_->execute("INSERT INTO test_users (name, email) VALUES ($1, $2)", *params);
 
-    ASSERT_TRUE(result.is_success()) << "Insert with NULL parameter failed: " << result.error<ErrorContext>().format();
+    ASSERT_TRUE(result.has_value()) << "Insert with NULL parameter failed: " << result.error().format();
 }
 
 // ============== Variadic Execute Tests ==============
@@ -209,7 +209,7 @@ TEST_F(SyncExecutorTest, ExecuteVariadicSingleParameter) {
     // Query with single variadic parameter
     auto result = executor_->execute("SELECT name, age FROM test_users WHERE name = $1", std::string{"Frank"});
 
-    ASSERT_TRUE(result.is_success()) << "Variadic single parameter failed: " << result.error<ErrorContext>().format();
+    ASSERT_TRUE(result.has_value()) << "Variadic single parameter failed: " << result.error().format();
 
     const auto& block = result.value();
     EXPECT_EQ(block.rows(), 1);
@@ -222,12 +222,12 @@ TEST_F(SyncExecutorTest, ExecuteVariadicMultipleTypes) {
                                      35,
                                      std::string{"grace@test.com"});
 
-    ASSERT_TRUE(result.is_success()) << "Variadic insert failed: " << result.error<ErrorContext>().format();
+    ASSERT_TRUE(result.has_value()) << "Variadic insert failed: " << result.error().format();
 
     // Verify insertion
     auto select_result =
         executor_->execute("SELECT name, age FROM test_users WHERE email = $1", std::string{"grace@test.com"});
-    ASSERT_TRUE(select_result.is_success());
+    ASSERT_TRUE(select_result.has_value());
     EXPECT_EQ(select_result.value().rows(), 1);
 }
 
@@ -240,7 +240,7 @@ TEST_F(SyncExecutorTest, ExecuteVariadicIntegerTypes) {
     // Query with int parameters
     auto result = executor_->execute("SELECT * FROM test_users WHERE age BETWEEN $1 AND $2", 25, 40);
 
-    ASSERT_TRUE(result.is_success()) << "Variadic int parameters failed: " << result.error<ErrorContext>().format();
+    ASSERT_TRUE(result.has_value()) << "Variadic int parameters failed: " << result.error().format();
 
     const auto& block = result.value();
     EXPECT_EQ(block.rows(), 1);  // Only User2 is between 25 and 40
@@ -251,12 +251,12 @@ TEST_F(SyncExecutorTest, ExecuteVariadicWithNull) {
     auto result = executor_->execute(
         "INSERT INTO test_users (name, email) VALUES ($1, $2)", std::string{"NullEmailUser2"}, std::monostate{});
 
-    ASSERT_TRUE(result.is_success()) << "Variadic NULL parameter failed: " << result.error<ErrorContext>().format();
+    ASSERT_TRUE(result.has_value()) << "Variadic NULL parameter failed: " << result.error().format();
 
     // Verify NULL was inserted
     auto select_result =
         executor_->execute("SELECT name, email FROM test_users WHERE name = $1", std::string{"NullEmailUser2"});
-    ASSERT_TRUE(select_result.is_success());
+    ASSERT_TRUE(select_result.has_value());
     auto& block = select_result.value();
     EXPECT_EQ(block.rows(), 1);
     auto email_opt = block.get_opt<std::string>(0, 1);
@@ -268,11 +268,11 @@ TEST_F(SyncExecutorTest, ExecuteVariadicBooleanType) {
     auto result = executor_->execute(
         "INSERT INTO test_users (name, age, active) VALUES ($1, $2, $3)", std::string{"Helen"}, 29, false);
 
-    ASSERT_TRUE(result.is_success()) << "Variadic boolean parameter failed: " << result.error<ErrorContext>().format();
+    ASSERT_TRUE(result.has_value()) << "Variadic boolean parameter failed: " << result.error().format();
 
     // Verify boolean value
     auto select_result = executor_->execute("SELECT active FROM test_users WHERE name = $1", std::string{"Helen"});
-    ASSERT_TRUE(select_result.is_success());
+    ASSERT_TRUE(select_result.has_value());
     EXPECT_EQ(select_result.value().rows(), 1);
 }
 
@@ -284,7 +284,7 @@ TEST_F(SyncExecutorTest, ExecuteVariadicManyParameters) {
                                      std::string{"ivan@test.com"},
                                      true);
 
-    ASSERT_TRUE(result.is_success()) << "Variadic many parameters failed: " << result.error<ErrorContext>().format();
+    ASSERT_TRUE(result.has_value()) << "Variadic many parameters failed: " << result.error().format();
 
     // Verify with multiple query parameters
     auto select_result = executor_->execute("SELECT name FROM test_users WHERE age = $1 AND email = $2 AND active = $3",
@@ -292,7 +292,7 @@ TEST_F(SyncExecutorTest, ExecuteVariadicManyParameters) {
                                             std::string{"ivan@test.com"},
                                             true);
 
-    ASSERT_TRUE(select_result.is_success());
+    ASSERT_TRUE(select_result.has_value());
     EXPECT_EQ(select_result.value().rows(), 1);
 }
 
@@ -306,7 +306,7 @@ TEST_F(SyncExecutorTest, ExecuteVariadicComplexQuery) {
     auto result = executor_->execute(
         "SELECT name, age FROM test_users WHERE age >= $1 AND age <= $2 AND active = $3 ORDER BY age", 20, 35, true);
 
-    ASSERT_TRUE(result.is_success()) << "Variadic complex query failed: " << result.error<ErrorContext>().format();
+    ASSERT_TRUE(result.has_value()) << "Variadic complex query failed: " << result.error().format();
 
     const auto& block = result.value();
     EXPECT_EQ(block.rows(), 2);  // ActiveUser1 and ActiveUser2
@@ -322,7 +322,7 @@ TEST_F(SyncExecutorTest, ExecuteTupleSingleParameter) {
     auto result =
         executor_->execute("SELECT name, age FROM test_users WHERE name = $1", std::tuple{std::string{"TupleUser"}});
 
-    ASSERT_TRUE(result.is_success()) << "Tuple single parameter failed: " << result.error<ErrorContext>().format();
+    ASSERT_TRUE(result.has_value()) << "Tuple single parameter failed: " << result.error().format();
 
     const auto& block = result.value();
     EXPECT_EQ(block.rows(), 1);
@@ -333,12 +333,12 @@ TEST_F(SyncExecutorTest, ExecuteTupleMultipleParameters) {
     auto result = executor_->execute("INSERT INTO test_users (name, age, email) VALUES ($1, $2, $3)",
                                      std::tuple{std::string{"TupleMulti"}, 38, std::string{"tuple@test.com"}});
 
-    ASSERT_TRUE(result.is_success()) << "Tuple insert failed: " << result.error<ErrorContext>().format();
+    ASSERT_TRUE(result.has_value()) << "Tuple insert failed: " << result.error().format();
 
     // Verify
     auto select_result = executor_->execute("SELECT name, age FROM test_users WHERE email = $1",
                                             std::tuple{std::string{"tuple@test.com"}});
-    ASSERT_TRUE(select_result.is_success());
+    ASSERT_TRUE(select_result.has_value());
     EXPECT_EQ(select_result.value().rows(), 1);
 }
 
@@ -349,7 +349,7 @@ TEST_F(SyncExecutorTest, ExecuteTupleRangeQuery) {
 
     auto result = executor_->execute("SELECT * FROM test_users WHERE age BETWEEN $1 AND $2", std::tuple{25, 40});
 
-    ASSERT_TRUE(result.is_success()) << "Tuple range query failed: " << result.error<ErrorContext>().format();
+    ASSERT_TRUE(result.has_value()) << "Tuple range query failed: " << result.error().format();
 
     const auto& block = result.value();
     EXPECT_EQ(block.rows(), 1);  // Only User2 is between 25 and 40
@@ -359,12 +359,12 @@ TEST_F(SyncExecutorTest, ExecuteTupleWithNull) {
     auto result = executor_->execute("INSERT INTO test_users (name, email) VALUES ($1, $2)",
                                      std::tuple{std::string{"TupleNullUser"}, std::monostate{}});
 
-    ASSERT_TRUE(result.is_success()) << "Tuple NULL parameter failed: " << result.error<ErrorContext>().format();
+    ASSERT_TRUE(result.has_value()) << "Tuple NULL parameter failed: " << result.error().format();
 
     // Verify NULL was inserted
     auto select_result =
         executor_->execute("SELECT email FROM test_users WHERE name = $1", std::tuple{std::string{"TupleNullUser"}});
-    ASSERT_TRUE(select_result.is_success());
+    ASSERT_TRUE(select_result.has_value());
     auto& block = select_result.value();
     EXPECT_EQ(block.rows(), 1);
     auto email_opt = block.get_opt<std::string>(0, 0);
@@ -375,7 +375,7 @@ TEST_F(SyncExecutorTest, ExecuteTupleEmptyTuple) {
     // Empty tuple should behave like a simple query
     auto result = executor_->execute("SELECT 1 AS number", std::tuple<>{});
 
-    ASSERT_TRUE(result.is_success()) << "Empty tuple query failed: " << result.error<ErrorContext>().format();
+    ASSERT_TRUE(result.has_value()) << "Empty tuple query failed: " << result.error().format();
 
     const auto& block = result.value();
     EXPECT_EQ(block.rows(), 1);
@@ -392,7 +392,7 @@ TEST_F(SyncExecutorTest, ExecuteCompiledStaticQuerySelect) {
 
     auto result = executor_->execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "CompiledStaticQuery select failed: " << result.error<ErrorContext>().format();
+    ASSERT_TRUE(result.has_value()) << "CompiledStaticQuery select failed: " << result.error().format();
 
     const auto& block = result.value();
     EXPECT_EQ(block.rows(), 1);
@@ -406,12 +406,12 @@ TEST_F(SyncExecutorTest, ExecuteCompiledStaticQueryInsert) {
 
     auto result = executor_->execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "CompiledStaticQuery insert failed: " << result.error<ErrorContext>().format();
+    ASSERT_TRUE(result.has_value()) << "CompiledStaticQuery insert failed: " << result.error().format();
 
     // Verify
     auto select_result =
         executor_->execute("SELECT name FROM test_users WHERE email = $1", std::string{"static@test.com"});
-    ASSERT_TRUE(select_result.is_success());
+    ASSERT_TRUE(select_result.has_value());
     EXPECT_EQ(select_result.value().rows(), 1);
 }
 
@@ -427,8 +427,7 @@ TEST_F(SyncExecutorTest, ExecuteCompiledStaticQueryMultipleParams) {
 
     auto result = executor_->execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "CompiledStaticQuery multi-param failed: "
-                                     << result.error<ErrorContext>().format();
+    ASSERT_TRUE(result.has_value()) << "CompiledStaticQuery multi-param failed: " << result.error().format();
 
     const auto& block = result.value();
     EXPECT_EQ(block.rows(), 2);  // CSQ1 and CSQ2
@@ -441,8 +440,7 @@ TEST_F(SyncExecutorTest, ExecuteCompiledStaticQueryNoParams) {
 
     auto result = executor_->execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "CompiledStaticQuery no-param failed: "
-                                     << result.error<ErrorContext>().format();
+    ASSERT_TRUE(result.has_value()) << "CompiledStaticQuery no-param failed: " << result.error().format();
 
     const auto& block = result.value();
     EXPECT_EQ(block.rows(), 1);
@@ -453,9 +451,9 @@ TEST_F(SyncExecutorTest, ExecuteCompiledStaticQueryNoParams) {
 TEST_F(SyncExecutorTest, SyntaxError) {
     auto result = executor_->execute("SELCT * FROM test_users");  // Typo: SELCT
 
-    ASSERT_FALSE(result.is_success()) << "Should have failed with syntax error";
+    ASSERT_FALSE(result.has_value()) << "Should have failed with syntax error";
 
-    const auto& error = result.error<ErrorContext>();
+    const auto& error = result.error();
     EXPECT_FALSE(error.sqlstate.empty());
     EXPECT_EQ(error.sqlstate.substr(0, 2), "42");  // Class 42 = Syntax Error or Access Rule Violation
     EXPECT_FALSE(error.message.empty());
@@ -468,9 +466,9 @@ TEST_F(SyncExecutorTest, UniqueConstraintViolation) {
     // Try to insert duplicate email
     auto result = executor_->execute("INSERT INTO test_users (name, email) VALUES ('User2', 'duplicate@test.com')");
 
-    ASSERT_FALSE(result.is_success()) << "Should have failed with unique constraint violation";
+    ASSERT_FALSE(result.has_value()) << "Should have failed with unique constraint violation";
 
-    const auto& error = result.error<ErrorContext>();
+    const auto& error = result.error();
     EXPECT_EQ(error.sqlstate, "23505");  // Unique violation
     EXPECT_TRUE(error.code.is_server_error());
     EXPECT_EQ(error.code, ServerErrorCode::UniqueViolation);
@@ -479,9 +477,9 @@ TEST_F(SyncExecutorTest, UniqueConstraintViolation) {
 TEST_F(SyncExecutorTest, NotNullConstraintViolation) {
     auto result = executor_->execute("INSERT INTO test_users (age) VALUES (25)");  // name is NOT NULL
 
-    ASSERT_FALSE(result.is_success()) << "Should have failed with NOT NULL constraint violation";
+    ASSERT_FALSE(result.has_value()) << "Should have failed with NOT NULL constraint violation";
 
-    const auto& error = result.error<ErrorContext>();
+    const auto& error = result.error();
     EXPECT_EQ(error.sqlstate, "23502");  // NOT NULL violation
     EXPECT_EQ(error.code, ServerErrorCode::NotNullViolation);
 }
@@ -489,9 +487,9 @@ TEST_F(SyncExecutorTest, NotNullConstraintViolation) {
 TEST_F(SyncExecutorTest, TableNotFound) {
     auto result = executor_->execute("SELECT * FROM non_existent_table");
 
-    ASSERT_FALSE(result.is_success()) << "Should have failed with table not found error";
+    ASSERT_FALSE(result.has_value()) << "Should have failed with table not found error";
 
-    const auto& error = result.error<ErrorContext>();
+    const auto& error = result.error();
     EXPECT_EQ(error.sqlstate, "42P01");  // Undefined table
     EXPECT_EQ(error.code, ServerErrorCode::TableNotFound);
 }
@@ -502,9 +500,9 @@ TEST_F(SyncExecutorTest, InvalidConnectionError) {
 
     auto result = invalid_executor.execute("SELECT 1");
 
-    ASSERT_FALSE(result.is_success()) << "Should have failed with connection error";
+    ASSERT_FALSE(result.has_value()) << "Should have failed with connection error";
 
-    const auto& error = result.error<ErrorContext>();
+    const auto& error = result.error();
     EXPECT_TRUE(error.code.is_client_error());
     EXPECT_EQ(error.code, ClientErrorCode::NotConnected);
 }
@@ -519,7 +517,7 @@ TEST_F(SyncExecutorTest, MultipleRowsResult) {
 
     auto result = executor_->execute("SELECT name, age FROM test_users ORDER BY age");
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>().format();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error().format();
 
     const auto& block = result.value();
     EXPECT_EQ(block.rows(), 3);
@@ -531,7 +529,7 @@ TEST_F(SyncExecutorTest, NullValuesInResult) {
 
     auto result = executor_->execute("SELECT name, age FROM test_users WHERE name = 'NullAge'");
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>().format();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error().format();
 
     const auto& block = result.value();
     EXPECT_EQ(block.rows(), 1);
@@ -547,8 +545,8 @@ TEST_F(SyncExecutorTest, EmptyQuery) {
     auto result = executor_->execute("");
 
     // Empty query should result in error
-    ASSERT_FALSE(result.is_success()) << "Empty query should fail";
-    const auto& error = result.error<ErrorContext>();
+    ASSERT_FALSE(result.has_value()) << "Empty query should fail";
+    const auto& error = result.error();
 
     // PGRES_EMPTY_QUERY doesn't provide SQLSTATE, falls back to status-based mapping
     EXPECT_TRUE(error.sqlstate.empty()) << "Empty query has no SQLSTATE";
@@ -562,12 +560,12 @@ TEST_F(SyncExecutorTest, LargeResultSet) {
         std::string query = "INSERT INTO test_users (name, age) VALUES ('User" + std::to_string(i) + "', " +
                             std::to_string(20 + i % 50) + ")";
         auto result = executor_->execute(query);
-        ASSERT_TRUE(result.is_success()) << "Insert failed at iteration " << i;
+        ASSERT_TRUE(result.has_value()) << "Insert failed at iteration " << i;
     }
 
     auto result = executor_->execute("SELECT * FROM test_users");
 
-    ASSERT_TRUE(result.is_success()) << "Large query failed: " << result.error<ErrorContext>().format();
+    ASSERT_TRUE(result.has_value()) << "Large query failed: " << result.error().format();
 
     auto& block = result.value();
     EXPECT_EQ(block.rows(), 1000);

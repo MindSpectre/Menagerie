@@ -5,6 +5,7 @@
 #include <chrono>
 #include <mutex>
 #include <thread>
+#include <tuple>
 #include <vector>
 
 #include <gtest/gtest.h>
@@ -54,11 +55,11 @@ TEST_F(BlockingSessionTest, TryWithSyncExecutesSimpleQuery) {
     BlockingSession session{make_test_config(), make_pool_config(2, 1)};
 
     auto outcome = session.try_with_sync();
-    ASSERT_TRUE(outcome.is_success());
+    ASSERT_TRUE(outcome.has_value());
 
     auto exec   = std::move(outcome).value();
     auto result = exec.execute("SELECT 42 AS answer");
-    ASSERT_TRUE(result.is_success());
+    ASSERT_TRUE(result.has_value());
     EXPECT_EQ(result.value().rows(), 1u);
 }
 
@@ -66,18 +67,18 @@ TEST_F(BlockingSessionTest, WithSyncTimedExecutesQueryOnFreePool) {
     BlockingSession session{make_test_config(), make_pool_config(2, 1)};
 
     auto outcome = session.with_sync(500ms);
-    ASSERT_TRUE(outcome.is_success());
+    ASSERT_TRUE(outcome.has_value());
     auto exec = std::move(outcome).value();
-    EXPECT_TRUE(exec.execute("SELECT 1").is_success());
+    EXPECT_TRUE(exec.execute("SELECT 1").has_value());
 }
 
 TEST_F(BlockingSessionTest, WithSyncBlockingExecutesQueryOnFreePool) {
     BlockingSession session{make_test_config(), make_pool_config(2, 1)};
 
     auto outcome = session.with_sync();
-    ASSERT_TRUE(outcome.is_success());
+    ASSERT_TRUE(outcome.has_value());
     auto exec = std::move(outcome).value();
-    EXPECT_TRUE(exec.execute("SELECT 1").is_success());
+    EXPECT_TRUE(exec.execute("SELECT 1").has_value());
 }
 
 // ============== Exhaustion + Error Codes ==============
@@ -86,25 +87,25 @@ TEST_F(BlockingSessionTest, TryWithSyncReturnsPoolExhaustedWhenFull) {
     BlockingSession session{make_test_config(), make_pool_config(1, 1)};
 
     auto first = session.try_with_sync();
-    ASSERT_TRUE(first.is_success());
+    ASSERT_TRUE(first.has_value());
 
     auto second = session.try_with_sync();
-    ASSERT_FALSE(second.is_success());
-    EXPECT_EQ(second.error<ErrorContext>().code.value(), static_cast<int>(ClientErrorCode::PoolExhausted));
+    ASSERT_FALSE(second.has_value());
+    EXPECT_EQ(second.error().code.value(), static_cast<int>(ClientErrorCode::PoolExhausted));
 }
 
 TEST_F(BlockingSessionTest, WithSyncTimedReturnsWaitTimeoutOnExpiry) {
     BlockingSession session{make_test_config(), make_pool_config(1, 1)};
 
     auto first = session.try_with_sync();
-    ASSERT_TRUE(first.is_success());
+    ASSERT_TRUE(first.has_value());
 
     const auto start   = std::chrono::steady_clock::now();
     auto second        = session.with_sync(120ms);
     const auto elapsed = std::chrono::steady_clock::now() - start;
 
-    ASSERT_FALSE(second.is_success());
-    EXPECT_EQ(second.error<ErrorContext>().code.value(), static_cast<int>(ClientErrorCode::WaitTimeout));
+    ASSERT_FALSE(second.has_value());
+    EXPECT_EQ(second.error().code.value(), static_cast<int>(ClientErrorCode::WaitTimeout));
     EXPECT_GE(elapsed, 110ms);
     EXPECT_LT(elapsed, 500ms);
 }
@@ -115,7 +116,7 @@ TEST_F(BlockingSessionTest, WithSyncTimedAcquiresSlotReleasedDuringWait) {
     BlockingSession session{make_test_config(), make_pool_config(1, 1)};
 
     auto first = session.try_with_sync();
-    ASSERT_TRUE(first.is_success());
+    ASSERT_TRUE(first.has_value());
 
     auto holder_wrapper = std::make_unique<SyncExecutor>(std::move(first).value());
 
@@ -130,7 +131,7 @@ TEST_F(BlockingSessionTest, WithSyncTimedAcquiresSlotReleasedDuringWait) {
 
     releaser.join();
 
-    ASSERT_TRUE(waited.is_success());
+    ASSERT_TRUE(waited.has_value());
     EXPECT_GE(took, 70ms);
     EXPECT_LT(took, 500ms) << "handoff should be near-instant after release";
 }
@@ -149,7 +150,7 @@ TEST_F(BlockingSessionTest, WithSyncBlockingAcquiresSlotReleasedDuringWait) {
     auto waited = session.with_sync();  // unbounded
     releaser.join();
 
-    ASSERT_TRUE(waited.is_success());
+    ASSERT_TRUE(waited.has_value());
 }
 
 // ============== Shutdown Semantics ==============
@@ -157,13 +158,13 @@ TEST_F(BlockingSessionTest, WithSyncBlockingAcquiresSlotReleasedDuringWait) {
 TEST_F(BlockingSessionTest, ShutdownWakesTimedWaiter) {
     BlockingSession session{make_test_config(), make_pool_config(1, 1)};
     auto first = session.try_with_sync();
-    ASSERT_TRUE(first.is_success());
+    ASSERT_TRUE(first.has_value());
 
     std::atomic<bool> waiter_observed_shutdown{false};
     std::thread waiter{[&] {
         auto result              = session.with_sync(5s);
-        waiter_observed_shutdown = !result.is_success() && result.error<ErrorContext>().code.value() ==
-                                                               static_cast<int>(ClientErrorCode::PoolShutdown);
+        waiter_observed_shutdown =
+            !result.has_value() && result.error().code.value() == static_cast<int>(ClientErrorCode::PoolShutdown);
     }};
 
     // Wait until the waiter has enqueued
@@ -179,13 +180,13 @@ TEST_F(BlockingSessionTest, ShutdownWakesTimedWaiter) {
 TEST_F(BlockingSessionTest, ShutdownWakesBlockingWaiter) {
     BlockingSession session{make_test_config(), make_pool_config(1, 1)};
     auto first = session.try_with_sync();
-    ASSERT_TRUE(first.is_success());
+    ASSERT_TRUE(first.has_value());
 
     std::atomic<bool> waiter_observed_shutdown{false};
     std::thread waiter{[&] {
         auto result              = session.with_sync();  // unbounded
-        waiter_observed_shutdown = !result.is_success() && result.error<ErrorContext>().code.value() ==
-                                                               static_cast<int>(ClientErrorCode::PoolShutdown);
+        waiter_observed_shutdown =
+            !result.has_value() && result.error().code.value() == static_cast<int>(ClientErrorCode::PoolShutdown);
     }};
 
     while (session.pool_waiter_count() == 0) {
@@ -203,7 +204,7 @@ TEST_F(BlockingSessionTest, FifoFairnessUnderContention) {
     BlockingSession session{make_test_config(), make_pool_config(1, 1)};
 
     auto initial_outcome = session.try_with_sync();
-    ASSERT_TRUE(initial_outcome.is_success());
+    ASSERT_TRUE(initial_outcome.has_value());
     auto initial = std::make_unique<SyncExecutor>(std::move(initial_outcome).value());
 
     constexpr std::size_t N = 6;
@@ -215,7 +216,7 @@ TEST_F(BlockingSessionTest, FifoFairnessUnderContention) {
     // This makes enqueue order deterministic — worker i is at waiters_[i].
     for (std::size_t i = 0; i < N; ++i) {
         workers.emplace_back([&, i] {
-            if (const auto w = session.with_sync(10s); w.is_success()) {
+            if (const auto w = session.with_sync(10s); w.has_value()) {
                 std::lock_guard lk{order_mtx};
                 acquire_order.push_back(i);
                 // Hold briefly so subsequent waiters don't race past us
@@ -250,43 +251,43 @@ TEST_F(BlockingSessionTest, BeginTransactionRollsBackOnScopeExit) {
     // Setup: create a test table in an auto-committed statement
     {
         auto exec_outcome = session.try_with_sync();
-        ASSERT_TRUE(exec_outcome.is_success());
+        ASSERT_TRUE(exec_outcome.has_value());
         auto exec = std::move(exec_outcome).value();
-        ASSERT_TRUE(exec.execute("CREATE TABLE IF NOT EXISTS blocking_tx_test (id INT)").is_success());
-        ASSERT_TRUE(exec.execute("TRUNCATE blocking_tx_test").is_success());
+        ASSERT_TRUE(exec.execute("CREATE TABLE IF NOT EXISTS blocking_tx_test (id INT)").has_value());
+        ASSERT_TRUE(exec.execute("TRUNCATE blocking_tx_test").has_value());
     }
 
     // Insert inside a transaction and roll back
     {
         auto tx_outcome = session.try_begin_transaction();
-        ASSERT_TRUE(tx_outcome.is_success());
+        ASSERT_TRUE(tx_outcome.has_value());
         auto tx = std::move(tx_outcome).value();
-        ASSERT_TRUE(tx.begin().is_success());
+        ASSERT_TRUE(tx.begin().has_value());
         {
             auto exec_outcome = tx.with_sync();
-            ASSERT_TRUE(exec_outcome.is_success());
+            ASSERT_TRUE(exec_outcome.has_value());
             auto exec = std::move(exec_outcome).value();
-            ASSERT_TRUE(exec.execute("INSERT INTO blocking_tx_test VALUES (1)").is_success());
+            ASSERT_TRUE(exec.execute("INSERT INTO blocking_tx_test VALUES (1)").has_value());
         }
-        ASSERT_TRUE(tx.rollback().is_success());
+        ASSERT_TRUE(tx.rollback().has_value());
     }
 
     // Verify the row is gone
     {
         auto exec_outcome = session.try_with_sync();
-        ASSERT_TRUE(exec_outcome.is_success());
+        ASSERT_TRUE(exec_outcome.has_value());
         auto exec   = std::move(exec_outcome).value();
         auto result = exec.execute("SELECT COUNT(*) FROM blocking_tx_test");
-        ASSERT_TRUE(result.is_success());
+        ASSERT_TRUE(result.has_value());
         EXPECT_EQ(result.value().rows(), 1u);
     }
 
     // Cleanup
     {
         auto exec_outcome = session.try_with_sync();
-        ASSERT_TRUE(exec_outcome.is_success());
+        ASSERT_TRUE(exec_outcome.has_value());
         auto exec = std::move(exec_outcome).value();
-        (void)exec.execute("DROP TABLE IF EXISTS blocking_tx_test");
+        std::ignore = exec.execute("DROP TABLE IF EXISTS blocking_tx_test");
     }
 }
 
@@ -295,34 +296,34 @@ TEST_F(BlockingSessionTest, TryBeginAutoTransactionAutoCommits) {
 
     {
         auto exec_outcome = session.try_with_sync();
-        ASSERT_TRUE(exec_outcome.is_success());
+        ASSERT_TRUE(exec_outcome.has_value());
         auto exec = std::move(exec_outcome).value();
-        ASSERT_TRUE(exec.execute("CREATE TABLE IF NOT EXISTS blocking_autotx_test (id INT)").is_success());
-        ASSERT_TRUE(exec.execute("TRUNCATE blocking_autotx_test").is_success());
+        ASSERT_TRUE(exec.execute("CREATE TABLE IF NOT EXISTS blocking_autotx_test (id INT)").has_value());
+        ASSERT_TRUE(exec.execute("TRUNCATE blocking_autotx_test").has_value());
     }
 
     {
         auto tx_outcome = session.try_begin_auto_transaction();
-        ASSERT_TRUE(tx_outcome.is_success());
+        ASSERT_TRUE(tx_outcome.has_value());
         auto tx = std::move(tx_outcome).value();
         {
             auto exec_outcome = tx.with_sync();
-            ASSERT_TRUE(exec_outcome.is_success());
+            ASSERT_TRUE(exec_outcome.has_value());
             auto exec = std::move(exec_outcome).value();
-            ASSERT_TRUE(exec.execute("INSERT INTO blocking_autotx_test VALUES (7)").is_success());
+            ASSERT_TRUE(exec.execute("INSERT INTO blocking_autotx_test VALUES (7)").has_value());
         }
-        ASSERT_TRUE(tx.commit().is_success());
+        ASSERT_TRUE(tx.commit().has_value());
     }
 
     {
         auto exec_outcome = session.try_with_sync();
-        ASSERT_TRUE(exec_outcome.is_success());
+        ASSERT_TRUE(exec_outcome.has_value());
         auto exec   = std::move(exec_outcome).value();
         auto result = exec.execute("SELECT id FROM blocking_autotx_test");
-        ASSERT_TRUE(result.is_success());
+        ASSERT_TRUE(result.has_value());
         EXPECT_EQ(result.value().rows(), 1u);
 
-        (void)exec.execute("DROP TABLE IF EXISTS blocking_autotx_test");
+        std::ignore = exec.execute("DROP TABLE IF EXISTS blocking_autotx_test");
     }
 }
 
@@ -336,18 +337,18 @@ TEST_F(BlockingSessionTest, StatsReflectFreeAndActiveHolders) {
     EXPECT_EQ(session.pool_active_count(), 0u);
 
     auto a = session.try_with_sync();
-    ASSERT_TRUE(a.is_success());
+    ASSERT_TRUE(a.has_value());
     EXPECT_EQ(session.pool_active_count(), 1u);
     EXPECT_EQ(session.pool_free_count(), 1u);
 
     auto b = session.try_with_sync();
-    ASSERT_TRUE(b.is_success());
+    ASSERT_TRUE(b.has_value());
     EXPECT_EQ(session.pool_active_count(), 2u);
     EXPECT_EQ(session.pool_free_count(), 0u);
 
     // Lazy init creates a 3rd
     auto c = session.try_with_sync();
-    ASSERT_TRUE(c.is_success());
+    ASSERT_TRUE(c.has_value());
     EXPECT_EQ(session.pool_active_count(), 3u);
     EXPECT_EQ(session.pool_free_count(), 0u);
 }

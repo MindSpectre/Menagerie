@@ -1,6 +1,7 @@
 #pragma once
 
 #include <chrono>
+#include <expected>
 #include <menagerie/beaver>
 #include <menagerie/crow>
 
@@ -48,7 +49,7 @@ namespace menagerie::savanna::elephant {
          * @brief Get a synchronous executor with an acquired connection
          * @return SyncExecutor on success, ErrorContext on pool exhaustion
          */
-        [[nodiscard]] beaver::Outcome<SyncExecutor, ErrorContext> with_sync();
+        [[nodiscard]] std::expected<SyncExecutor, ErrorContext> with_sync();
 
         /**
          * @brief Get a synchronous executor, waiting up to `timeout` for a free slot
@@ -56,15 +57,14 @@ namespace menagerie::savanna::elephant {
          *                Zero returns immediately (same as the no-arg overload).
          * @return SyncExecutor on success, ErrorContext{PoolExhausted} on full timeout
          */
-        [[nodiscard]] beaver::Outcome<SyncExecutor, ErrorContext>
-        with_sync(std::chrono::steady_clock::duration timeout);
+        [[nodiscard]] std::expected<SyncExecutor, ErrorContext> with_sync(std::chrono::steady_clock::duration timeout);
 
         /**
          * @brief Get an asynchronous executor with an acquired connection
          * @param exec Boost.Asio executor for async I/O
          * @return AsyncExecutor on success, ErrorContext on pool exhaustion
          */
-        [[nodiscard]] beaver::Outcome<AsyncExecutor, ErrorContext> with_async(boost::asio::any_io_executor exec);
+        [[nodiscard]] std::expected<AsyncExecutor, ErrorContext> with_async(boost::asio::any_io_executor exec);
 
         /**
          * @brief Get an async executor, waiting up to `timeout` for a free slot
@@ -76,7 +76,7 @@ namespace menagerie::savanna::elephant {
          * Note: the timeout wait blocks the calling thread. An awaitable variant
          * that suspends the coroutine may be added later.
          */
-        [[nodiscard]] beaver::Outcome<AsyncExecutor, ErrorContext>
+        [[nodiscard]] std::expected<AsyncExecutor, ErrorContext>
         with_async(boost::asio::any_io_executor exec, std::chrono::steady_clock::duration timeout);
 
         /// Shuts the session down: stops the janitor thread and drains the pool.
@@ -90,7 +90,7 @@ namespace menagerie::savanna::elephant {
          * @return An IDLE Transaction the caller must begin() itself, or
          *         ErrorContext{PoolExhausted} if no slot was immediately available
          */
-        [[nodiscard]] beaver::Outcome<Transaction, ErrorContext> begin_transaction(TransactionOptions opts = {});
+        [[nodiscard]] std::expected<Transaction, ErrorContext> begin_transaction(TransactionOptions opts = {});
 
         /**
          * @brief Begin a transaction, waiting up to `timeout` for a free slot
@@ -98,7 +98,7 @@ namespace menagerie::savanna::elephant {
          * @param timeout Duration to wait if the pool is exhausted on the first attempt.
          * @return Transaction on success, ErrorContext{PoolExhausted} on full timeout
          */
-        [[nodiscard]] beaver::Outcome<Transaction, ErrorContext>
+        [[nodiscard]] std::expected<Transaction, ErrorContext>
         begin_transaction(TransactionOptions opts, std::chrono::steady_clock::duration timeout);
 
         /**
@@ -107,8 +107,7 @@ namespace menagerie::savanna::elephant {
          * @return An ACTIVE AutoTransaction on success, ErrorContext{PoolExhausted} if
          *         no slot was immediately available, or the error from a failed BEGIN
          */
-        [[nodiscard]] beaver::Outcome<AutoTransaction, ErrorContext>
-        begin_auto_transaction(TransactionOptions opts = {});
+        [[nodiscard]] std::expected<AutoTransaction, ErrorContext> begin_auto_transaction(TransactionOptions opts = {});
 
         /**
          * @brief Begin an auto-transaction, waiting up to `timeout` for a free slot
@@ -117,7 +116,7 @@ namespace menagerie::savanna::elephant {
          * @return AutoTransaction on success, ErrorContext{PoolExhausted} on full timeout
          *         or on failure of the implicit BEGIN
          */
-        [[nodiscard]] beaver::Outcome<AutoTransaction, ErrorContext>
+        [[nodiscard]] std::expected<AutoTransaction, ErrorContext>
         begin_auto_transaction(TransactionOptions opts, std::chrono::steady_clock::duration timeout);
 
         // -------- Pool Stats --------
