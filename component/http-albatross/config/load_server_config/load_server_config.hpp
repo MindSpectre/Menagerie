@@ -1,9 +1,11 @@
 #pragma once
 
 #include <cstddef>
+#include <expected>
 #include <menagerie/beaver>
 #include <string>
 #include <string_view>
+#include <variant>
 
 #include <json/json.h>
 #include <server_config.hpp>
@@ -49,7 +51,7 @@ namespace menagerie::albatross {
      * Unknown JSON keys are ignored (the fields() walk reads known names
      * only). An empty file is a parse error, not an empty config.
      */
-    beaver::Outcome<ServerConfig, ConfigFileError, ConfigParseError, ConfigSchemaError>
+    [[nodiscard]] std::expected<ServerConfig, std::variant<ConfigFileError, ConfigParseError, ConfigSchemaError>>
     load_server_config(std::string_view path);
 
     /// Round-trip companion: serialize - which validates first. Secret

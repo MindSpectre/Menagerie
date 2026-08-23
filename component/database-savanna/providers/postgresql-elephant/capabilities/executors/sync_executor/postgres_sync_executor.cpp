@@ -37,11 +37,11 @@ namespace menagerie::savanna::elephant {
         return *this;
     }
 
-    beaver::Outcome<ResultBlock, ErrorContext> SyncExecutor::execute(const CompiledDynamicQuery& query) const {
+    std::expected<ResultBlock, ErrorContext> SyncExecutor::execute(const CompiledDynamicQuery& query) const {
         if (query.provider() != Providers::PostgreSQL) {
             ErrorContext ec{ErrorCode{ClientErrorCode::SyntaxError}};
             ec.context = "Wrong provider. Query was compiled not by PostgreSQL";
-            return beaver::err(ec);
+            return std::unexpected(std::move(ec));
         }
         const auto params_ptr = query.backend_packet_as<Params>();
         if (!params_ptr) {
@@ -50,14 +50,13 @@ namespace menagerie::savanna::elephant {
         return execute_impl(query.c_sql(), params_ptr.get());
     }
 
-    beaver::Outcome<ResultBlock, ErrorContext> SyncExecutor::execute_impl(const char* query,
-                                                                           const Params* params) const {
+    std::expected<ResultBlock, ErrorContext> SyncExecutor::execute_impl(const char* query, const Params* params) const {
         COMPONENT_LOG_ENTER_FUNCTION();
         COMPONENT_LOG_TRC() << CROW_PARAMS(query, params);
         if (const auto ec = check_connection(conn_); ec) {
             ErrorContext ctx(ec);
             COMPONENT_LOG_ERR() << "Connection failed: " << ctx;
-            return beaver::err(std::move(ctx));
+            return std::unexpected(std::move(ctx));
         }
 
         PGresult* result = (params == nullptr || params->values.empty())
@@ -74,7 +73,7 @@ namespace menagerie::savanna::elephant {
         if (!result) {
             auto ec = extract_connection_error(conn_);
             COMPONENT_LOG_ERR() << "Connection failed: " << ec;
-            return beaver::err(std::move(ec));
+            return std::unexpected(std::move(ec));
         }
 
         return process_result(result);

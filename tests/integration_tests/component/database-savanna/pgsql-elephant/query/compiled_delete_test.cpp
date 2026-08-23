@@ -41,12 +41,12 @@ TEST_F(CompiledDeleteTest, DeleteSingleRow) {
 
     auto result = executor().execute(compiled_query);
 
-    ASSERT_TRUE(result.is_success()) << "Delete failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Delete failed: " << result.error();
 
     EXPECT_EQ(CountRows(), 1);  // Only Bob should remain
 
     auto select_result = executor().execute("SELECT COUNT(*) FROM users WHERE name = 'Alice'");
-    ASSERT_TRUE(select_result.is_success());
+    ASSERT_TRUE(select_result.has_value());
     EXPECT_EQ(select_result.value().get<int>(0, 0), 0);
 }
 
@@ -58,12 +58,12 @@ TEST_F(CompiledDeleteTest, DeleteMultipleRows) {
     auto query  = compile_query(delete_from(schemas().users).where(schemas().users.column<"active">() == false));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Delete failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Delete failed: " << result.error();
 
     EXPECT_EQ(CountRows(), 1);  // Only User3 should remain
 
     auto select_result = executor().execute("SELECT COUNT(*) FROM users WHERE active = true");
-    ASSERT_TRUE(select_result.is_success());
+    ASSERT_TRUE(select_result.has_value());
     EXPECT_EQ(select_result.value().get<int>(0, 0), 1);
 }
 
@@ -79,7 +79,7 @@ TEST_F(CompiledDeleteTest, DeleteWithSimpleWhere) {
 
     auto result = executor().execute(compiled_query);
 
-    ASSERT_TRUE(result.is_success()) << "Delete failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Delete failed: " << result.error();
 
     EXPECT_EQ(CountRows(), 1);  // Only User1 should remain
 }
@@ -96,7 +96,7 @@ TEST_F(CompiledDeleteTest, DeleteWithComplexWhere) {
 
     auto result = executor().execute(compiled_query);
 
-    ASSERT_TRUE(result.is_success()) << "Delete failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Delete failed: " << result.error();
 
     EXPECT_EQ(CountRows(), 2);  // User1 and User3 should remain
 }
@@ -111,7 +111,7 @@ TEST_F(CompiledDeleteTest, DeleteWithOrCondition) {
 
     auto result = executor().execute(compiled_query);
 
-    ASSERT_TRUE(result.is_success()) << "Delete failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Delete failed: " << result.error();
 
     EXPECT_EQ(CountRows(), 1);  // Only User2 should remain
 }
@@ -125,12 +125,12 @@ TEST_F(CompiledDeleteTest, DeleteWithInCondition) {
     auto query  = compile_query(delete_from(schemas().users).where(in(schemas().users.column<"age">(), 18, 19, 20)));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Delete failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Delete failed: " << result.error();
 
     EXPECT_EQ(CountRows(), 1);  // Only User4 should remain
 
     auto select_result = executor().execute("SELECT age FROM users");
-    ASSERT_TRUE(select_result.is_success());
+    ASSERT_TRUE(select_result.has_value());
     EXPECT_EQ(select_result.value().get<int>(0, 0), 25);
 }
 
@@ -143,7 +143,7 @@ TEST_F(CompiledDeleteTest, DeleteWithBetweenCondition) {
     auto query  = compile_query(delete_from(schemas().users).where(between(schemas().users.column<"age">(), 18, 25)));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Delete failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Delete failed: " << result.error();
 
     EXPECT_EQ(CountRows(), 2);  // User1 and User4 should remain
 }
@@ -158,7 +158,7 @@ TEST_F(CompiledDeleteTest, DeleteAllRows) {
     auto query  = compile_query(delete_from(schemas().users));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Delete failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Delete failed: " << result.error();
 
     EXPECT_EQ(CountRows(), 0);
 }
@@ -173,7 +173,7 @@ TEST_F(CompiledDeleteTest, DeleteWithTableName) {
 
     auto result = executor().execute(compiled_query);
 
-    ASSERT_TRUE(result.is_success()) << "Delete failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Delete failed: " << result.error();
 
     EXPECT_EQ(CountRows(), 0);
 }
@@ -188,7 +188,7 @@ TEST_F(CompiledDeleteTest, DeleteNoMatch) {
 
     auto result = executor().execute(compiled_query);
 
-    ASSERT_TRUE(result.is_success()) << "Delete failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Delete failed: " << result.error();
 
     EXPECT_EQ(CountRows(), 1);  // No rows deleted
 }
@@ -199,7 +199,7 @@ TEST_F(CompiledDeleteTest, DeleteEmptyTable) {
 
     auto result = executor().execute(compiled_query);
 
-    ASSERT_TRUE(result.is_success()) << "Delete failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Delete failed: " << result.error();
 
     EXPECT_EQ(CountRows(), 0);
 }
@@ -213,7 +213,7 @@ TEST_F(CompiledDeleteTest, DeleteWithNullComparison) {
 
     auto result = executor().execute(compiled_query);
 
-    ASSERT_TRUE(result.is_success()) << "Delete failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Delete failed: " << result.error();
 
     EXPECT_EQ(CountRows(), 1);  // Only User1 (with NULL age) remains
 }
@@ -228,18 +228,18 @@ TEST_F(CompiledDeleteTest, DeleteMultipleSeparateQueries) {
     // First delete
     auto compiled_query1 = compile_query(delete_from(u).where(u.column<"age">() == 20));
     auto result1         = executor().execute(compiled_query1);
-    ASSERT_TRUE(result1.is_success()) << "First delete failed: " << result1.error<ErrorContext>();
+    ASSERT_TRUE(result1.has_value()) << "First delete failed: " << result1.error();
     EXPECT_EQ(CountRows(), 2);
 
     // Second delete
     auto compiled_query2 = compile_query(delete_from(u).where(u.column<"age">() == 40));
     auto result2         = executor().execute(compiled_query2);
-    ASSERT_TRUE(result2.is_success()) << "Second delete failed: " << result2.error<ErrorContext>();
+    ASSERT_TRUE(result2.has_value()) << "Second delete failed: " << result2.error();
     EXPECT_EQ(CountRows(), 1);
 
     // Verify only User2 remains
     auto select_result = executor().execute("SELECT age FROM users");
-    ASSERT_TRUE(select_result.is_success());
+    ASSERT_TRUE(select_result.has_value());
     EXPECT_EQ(select_result.value().get<int>(0, 0), 30);
 }
 
@@ -253,12 +253,12 @@ TEST_F(CompiledDeleteTest, DeleteWithStringComparison) {
 
     auto result = executor().execute(compiled_query);
 
-    ASSERT_TRUE(result.is_success()) << "Delete failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Delete failed: " << result.error();
 
     EXPECT_EQ(CountRows(), 2);
 
     auto select_result = executor().execute("SELECT COUNT(*) FROM users WHERE name = 'Bob'");
-    ASSERT_TRUE(select_result.is_success());
+    ASSERT_TRUE(select_result.has_value());
     EXPECT_EQ(select_result.value().get<int>(0, 0), 0);
 }
 
@@ -270,11 +270,11 @@ TEST_F(CompiledDeleteTest, DeleteWithBooleanCondition) {
     auto query  = compile_query(delete_from(schemas().users).where(schemas().users.column<"active">() == false));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Delete failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Delete failed: " << result.error();
 
     EXPECT_EQ(CountRows(), 2);  // Only active users remain
 
     auto select_result = executor().execute("SELECT COUNT(*) FROM users WHERE active = true");
-    ASSERT_TRUE(select_result.is_success());
+    ASSERT_TRUE(select_result.has_value());
     EXPECT_EQ(select_result.value().get<int>(0, 0), 2);
 }

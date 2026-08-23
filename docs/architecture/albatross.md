@@ -7,7 +7,8 @@ can land later without touching the surrounding architecture. Three goals show u
 layering**, so application code depends on routing, routing depends on HTTP semantics, and neither the transport
 nor the protocol drivers know anything about controllers; a **zero-additional-allocation hot path**, where a
 successful request reuses a per-connection arena and the only unavoidable heap allocation is the user's own
-response-body bytes; and an **explicit, typed error model** built on `beaver::Outcome<Response, Errors...>`, so
+response-body bytes; and an **explicit, typed error model** built on `std::expected<Response, std::variant<Errors...>>` (the
+`AsyncOutcome<Response, Errors...>` coroutine alias), so
 a handler's failure modes are part of its signature instead of an exception thrown into the void.
 
 ## Layer map
@@ -111,7 +112,8 @@ For an `Http11Driver` connection, one request's journey from accept to response 
    `Router::dispatch` resolves the route via `RouteRegistry::find_route`, injects path parameters into the
    context, and invokes the frozen registry's baked `ContextHandler` (the composed middleware chain wrapping the
    controller method or lambda). The whole call is wrapped in `try { ... } catch (...)`; anything that escapes
-   the Outcome system becomes `ResponseFactory::internal_error()` with `keep_alive` forced to `false`.
+   the typed-error (`AsyncOutcome`) path becomes `ResponseFactory::internal_error()` with `keep_alive` forced
+   to `false`.
 6. **Serialize.** `Http11Driver::serialize_response` flat-renders the `Response` (status line, headers - stamping
    `Date`/`Server` only if the handler did not set them - `Content-Length`, and `Connection: close` when
    `!keep_alive`) directly into a session-scope `std::string outbuf`, bypassing Beast's response serializer
@@ -129,10 +131,10 @@ For an `Http11Driver` connection, one request's journey from accept to response 
 ## Error model
 
 A handler returns either `AsyncResponse` (`awaitable<Response, Strand>`) or `AsyncOutcome<Response, Errors...>`
-(`awaitable<beaver::Outcome<Response, Errors...>, Strand>`). The bake step in
-`controller.hpp` wraps an Outcome-returning handler so
-that after `co_await`ing it, `detail::collapse_outcome` calls `.visit()` on the result: the `Response`
-alternative passes through unchanged, and any error alternative `E` converts via an ADL-found
+(`awaitable<std::expected<Response, std::variant<Errors...>>, Strand>`). The bake step in
+`controller.hpp` wraps an AsyncOutcome-returning handler so
+that after `co_await`ing it, `detail::collapse_outcome` passes a held `Response` through unchanged and
+`std::visit`s a held error variant, converting the active alternative `E` via an ADL-found
 `to_http_response(const E&)`. This is a compile-time contract, not a runtime one: `HasToHttpResponse<E>` is part
 of `IsRouteHandler`, so a handler whose `Errors...` pack contains a type with no `to_http_response` overload
 fails to compile, naming the offending type.
@@ -157,12 +159,12 @@ arena: error responses are the cold path, so `to_http_response(const E&)` stays 
 function with no allocator to thread through every user override.
 
 Routing misses use the same mechanism: `RouteRegistry::find_route` returns
-`beaver::Outcome<ResolvedRoute, NotFoundError, MethodNotAllowedError>`, and `Router::dispatch`
+`std::expected<ResolvedRoute, std::variant<NotFoundError, MethodNotAllowedError>>`, and `Router::dispatch`
 (`router.cpp`) converts a miss via the same
 `to_http_response` overloads.
 
-Handler exceptions - anything that escapes the Outcome system as a raw `throw` - are **not** translated by the
-routing layer. `Router::dispatch`'s hookless fast path lets such an exception propagate out of
+Handler exceptions - anything that escapes as a raw `throw` rather than a typed error - are **not** translated
+by the routing layer. `Router::dispatch`'s hookless fast path lets such an exception propagate out of
 `router.dispatch()` unchanged; `Http11Driver::serve` is the layer that catches it (`catch (...)`) and turns it
 into `ResponseFactory::internal_error()`, additionally forcing `keep_alive = false`: the connection is not kept
 open after an exception, since the handler's partial state is unknown. When one or more `ServerObserver`s are
@@ -290,9 +292,9 @@ private default constructor, a fluent `Builder`, a `fields()` tuple for the (de)
   (defaults 10 s / 30 s / 60 s), mapped by `attach_default_listeners` onto `Http11Config`'s three phase timeouts
   (`max_header_bytes` has no `ServerConfig` field and keeps its 16 KiB struct default).
 - **`load_server_config(path)`**
-  returns `beaver::Outcome<ServerConfig, ConfigFileError, ConfigParseError, ConfigSchemaError>`: the path must
-  be a regular file, JSON is parsed via jsoncpp's `CharReader`, unknown JSON keys are ignored, a missing key
-  keeps its declared default, and an unknown enum string or a `validate()` failure surfaces as
+  returns `std::expected<ServerConfig, std::variant<ConfigFileError, ConfigParseError, ConfigSchemaError>>`:
+  the path must be a regular file, JSON is parsed via jsoncpp's `CharReader`, unknown JSON keys are ignored, a
+  missing key keeps its declared default, and an unknown enum string or a `validate()` failure surfaces as
   `ConfigSchemaError`. `dump_server_config` round-trips a config back to JSON, omitting the secret passphrase
   field.
 - **`attach_default_listeners(Server&)`**
@@ -409,7 +411,7 @@ baking throws `std::logic_error`.
 `server.in_group(prefix).add_controller(ctrl)` mounts under a prefix, and
 `GroupBinding::in_group(sub_prefix)` nests further. Mounting bakes the controller immediately: its local route
 table drains into the server's `RouteRegistry` with the prefix applied and the middleware chain and
-Outcome-to-Response conversion pre-composed, and the `Server` keeps the controller alive (`shared_ptr`) for as
+typed-error-to-Response conversion pre-composed, and the `Server` keeps the controller alive (`shared_ptr`) for as
 long as its routes exist.
 
 **Middleware.** `using Middleware = std::function<AsyncResponse(RequestContext, const NextHandler&)>`
@@ -430,7 +432,7 @@ the offending type, not a runtime surprise.
 **A worked example.** `examples/http-albatross/minimal_http_server.cpp`
 shows all of the above together: a `GreeterController` with a path-parameter handler
 (`ctx.path_param_or<std::string>("name", ...)`), a plain JSON handler, and a typed-error handler that turns a
-`BodyLimitExceeded` Outcome error into a 413 without the handler ever building an error response itself; a
+`BodyLimitExceeded` typed error into a 413 without the handler ever building an error response itself; a
 post-processing middleware that stamps a response header; and both the config-file and programmatic listener
 wiring paths side by side.
 

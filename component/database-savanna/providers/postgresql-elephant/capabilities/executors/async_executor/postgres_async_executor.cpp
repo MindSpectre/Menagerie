@@ -115,13 +115,13 @@ namespace menagerie::savanna::elephant {
 
     // -------- Public execute overloads (non-template) --------
 
-    boost::asio::awaitable<beaver::Outcome<ResultBlock, ErrorContext>>
+    boost::asio::awaitable<std::expected<ResultBlock, ErrorContext>>
     AsyncExecutor::execute(const CompiledDynamicQuery& query) const {
         if (query.provider() != Providers::PostgreSQL) {
             ErrorContext ctx{ErrorCode{ClientErrorCode::SyntaxError}};
             ctx.message = "Query compiled for different provider";
             ctx.detail  = "Expected PostgreSQL, got different backend";
-            co_return beaver::err(std::move(ctx));
+            co_return std::unexpected(std::move(ctx));
         }
 
         if (const auto params_ptr = query.backend_packet_as<Params>()) {
@@ -132,14 +132,14 @@ namespace menagerie::savanna::elephant {
 
     // -------- Core implementation --------
 
-    boost::asio::awaitable<beaver::Outcome<ResultBlock, ErrorContext>>
+    boost::asio::awaitable<std::expected<ResultBlock, ErrorContext>>
     AsyncExecutor::execute_impl(const char* query, const Params* params) const {
         COMPONENT_LOG_ENTER_FUNCTION();
         COMPONENT_LOG_TRC() << CROW_PARAMS(query, params);
         // 1. Validate executor state
         if (auto err = validate_state()) {
             COMPONENT_LOG_ERR() << "Validation failed: " << *err;
-            co_return beaver::err(std::move(*err));
+            co_return std::unexpected(std::move(*err));
         }
 
         // 2. Send query
@@ -159,19 +159,19 @@ namespace menagerie::savanna::elephant {
             // Use extract_connection_error for send failures
             auto err = extract_connection_error(conn_);
             COMPONENT_LOG_ERR() << "Send failed: " << err;
-            co_return beaver::err(std::move(err));
+            co_return std::unexpected(std::move(err));
         }
 
         // 3. Flush output buffer
         if (auto err = co_await async_flush()) {
             COMPONENT_LOG_ERR() << "Flush failed: " << *err;
-            co_return beaver::err(std::move(*err));
+            co_return std::unexpected(std::move(*err));
         }
 
         // 4. Wait for results
         if (auto err = co_await async_consume_until_ready()) {
             COMPONENT_LOG_ERR() << "Consume failed: " << *err;
-            co_return beaver::err(std::move(*err));
+            co_return std::unexpected(std::move(*err));
         }
 
         // 5. Collect result
@@ -234,13 +234,13 @@ namespace menagerie::savanna::elephant {
 
     // -------- Result collection --------
 
-    beaver::Outcome<ResultBlock, ErrorContext> AsyncExecutor::collect_single_result() const {
+    std::expected<ResultBlock, ErrorContext> AsyncExecutor::collect_single_result() const {
         PGresult* result = PQgetResult(conn_);
 
         if (!result) {
             ErrorContext ctx{ErrorCode{ClientErrorCode::InvalidArgument}};
             ctx.message = "No result returned from query";
-            return beaver::err(std::move(ctx));
+            return std::unexpected(std::move(ctx));
         }
 
         // Drain additional results (protocol cleanup)

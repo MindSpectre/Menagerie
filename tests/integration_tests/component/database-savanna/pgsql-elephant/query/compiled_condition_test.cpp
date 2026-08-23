@@ -32,7 +32,7 @@ TEST_F(CompiledConditionTest, BinaryEqual) {
         select(schemas().users.column<"name">()).from(schemas().users).where(schemas().users.column<"age">() == 25));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
     auto& block = result.value();
     EXPECT_EQ(block.rows(), 1);  // Only john has age == 25
 }
@@ -42,7 +42,7 @@ TEST_F(CompiledConditionTest, BinaryNotEqual) {
         select(schemas().users.column<"name">()).from(schemas().users).where(schemas().users.column<"age">() != 25));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
     auto& block = result.value();
     EXPECT_EQ(block.rows(), 4);  // Everyone except age == 25
 }
@@ -52,7 +52,7 @@ TEST_F(CompiledConditionTest, BinaryGreater) {
         select(schemas().users.column<"name">()).from(schemas().users).where(schemas().users.column<"age">() > 18));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
     auto& block = result.value();
     EXPECT_GE(block.rows(), 1);  // Users with age > 18
 }
@@ -62,7 +62,7 @@ TEST_F(CompiledConditionTest, BinaryGreaterEqual) {
         select(schemas().users.column<"name">()).from(schemas().users).where(schemas().users.column<"age">() >= 18));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
     auto& block = result.value();
     EXPECT_GE(block.rows(), 1);  // Users with age >= 18
 }
@@ -72,7 +72,7 @@ TEST_F(CompiledConditionTest, BinaryLess) {
         select(schemas().users.column<"name">()).from(schemas().users).where(schemas().users.column<"age">() < 65));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
     auto& block = result.value();
     EXPECT_GE(block.rows(), 1);  // Users with age < 65
 }
@@ -82,7 +82,7 @@ TEST_F(CompiledConditionTest, BinaryLessEqual) {
         select(schemas().users.column<"name">()).from(schemas().users).where(schemas().users.column<"age">() <= 65));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
     auto& block = result.value();
     EXPECT_GE(block.rows(), 1);  // Users with age <= 65
 }
@@ -96,7 +96,7 @@ TEST_F(CompiledConditionTest, LogicalAnd) {
                           .where(schemas().users.column<"age">() > 18 && schemas().users.column<"active">() == true));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
     auto& block = result.value();
     // Users with age > 18 AND active == true
     EXPECT_GE(block.rows(), 1);
@@ -109,7 +109,7 @@ TEST_F(CompiledConditionTest, LogicalOr) {
                           .where(schemas().users.column<"age">() < 18 || schemas().users.column<"age">() > 65));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
     auto& block = result.value();
     // Users with age < 18 OR age > 65
     EXPECT_GE(block.rows(), 1);
@@ -121,7 +121,7 @@ TEST_F(CompiledConditionTest, UnaryCondition) {
                                    .where(schemas().users.column<"active">() == false));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
     auto& block = result.value();
     // Users with active == false
     EXPECT_EQ(block.rows(), 2);  // bob and charlie
@@ -135,7 +135,7 @@ TEST_F(CompiledConditionTest, StringComparison) {
                                    .where(schemas().users.column<"name">() == "john"));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
     auto& block = result.value();
     EXPECT_EQ(block.rows(), 1);  // Only john
 }
@@ -148,7 +148,7 @@ TEST_F(CompiledConditionTest, Between) {
                                    .where(between(schemas().users.column<"age">(), 18, 65)));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
     auto& block = result.value();
     // Users with age BETWEEN 18 AND 65
     EXPECT_GE(block.rows(), 1);
@@ -160,7 +160,7 @@ TEST_F(CompiledConditionTest, InList) {
                                    .where(in(schemas().users.column<"age">(), 18, 25, 30)));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
     auto& block = result.value();
     // Users with age IN (18, 25, 30)
     EXPECT_GE(block.rows(), 1);
@@ -175,7 +175,7 @@ TEST_F(CompiledConditionTest, ExistsCondition) {
     auto query    = compile_query(select(s.users.column<"name">()).from(s.users).where(exists(subq)));
     auto result   = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
 }
 
 TEST_F(CompiledConditionTest, SubqueryCondition) {
@@ -185,7 +185,7 @@ TEST_F(CompiledConditionTest, SubqueryCondition) {
         select(s.posts.column<"title">()).from(s.posts).where(in(s.posts.column<"user_id">(), subquery(active_users))));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
 }
 
 // ============== Complex Nested Tests ==============
@@ -198,6 +198,6 @@ TEST_F(CompiledConditionTest, ComplexNested) {
                    (schemas().users.column<"active">() == true && schemas().users.column<"age">() >= 65)));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
     // Complex nested: (age > 18 && age < 65) || (active == true && age >= 65)
 }

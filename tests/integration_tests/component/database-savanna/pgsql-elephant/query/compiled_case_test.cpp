@@ -36,7 +36,7 @@ TEST_F(CompiledCaseTest, SimpleCaseWhen) {
     auto query       = compile_query(select(s.users.column<"name">(), case_active.as("status")).from(s.users));
     auto result      = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
     auto& block = result.value();
     EXPECT_GE(block.rows(), 1);
     EXPECT_GE(block.cols(), 2);  // name and status columns
@@ -48,7 +48,7 @@ TEST_F(CompiledCaseTest, CaseWithElse) {
     auto query       = compile_query(select(s.users.column<"name">(), case_status.as("status")).from(s.users));
     auto result      = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
     auto& block = result.value();
     EXPECT_GE(block.rows(), 1);
 }
@@ -63,7 +63,7 @@ TEST_F(CompiledCaseTest, CaseMultipleWhen) {
         select(s.users.column<"name">(), s.users.column<"age">(), age_category.as("age_group")).from(s.users));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
     auto& block = result.value();
     EXPECT_GE(block.rows(), 1);
     EXPECT_GE(block.cols(), 3);  // name, age, age_group
@@ -79,7 +79,7 @@ TEST_F(CompiledCaseTest, CaseInSelect) {
                                    .where(s.orders.column<"completed">() == true));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
     auto& block = result.value();
     // Should return orders with size category
     EXPECT_GE(block.cols(), 3);  // id, amount, order_size
@@ -95,7 +95,7 @@ TEST_F(CompiledCaseTest, CaseWithComparison) {
         select(s.orders.column<"id">(), s.orders.column<"amount">(), priority.as("priority")).from(s.orders));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
 }
 
 TEST_F(CompiledCaseTest, CaseNested) {
@@ -106,7 +106,7 @@ TEST_F(CompiledCaseTest, CaseNested) {
     auto query  = compile_query(select(s.users.column<"name">(), high_value.as("customer_type")).from(s.users));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
     auto& block = result.value();
     EXPECT_GE(block.rows(), 1);
 }

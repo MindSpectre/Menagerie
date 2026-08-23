@@ -32,7 +32,7 @@ TEST_F(CompiledAggregateTest, Count) {
     auto query  = compile_query(select(count(schemas().users.column<"id">())).from(schemas().users));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
     auto& block = result.value();
     EXPECT_EQ(block.rows(), 1);
     EXPECT_EQ(block.cols(), 1);
@@ -42,7 +42,7 @@ TEST_F(CompiledAggregateTest, Sum) {
     auto query  = compile_query(select(sum(schemas().users.column<"age">())).from(schemas().users));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
     auto& block = result.value();
     EXPECT_EQ(block.rows(), 1);
 }
@@ -51,7 +51,7 @@ TEST_F(CompiledAggregateTest, Avg) {
     auto query  = compile_query(select(avg(schemas().users.column<"age">())).from(schemas().users));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
     auto& block = result.value();
     EXPECT_EQ(block.rows(), 1);
 }
@@ -60,7 +60,7 @@ TEST_F(CompiledAggregateTest, Min) {
     auto query  = compile_query(select(min(schemas().users.column<"age">())).from(schemas().users));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
     auto& block = result.value();
     EXPECT_EQ(block.rows(), 1);
 }
@@ -69,7 +69,7 @@ TEST_F(CompiledAggregateTest, Max) {
     auto query  = compile_query(select(max(schemas().users.column<"age">())).from(schemas().users));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
     auto& block = result.value();
     EXPECT_EQ(block.rows(), 1);
 }
@@ -85,21 +85,21 @@ TEST_F(CompiledAggregateTest, AggregateWithAlias) {
                                    .from(schemas().users));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
 }
 
 TEST_F(CompiledAggregateTest, CountDistinct) {
     auto query  = compile_query(select(count_distinct(schemas().users.column<"age">())).from(schemas().users));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
 }
 
 TEST_F(CompiledAggregateTest, CountAll) {
     auto query  = compile_query(select(count_all()).from(schemas().users));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
     auto& block = result.value();
     EXPECT_EQ(block.rows(), 1);
 }
@@ -111,7 +111,7 @@ TEST_F(CompiledAggregateTest, AggregateGroupBy) {
                           .group_by(schemas().users.column<"active">()));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
     auto& block = result.value();
     // Should have groups for Engineering, Sales, Marketing
     EXPECT_GE(block.rows(), 1);
@@ -125,7 +125,7 @@ TEST_F(CompiledAggregateTest, AggregateHaving) {
                           .having(count(schemas().users.column<"id">()) > 5));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
 }
 
 TEST_F(CompiledAggregateTest, MultipleAggregates) {
@@ -138,7 +138,7 @@ TEST_F(CompiledAggregateTest, MultipleAggregates) {
                                    .from(schemas().users));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
     auto& block = result.value();
     // Multiple aggregate columns
     EXPECT_GE(block.cols(), 2);
@@ -153,5 +153,5 @@ TEST_F(CompiledAggregateTest, AggregateMixedTypes) {
                                    .group_by(schemas().users.column<"name">()));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
 }

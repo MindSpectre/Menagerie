@@ -65,9 +65,9 @@ TEST_F(PoolTest, MultipleSyncExecutorsRunQueriesAndRelease) {
         auto r2 = exec2.execute("SELECT 2 AS n");
         auto r3 = exec3.execute("SELECT 3 AS n");
 
-        ASSERT_TRUE(r1.is_success()) << r1.error<ErrorContext>().format();
-        ASSERT_TRUE(r2.is_success()) << r2.error<ErrorContext>().format();
-        ASSERT_TRUE(r3.is_success()) << r3.error<ErrorContext>().format();
+        ASSERT_TRUE(r1.has_value()) << r1.error().format();
+        ASSERT_TRUE(r2.has_value()) << r2.error().format();
+        ASSERT_TRUE(r3.has_value()) << r3.error().format();
 
         EXPECT_EQ(r1.value().get<int>(0, 0), 1);
         EXPECT_EQ(r2.value().get<int>(0, 0), 2);
@@ -79,7 +79,7 @@ TEST_F(PoolTest, MultipleSyncExecutorsRunQueriesAndRelease) {
     auto exec = session.with_sync().value();
     ASSERT_TRUE(exec.valid());
     auto result = exec.execute("SELECT 42 AS answer");
-    ASSERT_TRUE(result.is_success()) << result.error<ErrorContext>().format();
+    ASSERT_TRUE(result.has_value()) << result.error().format();
     EXPECT_EQ(result.value().get<int>(0, 0), 42);
 
     session.shutdown();
@@ -99,7 +99,7 @@ TEST_F(PoolTest, PoolExhaustionReturnsInvalidExecutor) {
 
     // 3rd acquire should fail — pool exhausted
     auto result3 = session.with_sync();
-    EXPECT_FALSE(result3.is_success());
+    EXPECT_FALSE(result3.has_value());
 
     // Release one executor by moving it out of scope
     { [[maybe_unused]] auto released = std::move(exec1); }
@@ -109,7 +109,7 @@ TEST_F(PoolTest, PoolExhaustionReturnsInvalidExecutor) {
     EXPECT_TRUE(exec4.valid());
 
     auto result = exec4.execute("SELECT 1");
-    ASSERT_TRUE(result.is_success()) << result.error<ErrorContext>().format();
+    ASSERT_TRUE(result.has_value()) << result.error().format();
 
     session.shutdown();
 }
@@ -125,7 +125,7 @@ TEST_F(PoolTest, ShutdownPreventsNewAcquisitions) {
         auto exec = session.with_sync().value();
         ASSERT_TRUE(exec.valid());
         auto result = exec.execute("SELECT 1");
-        ASSERT_TRUE(result.is_success()) << result.error<ErrorContext>().format();
+        ASSERT_TRUE(result.has_value()) << result.error().format();
     }
 
     // Shutdown the session
@@ -134,7 +134,7 @@ TEST_F(PoolTest, ShutdownPreventsNewAcquisitions) {
 
     // New acquisitions should fail after shutdown
     auto result = session.with_sync();
-    EXPECT_FALSE(result.is_success());
+    EXPECT_FALSE(result.has_value());
 }
 
 // ============== ExecutorLifecycleScope ==============
@@ -154,7 +154,7 @@ TEST_F(PoolTest, ExecutorLifecycleScopeReleasesSlot) {
         EXPECT_LT(session.pool_free_count(), free_before + session.pool_capacity());
 
         auto result = exec.execute("SELECT pg_backend_pid()");
-        ASSERT_TRUE(result.is_success()) << result.error<ErrorContext>().format();
+        ASSERT_TRUE(result.has_value()) << result.error().format();
     }
     // Executor destroyed — slot returned to pool
 
@@ -162,7 +162,7 @@ TEST_F(PoolTest, ExecutorLifecycleScopeReleasesSlot) {
     auto exec = session.with_sync().value();
     ASSERT_TRUE(exec.valid());
     auto result = exec.execute("SELECT 1");
-    ASSERT_TRUE(result.is_success()) << result.error<ErrorContext>().format();
+    ASSERT_TRUE(result.has_value()) << result.error().format();
 
     // Free count should be restored (minus the one we just acquired)
     EXPECT_GE(session.pool_free_count() + 1, free_before);
@@ -240,7 +240,7 @@ TEST_F(PoolTest, ConcurrentAsyncQueriesComplete) {
             [&session, &ioc, &success_count, &completion_count, i]() -> boost::asio::awaitable<void> {
                 auto exec = session.with_async(ioc.get_executor()).value();
                 if (auto result = co_await exec.execute("SELECT $1::integer AS n", i);
-                    result.is_success() && result.value().get<int>(0, 0) == i) {
+                    result.has_value() && result.value().get<int>(0, 0) == i) {
                     ++success_count;
                 }
                 ++completion_count;
@@ -271,12 +271,12 @@ TEST_F(PoolTest, ConcurrentSyncExecutorsFromMultipleThreads) {
     for (int i = 0; i < kThreads; ++i) {
         threads.emplace_back([&session, &success_count, i] {
             auto outcome = session.with_sync();
-            if (!outcome.is_success()) {
+            if (!outcome.has_value()) {
                 return;
             }
             auto exec = std::move(outcome).value();
             if (auto result = exec.execute("SELECT $1::integer AS n", i);
-                result.is_success() && result.value().get<int>(0, 0) == i) {
+                result.has_value() && result.value().get<int>(0, 0) == i) {
                 ++success_count;
             }
         });

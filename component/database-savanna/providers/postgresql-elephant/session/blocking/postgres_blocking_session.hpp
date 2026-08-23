@@ -1,6 +1,7 @@
 #pragma once
 
 #include <chrono>
+#include <expected>
 #include <menagerie/beaver>
 #include <menagerie/crow>
 
@@ -31,17 +32,17 @@ namespace menagerie::savanna::elephant {
         // -------- Sync Executor --------
 
         /// Non-blocking sync acquire; fails immediately if the pool is exhausted or shut down.
-        [[nodiscard]] beaver::Outcome<SyncExecutor, ErrorContext> try_with_sync() noexcept;
+        [[nodiscard]] std::expected<SyncExecutor, ErrorContext> try_with_sync() noexcept;
         /// Bounded sync acquire; blocks the calling thread up to timeout.
-        [[nodiscard]] beaver::Outcome<SyncExecutor, ErrorContext>
+        [[nodiscard]] std::expected<SyncExecutor, ErrorContext>
         with_sync(std::chrono::steady_clock::duration timeout) noexcept;
         /// Unbounded sync acquire; blocks the calling thread until a slot frees or shutdown().
-        [[nodiscard]] beaver::Outcome<SyncExecutor, ErrorContext> with_sync() noexcept;
+        [[nodiscard]] std::expected<SyncExecutor, ErrorContext> with_sync() noexcept;
 
         // -------- Async Executor --------
 
         /// Non-blocking async acquire; fails immediately if the pool is exhausted or shut down.
-        [[nodiscard]] beaver::Outcome<AsyncExecutor, ErrorContext>
+        [[nodiscard]] std::expected<AsyncExecutor, ErrorContext>
         try_with_async(boost::asio::any_io_executor exec) noexcept;
 
         /**
@@ -50,7 +51,7 @@ namespace menagerie::savanna::elephant {
          * Never blocks the calling thread; suspends the caller until a
          * slot is available or the timeout expires.
          */
-        [[nodiscard]] boost::asio::awaitable<beaver::Outcome<AsyncExecutor, ErrorContext>>
+        [[nodiscard]] boost::asio::awaitable<std::expected<AsyncExecutor, ErrorContext>>
         with_async(boost::asio::any_io_executor exec, std::chrono::steady_clock::duration timeout);
 
         /**
@@ -58,29 +59,28 @@ namespace menagerie::savanna::elephant {
          *
          * Suspends until a slot is available or the pool shuts down.
          */
-        [[nodiscard]] boost::asio::awaitable<beaver::Outcome<AsyncExecutor, ErrorContext>>
+        [[nodiscard]] boost::asio::awaitable<std::expected<AsyncExecutor, ErrorContext>>
         with_async(boost::asio::any_io_executor exec);
 
         // -------- Transactions --------
 
         /// Non-blocking: acquires a Transaction without sending BEGIN (caller must call begin()).
-        [[nodiscard]] beaver::Outcome<Transaction, ErrorContext>
+        [[nodiscard]] std::expected<Transaction, ErrorContext>
         try_begin_transaction(TransactionOptions opts = {}) noexcept;
         /// Bounded: acquires a Transaction (up to timeout) without sending BEGIN.
-        [[nodiscard]] beaver::Outcome<Transaction, ErrorContext>
+        [[nodiscard]] std::expected<Transaction, ErrorContext>
         begin_transaction(TransactionOptions opts, std::chrono::steady_clock::duration timeout) noexcept;
         /// Unbounded: acquires a Transaction without sending BEGIN.
-        [[nodiscard]] beaver::Outcome<Transaction, ErrorContext>
-        begin_transaction(TransactionOptions opts = {}) noexcept;
+        [[nodiscard]] std::expected<Transaction, ErrorContext> begin_transaction(TransactionOptions opts = {}) noexcept;
 
         /// Non-blocking: acquires a Transaction and immediately sends BEGIN.
-        [[nodiscard]] beaver::Outcome<AutoTransaction, ErrorContext>
+        [[nodiscard]] std::expected<AutoTransaction, ErrorContext>
         try_begin_auto_transaction(TransactionOptions opts = {}) noexcept;
         /// Bounded: acquires a Transaction (up to timeout) and immediately sends BEGIN.
-        [[nodiscard]] beaver::Outcome<AutoTransaction, ErrorContext>
+        [[nodiscard]] std::expected<AutoTransaction, ErrorContext>
         begin_auto_transaction(TransactionOptions opts, std::chrono::steady_clock::duration timeout) noexcept;
         /// Unbounded: acquires a Transaction and immediately sends BEGIN.
-        [[nodiscard]] beaver::Outcome<AutoTransaction, ErrorContext>
+        [[nodiscard]] std::expected<AutoTransaction, ErrorContext>
         begin_auto_transaction(TransactionOptions opts = {}) noexcept;
 
         // -------- Lifecycle + Stats --------

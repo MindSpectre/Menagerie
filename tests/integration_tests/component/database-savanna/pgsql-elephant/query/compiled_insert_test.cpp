@@ -37,7 +37,7 @@ TEST_F(CompiledInsertTest, InsertSingleRow) {
         insert_into(schemas().users).into({"name", "age", "active"}).values({std::string{"John Doe"}, 25, true}));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Insert failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Insert failed: " << result.error();
     EXPECT_EQ(CountRows(), 1);
 }
 
@@ -48,11 +48,11 @@ TEST_F(CompiledInsertTest, InsertMultipleColumns) {
 
     auto result = executor().execute(compiled_query);
 
-    ASSERT_TRUE(result.is_success()) << "Insert failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Insert failed: " << result.error();
     EXPECT_EQ(CountRows(), 1);
 
     auto select_result = executor().execute("SELECT name, age, active FROM users WHERE name = 'Bob'");
-    ASSERT_TRUE(select_result.is_success());
+    ASSERT_TRUE(select_result.has_value());
     EXPECT_EQ(select_result.value().rows(), 1);
 }
 
@@ -62,11 +62,11 @@ TEST_F(CompiledInsertTest, InsertPartialColumns) {
 
     auto result = executor().execute(compiled_query);
 
-    ASSERT_TRUE(result.is_success()) << "Insert failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Insert failed: " << result.error();
     EXPECT_EQ(CountRows(), 1);
 
     auto select_result = executor().execute("SELECT name, age FROM users WHERE name = 'Charlie'");
-    ASSERT_TRUE(select_result.is_success());
+    ASSERT_TRUE(select_result.has_value());
     EXPECT_EQ(select_result.value().rows(), 1);
 }
 
@@ -79,7 +79,7 @@ TEST_F(CompiledInsertTest, InsertMultipleRows) {
                                    .values({std::string{"User2"}, 30, false}));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Insert failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Insert failed: " << result.error();
     EXPECT_EQ(CountRows(), 2);  // InsertMultipleValues produces 2 rows
 }
 
@@ -93,11 +93,11 @@ TEST_F(CompiledInsertTest, InsertFromRecord) {
     auto query  = compile_query(insert_into(schemas().users).into({"name", "age", "active"}).values(test_record));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Insert failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Insert failed: " << result.error();
     EXPECT_EQ(CountRows(), 1);
 
     auto select_result = executor().execute("SELECT name FROM users WHERE name = 'Bob Smith'");
-    ASSERT_TRUE(select_result.is_success());
+    ASSERT_TRUE(select_result.has_value());
     EXPECT_EQ(select_result.value().rows(), 1);
 }
 
@@ -116,7 +116,7 @@ TEST_F(CompiledInsertTest, InsertBatchRecords) {
     auto query  = compile_query(insert_into(schemas().users).into({"name", "age", "active"}).batch(records));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Batch insert failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Batch insert failed: " << result.error();
     EXPECT_EQ(CountRows(), 2);  // InsertBatch produces 2 records
 }
 
@@ -128,11 +128,11 @@ TEST_F(CompiledInsertTest, InsertWithBoolean) {
 
     auto result = executor().execute(compiled_query);
 
-    ASSERT_TRUE(result.is_success()) << "Insert failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Insert failed: " << result.error();
     EXPECT_EQ(CountRows(), 1);
 
     auto select_result = executor().execute("SELECT active FROM users WHERE name = 'Helen'");
-    ASSERT_TRUE(select_result.is_success());
+    ASSERT_TRUE(select_result.has_value());
     auto& block = select_result.value();
     EXPECT_EQ(block.rows(), 1);
 }
@@ -143,11 +143,11 @@ TEST_F(CompiledInsertTest, InsertWithInteger) {
 
     auto result = executor().execute(compiled_query);
 
-    ASSERT_TRUE(result.is_success()) << "Insert failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Insert failed: " << result.error();
     EXPECT_EQ(CountRows(), 1);
 
     auto select_result = executor().execute("SELECT age FROM users WHERE name = 'Ivan'");
-    ASSERT_TRUE(select_result.is_success());
+    ASSERT_TRUE(select_result.has_value());
     auto& block = select_result.value();
     EXPECT_EQ(block.rows(), 1);
 }
@@ -159,12 +159,12 @@ TEST_F(CompiledInsertTest, InsertWithString) {
 
     auto result = executor().execute(compiled_query);
 
-    ASSERT_TRUE(result.is_success()) << "Insert failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Insert failed: " << result.error();
     EXPECT_EQ(CountRows(), 1);
 
     auto select_result =
         executor().execute("SELECT name FROM users WHERE name = 'Long Name With Spaces And Special Ch@rs'");
-    ASSERT_TRUE(select_result.is_success());
+    ASSERT_TRUE(select_result.has_value());
     EXPECT_EQ(select_result.value().rows(), 1);
 }
 
@@ -177,11 +177,11 @@ TEST_F(CompiledInsertTest, InsertWithNullAge) {
 
     auto result = executor().execute(compiled_query);
 
-    ASSERT_TRUE(result.is_success()) << "Insert with NULL failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Insert with NULL failed: " << result.error();
     EXPECT_EQ(CountRows(), 1);
 
     auto select_result = executor().execute("SELECT age FROM users WHERE name = 'Julia'");
-    ASSERT_TRUE(select_result.is_success());
+    ASSERT_TRUE(select_result.has_value());
     auto& block = select_result.value();
     EXPECT_EQ(block.rows(), 1);
     auto age_opt = block.get_opt<int>(0, 0);
@@ -194,7 +194,7 @@ TEST_F(CompiledInsertTest, InsertWithTableName) {
     auto query  = compile_query(insert_into("users").into({"name", "age"}).values({std::string{"Jane Doe"}, 30}));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Insert failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Insert failed: " << result.error();
     EXPECT_EQ(CountRows(), 1);
 }
 
@@ -214,7 +214,7 @@ TEST_F(CompiledInsertTest, InsertLargeBatch) {
 
     auto result = executor().execute(compiled_query);
 
-    ASSERT_TRUE(result.is_success()) << "Large batch insert failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Large batch insert failed: " << result.error();
     EXPECT_EQ(CountRows(), 100);
 }
 
@@ -226,7 +226,7 @@ TEST_F(CompiledInsertTest, InsertEmptyString) {
 
     auto result = executor().execute(compiled_query);
 
-    ASSERT_TRUE(result.is_success()) << "Insert with empty string failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Insert with empty string failed: " << result.error();
     EXPECT_EQ(CountRows(), 1);
 }
 
@@ -236,6 +236,6 @@ TEST_F(CompiledInsertTest, InsertZeroValues) {
 
     auto result = executor().execute(compiled_query);
 
-    ASSERT_TRUE(result.is_success()) << "Insert with zero values failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Insert with zero values failed: " << result.error();
     EXPECT_EQ(CountRows(), 1);
 }

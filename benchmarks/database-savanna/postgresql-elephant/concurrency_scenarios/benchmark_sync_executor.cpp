@@ -77,7 +77,7 @@ namespace {
             }
             auto result = se->execute(std::string{query_}, id);
             benchmark::DoNotOptimize(result);
-            return result.is_success();
+            return result.has_value();
         }
 
     private:

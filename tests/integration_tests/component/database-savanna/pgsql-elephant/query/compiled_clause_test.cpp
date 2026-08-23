@@ -31,7 +31,7 @@ TEST_F(CompiledClauseTest, FromTable) {
     auto query  = compile_query(select(schemas().users.column<"name">()).from(schemas().users));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
     auto& block = result.value();
     EXPECT_GE(block.rows(), 1);
 }
@@ -40,7 +40,7 @@ TEST_F(CompiledClauseTest, FromTableName) {
     auto query  = compile_query(select(1).from("test_table"));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
 }
 
 // ============== WHERE Clause Tests ==============
@@ -51,7 +51,7 @@ TEST_F(CompiledClauseTest, WhereSimple) {
                                    .where(schemas().users.column<"active">() == true));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
     auto& block = result.value();
     // Should return only active users
     EXPECT_GE(block.rows(), 1);
@@ -65,7 +65,7 @@ TEST_F(CompiledClauseTest, WhereComplex) {
                                            schemas().users_extended.column<"salary">() > lit(50000.0))));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
 }
 
 TEST_F(CompiledClauseTest, WhereIn) {
@@ -74,7 +74,7 @@ TEST_F(CompiledClauseTest, WhereIn) {
                                    .where(in(schemas().users.column<"age">(), 25, 30, 35)));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
 }
 
 TEST_F(CompiledClauseTest, WhereBetween) {
@@ -84,7 +84,7 @@ TEST_F(CompiledClauseTest, WhereBetween) {
                           .where(between(schemas().users_extended.column<"salary">(), lit(30000.0), lit(80000.0))));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
 }
 
 // ============== GROUP BY Clause Tests ==============
@@ -96,7 +96,7 @@ TEST_F(CompiledClauseTest, GroupBySingle) {
                                    .group_by(schemas().users_extended.column<"department">()));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
     auto& block = result.value();
     // Should have groups for each department
     EXPECT_GE(block.rows(), 1);
@@ -111,7 +111,7 @@ TEST_F(CompiledClauseTest, GroupByMultiple) {
             .group_by(schemas().users_extended.column<"department">(), schemas().users_extended.column<"active">()));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
 }
 
 TEST_F(CompiledClauseTest, GroupByWithWhere) {
@@ -122,7 +122,7 @@ TEST_F(CompiledClauseTest, GroupByWithWhere) {
                                    .group_by(schemas().users_extended.column<"department">()));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
 }
 
 // ============== HAVING Clause Tests ==============
@@ -135,7 +135,7 @@ TEST_F(CompiledClauseTest, HavingSimple) {
                                    .having(count(schemas().users_extended.column<"id">()) > 5));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
 }
 
 TEST_F(CompiledClauseTest, HavingMultiple) {
@@ -148,7 +148,7 @@ TEST_F(CompiledClauseTest, HavingMultiple) {
                                            avg(schemas().users_extended.column<"salary">()) > lit(45000.0)));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
 }
 
 TEST_F(CompiledClauseTest, HavingWithWhere) {
@@ -160,7 +160,7 @@ TEST_F(CompiledClauseTest, HavingWithWhere) {
                                    .having(max(schemas().users_extended.column<"salary">()) > lit(70000.0)));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
 }
 
 // ============== ORDER BY Clause Tests ==============
@@ -171,7 +171,7 @@ TEST_F(CompiledClauseTest, OrderByAsc) {
                                    .order_by(asc(schemas().users.column<"name">())));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
     auto& block = result.value();
     EXPECT_GE(block.rows(), 1);
 }
@@ -183,7 +183,7 @@ TEST_F(CompiledClauseTest, OrderByDesc) {
                           .order_by(desc(schemas().users_extended.column<"salary">())));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
     auto& block = result.value();
     EXPECT_GE(block.rows(), 1);
 }
@@ -198,7 +198,7 @@ TEST_F(CompiledClauseTest, OrderByMultiple) {
                                              asc(schemas().users_extended.column<"name">())));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
 }
 
 // ============== LIMIT Clause Tests ==============
@@ -207,7 +207,7 @@ TEST_F(CompiledClauseTest, LimitBasic) {
     auto query  = compile_query(select(schemas().users.column<"name">()).from(schemas().users).limit(10));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
     auto& block = result.value();
     EXPECT_LE(block.rows(), 10);
 }
@@ -220,7 +220,7 @@ TEST_F(CompiledClauseTest, LimitWithOrderBy) {
                           .limit(5));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
     auto& block = result.value();
     EXPECT_LE(block.rows(), 5);
 }
@@ -233,7 +233,7 @@ TEST_F(CompiledClauseTest, LimitWithWhereOrderBy) {
                                    .limit(20));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
     auto& block = result.value();
     EXPECT_LE(block.rows(), 20);
 }
@@ -255,7 +255,7 @@ TEST_F(CompiledClauseTest, ComplexAllClauses) {
                                    .limit(10));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
 }
 
 TEST_F(CompiledClauseTest, ClausesWithJoins) {
@@ -276,5 +276,5 @@ TEST_F(CompiledClauseTest, ClausesWithJoins) {
                           .limit(5));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
 }

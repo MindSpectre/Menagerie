@@ -1,3 +1,4 @@
+#include <expected>
 #include <memory>
 #include <menagerie/beaver>
 #include <stdexcept>
@@ -92,7 +93,7 @@ protected:
 
     Response invoke(const HttpMethod m, const std::string& path) {
         auto resolved = registry_.find_route(m, path, alloc_);
-        EXPECT_TRUE(resolved.is_success()) << "no route for " << path;
+        EXPECT_TRUE(resolved.has_value()) << "no route for " << path;
         auto ctx = make_ctx(m, path);
         for (const auto& [n, v] : resolved.value().path_params)
             ctx.set_path_param(n, v);
@@ -127,7 +128,7 @@ TEST_F(ControllerTest, AllSevenVerbsPlusCallables) {
                          HttpMethod::del,
                          HttpMethod::head,
                          HttpMethod::options}) {
-        EXPECT_TRUE(registry_.find_route(m, "/k", alloc_).is_success());
+        EXPECT_TRUE(registry_.find_route(m, "/k", alloc_).has_value());
     }
     EXPECT_EQ(*invoke(HttpMethod::get, "/lambda").body.buffered_view(), "lambda");
     EXPECT_EQ(*invoke(HttpMethod::get, "/free").body.buffered_view(), "free");
@@ -137,8 +138,8 @@ TEST_F(ControllerTest, PrefixAppliedAtBake) {
     auto ctrl = std::make_shared<PlainController>();
     bake(ctrl, "/api/v1");
     ASSERT_TRUE(registry_.freeze().empty());
-    EXPECT_TRUE(registry_.find_route(HttpMethod::get, "/api/v1/users", alloc_).is_success());
-    EXPECT_TRUE(registry_.find_route(HttpMethod::get, "/users", alloc_).is_error());
+    EXPECT_TRUE(registry_.find_route(HttpMethod::get, "/api/v1/users", alloc_).has_value());
+    EXPECT_FALSE(registry_.find_route(HttpMethod::get, "/users", alloc_).has_value());
 }
 
 TEST_F(ControllerTest, DoubleBakeThrows) {
@@ -193,7 +194,7 @@ namespace {
             Get("/tea", [](RequestContext ctx) -> AsyncOutcome<Response, myapp::TeapotError> {
                 if (ctx.query<bool>("brew").value_or(false))
                     co_return ctx.ok("brewing");
-                co_return menagerie::beaver::err(myapp::TeapotError{"earl-grey"});
+                co_return std::unexpected(myapp::TeapotError{"earl-grey"});
             });
         }
 
@@ -201,15 +202,15 @@ namespace {
         static AsyncOutcome<Response, NotFoundError> get_user(RequestContext ctx) {
             if (const auto id = ctx.path_param<int>("id"); id && *id == 42)
                 co_return ctx.ok("user-42");
-            co_return menagerie::beaver::err(NotFoundError{"user", "?"});
+            co_return std::unexpected(NotFoundError{"user", "?"});
         }
 
         static AsyncOutcome<Response, BadRequestError, ForbiddenError> create_user(RequestContext ctx) {
             const auto mode = ctx.query<std::string>("mode");
             if (mode == "bad")
-                co_return menagerie::beaver::err(BadRequestError{"bad mode"});
+                co_return std::unexpected(BadRequestError{"bad mode"});
             if (mode == "forbidden")
-                co_return menagerie::beaver::err(ForbiddenError{"no"});
+                co_return std::unexpected(ForbiddenError{"no"});
             co_return ctx.created("ok");
         }
     };
@@ -238,7 +239,7 @@ TEST_F(OutcomeControllerTest, TypedErrorCollapsesViaAdl) {
 TEST_F(OutcomeControllerTest, MultiErrorPackEachAlternative) {
     // make_ctx targets carry the query string; invoke() routes on the path.
     auto resolved = registry_.find_route(HttpMethod::post, "/users", alloc_);
-    ASSERT_TRUE(resolved.is_success());
+    ASSERT_TRUE(resolved.has_value());
     const auto run = [&](const std::string& target) {
         return run_awaitable((*resolved.value().handler)(make_ctx(HttpMethod::post, target)));
     };
@@ -249,7 +250,7 @@ TEST_F(OutcomeControllerTest, MultiErrorPackEachAlternative) {
 
 TEST_F(OutcomeControllerTest, UserDefinedErrorTypeViaLambda) {
     auto resolved = registry_.find_route(HttpMethod::get, "/tea", alloc_);
-    ASSERT_TRUE(resolved.is_success());
+    ASSERT_TRUE(resolved.has_value());
     const Response err = run_awaitable((*resolved.value().handler)(make_ctx(HttpMethod::get, "/tea")));
     EXPECT_EQ(err.status, HttpStatus::unprocessable_entity);
     EXPECT_EQ(*err.body.buffered_view(), "teapot:earl-grey");

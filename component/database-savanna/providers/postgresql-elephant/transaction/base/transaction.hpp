@@ -1,5 +1,6 @@
 #pragma once
 
+#include <expected>
 #include <memory>
 #include <menagerie/beaver>
 #include <menagerie/crow>
@@ -59,25 +60,25 @@ namespace menagerie::savanna::elephant {
          * @return Success, or ErrorContext{InvalidState} if this transaction is not IDLE.
          * @throw std::invalid_argument under the same condition as TransactionOptions::to_begin_sql().
          */
-        [[nodiscard]] beaver::Outcome<void, ErrorContext> begin();
+        [[nodiscard]] std::expected<void, ErrorContext> begin();
 
         /// Sends COMMIT, moving ACTIVE -> COMMITTED. Returns ErrorContext{InvalidState} unless ACTIVE.
-        [[nodiscard]] beaver::Outcome<void, ErrorContext> commit();
+        [[nodiscard]] std::expected<void, ErrorContext> commit();
 
         /// Sends ROLLBACK, moving ACTIVE -> ROLLED_BACK. Returns ErrorContext{InvalidState} unless ACTIVE.
-        [[nodiscard]] beaver::Outcome<void, ErrorContext> rollback();
+        [[nodiscard]] std::expected<void, ErrorContext> rollback();
 
         // -------- Capability Provision --------
 
         /// Borrows a synchronous executor bound to this transaction's connection. Returns ErrorContext{InvalidState}
         /// unless ACTIVE.
-        [[nodiscard]] beaver::Outcome<SyncExecutor, ErrorContext> with_sync() const;
+        [[nodiscard]] std::expected<SyncExecutor, ErrorContext> with_sync() const;
         /**
          * @brief Borrows an asynchronous executor bound to this transaction's connection.
          * @param exec Boost.Asio executor the async operations complete on.
          * @return The executor, or ErrorContext{InvalidState} unless this transaction is ACTIVE.
          */
-        [[nodiscard]] beaver::Outcome<AsyncExecutor, ErrorContext> with_async(boost::asio::any_io_executor exec) const;
+        [[nodiscard]] std::expected<AsyncExecutor, ErrorContext> with_async(boost::asio::any_io_executor exec) const;
 
         // -------- Savepoints --------
 
@@ -86,7 +87,7 @@ namespace menagerie::savanna::elephant {
          * @return The Savepoint, or ErrorContext{InvalidState} unless ACTIVE, or
          *         ErrorContext{InvalidArgument} if name is not a valid identifier.
          */
-        [[nodiscard]] beaver::Outcome<Savepoint, ErrorContext> savepoint(std::string name) const;
+        [[nodiscard]] std::expected<Savepoint, ErrorContext> savepoint(std::string name) const;
 
         // -------- Introspection --------
 
@@ -123,7 +124,7 @@ namespace menagerie::savanna::elephant {
 
         Transaction(std::weak_ptr<ConnectionHolder> holder, TransactionOptions opts);
 
-        [[nodiscard]] beaver::Outcome<void, ErrorContext> execute_control(const std::string& sql) const;
+        [[nodiscard]] std::expected<void, ErrorContext> execute_control(const std::string& sql) const;
     };
 
     static_assert(CapabilityProvider<Transaction>);

@@ -38,7 +38,7 @@ TEST_F(CompiledSubqueryTest, SubqueryInWhere) {
         select(s.posts.column<"title">()).from(s.posts).where(in(s.posts.column<"user_id">(), subquery(active_users))));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
     auto& block = result.value();
     // Should return posts by active users
     EXPECT_GE(block.rows(), 1);
@@ -53,7 +53,7 @@ TEST_F(CompiledSubqueryTest, Exists) {
     auto query           = compile_query(select(s.users.column<"name">()).from(s.users).where(exists(published_posts)));
     auto result          = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
     auto& block = result.value();
     // Should return users who have published posts
     EXPECT_GE(block.rows(), 1);
@@ -66,7 +66,7 @@ TEST_F(CompiledSubqueryTest, NotExists) {
     auto query          = compile_query(select(s.users.column<"name">()).from(s.users).where(!exists(pending_orders)));
     auto result         = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
 }
 
 // ============== IN Subquery Tests ==============
@@ -82,7 +82,7 @@ TEST_F(CompiledSubqueryTest, InSubqueryMultiple) {
         select(s.users.column<"name">()).from(s.users).where(in(s.users.column<"id">(), subquery(high_value_users))));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
 }
 
 // ============== Nested Subquery Tests ==============
@@ -99,7 +99,7 @@ TEST_F(CompiledSubqueryTest, NestedSubqueries) {
                                    .where(in(s.users.column<"id">(), subquery(posts_by_active_users))));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
 }
 
 // ============== Subquery with Aggregates ==============
@@ -115,7 +115,7 @@ TEST_F(CompiledSubqueryTest, SubqueryWithAggregates) {
                                    .where(s.orders.column<"amount">() > subquery(avg_order_amount)));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
 }
 
 // ============== Subquery with DISTINCT ==============
@@ -128,5 +128,5 @@ TEST_F(CompiledSubqueryTest, SubqueryWithDistinct) {
         select(s.users.column<"name">()).from(s.users).where(in(s.users.column<"id">(), subquery(unique_publishers))));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
 }

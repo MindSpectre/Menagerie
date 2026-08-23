@@ -36,7 +36,7 @@ TEST_F(CompiledCteTest, BasicCte) {
     auto query    = compile_query(select(col("id"), col("name")).from(cte));
     auto result   = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
     auto& block = result.value();
     // Should return active users (id, name)
     EXPECT_GE(block.cols(), 2);
@@ -52,7 +52,7 @@ TEST_F(CompiledCteTest, CteWithSelect) {
     auto query    = compile_query(select(col("user_id"), col("total_amount")).from(cte));
     auto result   = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
     auto& block = result.value();
     // Should return user_id, total_amount
     EXPECT_GE(block.cols(), 2);
@@ -67,7 +67,7 @@ TEST_F(CompiledCteTest, CteWithJoin) {
     auto query    = compile_query(select(col("id"), col("title"), col("user_id")).from(cte));
     auto result   = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
     auto& block = result.value();
     // Should return published posts (id, title, user_id)
     EXPECT_GE(block.cols(), 3);
@@ -82,7 +82,7 @@ TEST_F(CompiledCteTest, MultipleCtes) {
     auto query    = compile_query(select(col("user_id"), col("post_count")).from(cte));
     auto result   = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
     auto& block = result.value();
     // Should return user_id, post_count
     EXPECT_GE(block.cols(), 2);
@@ -102,7 +102,7 @@ TEST_F(CompiledCteTest, CteWithAggregates) {
         compile_query(select(col("user_id"), col("order_count"), col("total_spent"), col("avg_order")).from(cte));
     auto result = executor().execute(query);
 
-    ASSERT_TRUE(result.is_success()) << "Query failed: " << result.error<ErrorContext>();
+    ASSERT_TRUE(result.has_value()) << "Query failed: " << result.error();
     auto& block = result.value();
     // Should return user_id, order_count, total_spent, avg_order
     EXPECT_GE(block.cols(), 4);

@@ -133,8 +133,7 @@ TEST_F(AsyncExecutorEdgeTest, MoveConstruction) {
     auto result = run_async([&moved_executor]() { return moved_executor.execute("SELECT 1 AS number"); });
 
     ASSERT_TRUE(result.has_value());
-    ASSERT_TRUE(result->is_success()) << "Query on moved-to executor failed: "
-                                      << result->error<ErrorContext>().format();
+    ASSERT_TRUE(result->has_value()) << "Query on moved-to executor failed: " << result->error().format();
 
     const auto& block = result->value();
     EXPECT_EQ(block.rows(), 1);
@@ -147,8 +146,7 @@ TEST_F(AsyncExecutorEdgeTest, MoveConstruction) {
     auto result2 = run_async([&moved_executor]() { return moved_executor.execute("SELECT 2 AS number"); });
 
     ASSERT_TRUE(result2.has_value());
-    ASSERT_TRUE(result2->is_success()) << "Query after moved-from destruction failed: "
-                                       << result2->error<ErrorContext>().format();
+    ASSERT_TRUE(result2->has_value()) << "Query after moved-from destruction failed: " << result2->error().format();
 
     // Restore executor_ so TearDown can use the connection
     executor_ = std::make_unique<AsyncExecutor>(std::move(moved_executor));
@@ -191,8 +189,7 @@ TEST_F(AsyncExecutorEdgeTest, MoveAssignmentCleanup) {
     auto result = run_async([&executor2]() { return executor2.execute("SELECT 42 AS answer"); });
 
     ASSERT_TRUE(result.has_value());
-    ASSERT_TRUE(result->is_success()) << "Query on move-assigned executor failed: "
-                                      << result->error<ErrorContext>().format();
+    ASSERT_TRUE(result->has_value()) << "Query on move-assigned executor failed: " << result->error().format();
 
     const auto& block = result->value();
     EXPECT_EQ(block.rows(), 1);
@@ -217,9 +214,9 @@ TEST_F(AsyncExecutorEdgeTest, ExecuteOnMovedFrom) {
     auto result = run_async([this]() { return executor_->execute("SELECT 1"); });
 
     ASSERT_TRUE(result.has_value());
-    ASSERT_FALSE(result->is_success()) << "Execute on moved-from executor should fail";
+    ASSERT_FALSE(result->has_value()) << "Execute on moved-from executor should fail";
 
-    const auto& error = result->error<ErrorContext>();
+    const auto& error = result->error();
     EXPECT_TRUE(error.code.is_client_error());
     EXPECT_FALSE(error.message.empty());
 
@@ -240,15 +237,14 @@ TEST_F(AsyncExecutorEdgeTest, SequentialReuse) {
         auto result = run_async([this, &insert_sql]() { return executor_->execute(insert_sql); });
 
         ASSERT_TRUE(result.has_value()) << "No result at iteration " << i;
-        ASSERT_TRUE(result->is_success())
-            << "Insert failed at iteration " << i << ": " << result->error<ErrorContext>().format();
+        ASSERT_TRUE(result->has_value()) << "Insert failed at iteration " << i << ": " << result->error().format();
     }
 
     // Verify all rows were inserted
     auto count_result = run_async([this]() { return executor_->execute("SELECT COUNT(*) FROM test_users"); });
 
     ASSERT_TRUE(count_result.has_value());
-    ASSERT_TRUE(count_result->is_success()) << "Count query failed: " << count_result->error<ErrorContext>().format();
+    ASSERT_TRUE(count_result->has_value()) << "Count query failed: " << count_result->error().format();
 
     const auto& block = count_result->value();
     EXPECT_EQ(block.rows(), 1);
@@ -258,8 +254,7 @@ TEST_F(AsyncExecutorEdgeTest, SequentialReuse) {
         run_async([this]() { return executor_->execute("SELECT name, age FROM test_users ORDER BY age"); });
 
     ASSERT_TRUE(select_result.has_value());
-    ASSERT_TRUE(select_result->is_success())
-        << "Select query failed: " << select_result->error<ErrorContext>().format();
+    ASSERT_TRUE(select_result->has_value()) << "Select query failed: " << select_result->error().format();
 
     EXPECT_EQ(select_result->value().rows(), query_count);
 }
@@ -278,9 +273,9 @@ TEST_F(AsyncExecutorEdgeTest, NullConstruction) {
     auto result = run_async([&null_executor]() { return null_executor.execute("SELECT 1"); });
 
     ASSERT_TRUE(result.has_value());
-    ASSERT_FALSE(result->is_success()) << "Execute on null-constructed executor should fail";
+    ASSERT_FALSE(result->has_value()) << "Execute on null-constructed executor should fail";
 
-    const auto& error = result->error<ErrorContext>();
+    const auto& error = result->error();
     EXPECT_TRUE(error.code.is_client_error());
     EXPECT_EQ(error.code, ClientErrorCode::NotConnected);
     EXPECT_FALSE(error.message.empty());
@@ -300,7 +295,7 @@ TEST_F(AsyncExecutorEdgeTest, VariadicTemporaryString) {
         [this]() { return executor_->execute("SELECT name FROM test_users WHERE name = $1", std::string{"Tmp"}); });
 
     ASSERT_TRUE(result.has_value());
-    ASSERT_TRUE(result->is_success()) << "Temporary string arg failed: " << result->error<ErrorContext>().format();
+    ASSERT_TRUE(result->has_value()) << "Temporary string arg failed: " << result->error().format();
     EXPECT_EQ(result->value().rows(), 1);
 }
 
@@ -315,13 +310,13 @@ TEST_F(AsyncExecutorEdgeTest, VariadicMultipleTemporaries) {
     });
 
     ASSERT_TRUE(result.has_value());
-    ASSERT_TRUE(result->is_success()) << "Multiple temporaries failed: " << result->error<ErrorContext>().format();
+    ASSERT_TRUE(result->has_value()) << "Multiple temporaries failed: " << result->error().format();
 
     // Verify data was inserted correctly
     auto select = run_async([this]() {
         return executor_->execute("SELECT name, age, email FROM test_users WHERE name = $1", std::string{"TmpMulti"});
     });
-    ASSERT_TRUE(select.has_value() && select->is_success());
+    ASSERT_TRUE(select.has_value() && select->has_value());
     EXPECT_EQ(select->value().rows(), 1);
 }
 
@@ -333,7 +328,7 @@ TEST_F(AsyncExecutorEdgeTest, VariadicMovedString) {
     });
 
     ASSERT_TRUE(result.has_value());
-    ASSERT_TRUE(result->is_success()) << "Moved string failed: " << result->error<ErrorContext>().format();
+    ASSERT_TRUE(result->has_value()) << "Moved string failed: " << result->error().format();
 }
 
 TEST_F(AsyncExecutorEdgeTest, TupleTemporaries) {
@@ -346,7 +341,7 @@ TEST_F(AsyncExecutorEdgeTest, TupleTemporaries) {
     });
 
     ASSERT_TRUE(result.has_value());
-    ASSERT_TRUE(result->is_success()) << "Tuple temporaries failed: " << result->error<ErrorContext>().format();
+    ASSERT_TRUE(result->has_value()) << "Tuple temporaries failed: " << result->error().format();
     EXPECT_EQ(result->value().rows(), 1);
 }
 
@@ -360,8 +355,7 @@ TEST_F(AsyncExecutorEdgeTest, CompiledStaticQueryTemporary) {
     });
 
     ASSERT_TRUE(result.has_value());
-    ASSERT_TRUE(result->is_success()) << "CompiledStaticQuery temporary failed: "
-                                      << result->error<ErrorContext>().format();
+    ASSERT_TRUE(result->has_value()) << "CompiledStaticQuery temporary failed: " << result->error().format();
     EXPECT_EQ(result->value().rows(), 1);
 }
 
@@ -370,6 +364,6 @@ TEST_F(AsyncExecutorEdgeTest, VariadicEmptyArgs) {
     auto result = run_async([this]() { return executor_->execute("SELECT 1 AS number"); });
 
     ASSERT_TRUE(result.has_value());
-    ASSERT_TRUE(result->is_success()) << "Empty variadic failed: " << result->error<ErrorContext>().format();
+    ASSERT_TRUE(result->has_value()) << "Empty variadic failed: " << result->error().format();
     EXPECT_EQ(result->value().rows(), 1);
 }

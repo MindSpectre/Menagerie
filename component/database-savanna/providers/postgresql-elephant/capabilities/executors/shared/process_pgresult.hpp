@@ -1,5 +1,6 @@
 #pragma once
 
+#include <expected>
 #include <menagerie/beaver>
 
 #include <postgres_errors.hpp>
@@ -15,11 +16,11 @@ namespace menagerie::savanna::elephant {
      * This is a common helper used by both sync and async executors
      * to process PGresult objects and handle errors consistently.
      */
-    inline beaver::Outcome<ResultBlock, ErrorContext> process_result(PGresult* result) {
+    [[nodiscard]] inline std::expected<ResultBlock, ErrorContext> process_result(PGresult* result) {
         // Extract error if present
         if (auto error_ctx = extract_error(result)) {
             PQclear(result);
-            return beaver::err(std::move(*error_ctx));
+            return std::unexpected(std::move(*error_ctx));
         }
 
         // Success - wrap result in ResultBlock (takes ownership)
