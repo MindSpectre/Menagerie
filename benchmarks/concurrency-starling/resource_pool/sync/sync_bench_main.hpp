@@ -12,7 +12,7 @@
 
 namespace bench::pool {
 
-    /// Registration entry point for a synchronous-pool subject (Try, AcqFor*, Pinned).
+    /// Registration entry point for a synchronous-pool subject (Try, AcqFor*).
     /// Each subject's main() supplies its pool type, factory, acquire strategy, bench-name
     /// subject, and scenario set; the shared boilerplate (pin flag, calibration print, env
     /// check, per-scenario registration, worker-count args, run) lives here. `AsioPost*`

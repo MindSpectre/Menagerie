@@ -39,13 +39,11 @@ namespace menagerie::starling {
     }  // namespace detail
 
     /**
-     * @brief A bounded pool of @p MaxSize interchangeable @c T resources, partitioned at
-     *        construction into exclusively-owned @e pinned slots and a shared @e free region.
+     * @brief A bounded pool of up to @p MaxSize interchangeable @c T resources.
      *
-     * Storage is entirely inline (no heap). Pinned slots give one designated thread
-     * zero-overhead exclusive access via @c pinned(i); free slots are acquired with a
-     * lock-free bitset scan (@c try_acquire) or a bounded wait (@c acquire_for) and handed
-     * out as move-only @c Lease<T> objects that release on destruction.
+     * Storage is entirely inline (no heap). Slots are acquired with a lock-free bitset
+     * scan (@c try_acquire) or a bounded wait (@c acquire_for) and handed out as
+     * move-only @c Lease<T> objects that release on destruction.
      *
      * ## Thread safety
      *
@@ -53,15 +51,12 @@ namespace menagerie::starling {
      *   concurrently.
      * - @c try_claim_free_for_repair and @c mark_healthy_free are safe to interleave with
      *   concurrent acquirers (typically called from a dedicated repair/janitor thread).
-     * - @c pinned(i) returns a stable @c atomic reference; the cooperative pointer-swap
-     *   repair protocol assumes the slot's designated owner thread does load-only access
-     *   and a single repair thread does the @c exchange / @c store cycle.
      * - Outstanding @c Lease<T> handles must not outlive the pool - destroy / release
      *   them before the @c ResourcePool destructor runs.
      * - Construction and destruction of the @c ResourcePool itself are NOT thread-safe.
      *
      * @tparam T        the pooled resource type (need not be default-constructible).
-     * @tparam MaxSize  the inline capacity cap; @c n_pinned + @c n_free must not exceed it.
+     * @tparam MaxSize  the inline capacity cap; @c n must not exceed it.
      */
     template <typename T, std::size_t MaxSize>
     class ResourcePool : beaver::Immutable {
@@ -78,62 +73,31 @@ namespace menagerie::starling {
         static constexpr std::size_t max_size   = MaxSize;  ///< Compile-time capacity cap.
         static constexpr std::size_t word_count = (MaxSize + bits_per_word - 1) / bits_per_word;  ///< Number of 64-bit free-bitset words.
 
-        /// Construct a free-only pool (n_pinned == 0) - the common case.
-        template <typename Factory>
-            requires ResourceFactory<Factory&, T>
-        explicit ResourcePool(const std::size_t n_free, const std::chrono::nanoseconds spin_budget, Factory&& make)
-            : ResourcePool{std::size_t{0}, n_free, spin_budget, std::forward<Factory>(make)} {
-        }
-
-        /// Construct a free-only pool (n_pinned == 0) with the default spin budget.
-        template <typename Factory>
-            requires ResourceFactory<Factory&, T>
-        constexpr explicit ResourcePool(const std::size_t n_free, Factory&& make)
-            : ResourcePool{std::size_t{0}, n_free, std::chrono::nanoseconds{400}, std::forward<Factory>(make)} {
-        }
-
-        /// Construct a full free pool (n_free == MaxSize) with the default spin budget.
-        template <typename Factory>
-            requires ResourceFactory<Factory&, T>
-        constexpr explicit ResourcePool(Factory&& make)
-            : ResourcePool{std::size_t{0}, MaxSize, std::chrono::nanoseconds{400}, std::forward<Factory>(make)} {
-        }
-        /// Construct a partitioned pool with the default spin budget.
-        template <typename Factory>
-            requires ResourceFactory<Factory&, T>
-        constexpr ResourcePool(const std::size_t n_pinned, const std::size_t n_free, Factory&& make)
-            : ResourcePool{n_pinned, n_free, std::chrono::nanoseconds{400}, std::forward<Factory>(make)} {
-        }
-
         /**
-         * @brief Construct a partitioned pool: the canonical constructor every other
-         *        overload funnels into.
+         * @brief Construct a pool of @p n slots with an explicit spin budget: the
+         *        canonical constructor every other overload funnels into.
          *
-         * The factory is invoked once per live slot ([0, n_pinned + n_free)); if it
-         * throws while building slot k, the already-built [0, k) slots are destroyed
-         * before rethrowing, leaving no partially-built pool and no leak.
+         * The factory is invoked once per slot ([0, n)); if it throws while building
+         * slot k, the already-built [0, k) slots are destroyed before rethrowing,
+         * leaving no partially-built pool and no leak.
          *
-         * @throw std::invalid_argument if `n_pinned + n_free` exceeds `MaxSize`.
+         * @throw std::invalid_argument if `n` exceeds `MaxSize`.
          * @throw whatever `make` throws, propagated after cleaning up any slots
          *        already constructed.
          */
         template <typename Factory>
             requires ResourceFactory<Factory&, T>
-        constexpr ResourcePool(const std::size_t n_pinned,
-                               const std::size_t n_free,
-                               const std::chrono::nanoseconds spin_budget,
-                               Factory&& make)
-            : n_pinned_{n_pinned},
-              n_free_{n_free},
-              n_free_words_{(n_free + bits_per_word - 1) / bits_per_word},
+        constexpr explicit ResourcePool(const std::size_t n, const std::chrono::nanoseconds spin_budget, Factory&& make)
+            : n_{n},
+              n_words_{(n + bits_per_word - 1) / bits_per_word},
               spin_budget_{spin_budget} {
-            if (n_pinned + n_free > MaxSize) {
-                throw std::invalid_argument{"ResourcePool: n_pinned + n_free exceeds MaxSize"};
+            if (n > MaxSize) {
+                throw std::invalid_argument{"ResourcePool: n exceeds MaxSize"};
             }
 
             std::size_t built = 0;
             try {
-                for (; built < n_pinned_ + n_free_; ++built) {
+                for (; built < n_; ++built) {
                     if constexpr (std::invocable<Factory&, std::size_t>) {
                         std::construct_at(slot_ptr(built), std::invoke(make, built));
                     } else {
@@ -147,37 +111,39 @@ namespace menagerie::starling {
                 throw;
             }
 
-            for (std::size_t i = 0; i < n_pinned_; ++i) {
-                pinned_cells_[i].store(slot_ptr(i), std::memory_order_relaxed);
-            }
-
-            // Free bits [0, n_free_) start set: bit == 1 means "free AND healthy".
-            for (std::size_t w = 0; w < n_free_words_; ++w) {
+            // Bits [0, n_) start set: bit == 1 means "free AND healthy".
+            for (std::size_t w = 0; w < n_words_; ++w) {
                 const std::size_t base  = w * bits_per_word;
-                const std::size_t count = (n_free_ - base < bits_per_word) ? n_free_ - base : bits_per_word;
+                const std::size_t count = (n_ - base < bits_per_word) ? n_ - base : bits_per_word;
                 const std::uint64_t mask =
                     (count >= bits_per_word) ? ~std::uint64_t{0} : ((std::uint64_t{1} << count) - 1);
                 free_words_[w].bits.store(mask, std::memory_order_relaxed);
             }
         }
 
+        /// Construct a pool of @p n slots with the default spin budget.
+        template <typename Factory>
+            requires ResourceFactory<Factory&, T>
+        constexpr explicit ResourcePool(const std::size_t n, Factory&& make)
+            : ResourcePool{n, std::chrono::nanoseconds{400}, std::forward<Factory>(make)} {
+        }
+
+        /// Construct a full pool (n == MaxSize) with the default spin budget.
+        template <typename Factory>
+            requires ResourceFactory<Factory&, T>
+        constexpr explicit ResourcePool(Factory&& make)
+            : ResourcePool{MaxSize, std::chrono::nanoseconds{400}, std::forward<Factory>(make)} {
+        }
+
         ~ResourcePool() noexcept {
-            for (std::size_t i = 0; i < n_pinned_ + n_free_; ++i) {
+            for (std::size_t i = 0; i < n_; ++i) {
                 std::destroy_at(slot_ptr(i));
             }
         }
 
-        /// Total live slot count (`pinned_count() + free_count()`).
+        /// Number of slots (`n` as passed to the constructor).
         [[nodiscard]] constexpr std::size_t capacity() const noexcept {
-            return n_pinned_ + n_free_;
-        }
-        /// Number of slots exclusively owned by pinned-slot accessors (`pinned(i)`).
-        [[nodiscard]] constexpr std::size_t pinned_count() const noexcept {
-            return n_pinned_;
-        }
-        /// Number of slots managed by the shared free-bitset pool.
-        [[nodiscard]] constexpr std::size_t free_count() const noexcept {
-            return n_free_;
+            return n_;
         }
 
         /**
@@ -189,20 +155,19 @@ namespace menagerie::starling {
          * the release in Lease's destructor / mark_healthy_free).
          */
         [[nodiscard]] std::optional<Lease<T>> try_acquire() noexcept {
-            if (n_free_words_ == 0) {
+            if (n_words_ == 0) {
                 return std::nullopt;
             }
-            const std::size_t start = detail::resource_pool_word_hint() % n_free_words_;
-            for (std::size_t k = 0; k < n_free_words_; ++k) {
-                const std::size_t w              = (start + k) % n_free_words_;
+            const std::size_t start = detail::resource_pool_word_hint() % n_words_;
+            for (std::size_t k = 0; k < n_words_; ++k) {
+                const std::size_t w              = (start + k) % n_words_;
                 std::atomic<std::uint64_t>& word = free_words_[w].bits;
                 std::uint64_t cur                = word.load(std::memory_order_relaxed);
                 while (cur != 0) {
                     if (const std::uint64_t bit = cur & (~cur + 1); word.compare_exchange_weak(
                             cur, cur & ~bit, std::memory_order_acquire, std::memory_order_relaxed)) {
-                        const std::size_t free_idx =
-                            w * bits_per_word + static_cast<std::size_t>(std::countr_zero(bit));
-                        return Lease<T>{slot_ptr(n_pinned_ + free_idx), &word, bit, &free_waiters_};
+                        const std::size_t idx = w * bits_per_word + static_cast<std::size_t>(std::countr_zero(bit));
+                        return Lease<T>{slot_ptr(idx), &word, bit, &free_waiters_};
                     }
                     // compare_exchange_weak reloaded `cur` on failure.
                 }
@@ -251,28 +216,14 @@ namespace menagerie::starling {
         }
 
         /**
-         * @brief Access the pinned cell for index @p i (Tier 1, zero contention).
-         *
-         * The designated owner caches this reference once and loads it with acquire on
-         * every iteration - no CAS, no shared mutability beyond the pointer. The cell is
-         * the synchronization point for cooperative pointer-swap repair: a repair thread
-         * does exchange(nullptr) / reconstruct / store(p), and the owner skips its work
-         * while the load yields nullptr.
-         */
-        [[nodiscard]] std::atomic<T*>& pinned(const std::size_t i) noexcept {
-            assert(i < n_pinned_ && "ResourcePool::pinned index out of range");
-            return pinned_cells_[i];
-        }
-
-        /**
-         * @brief Try to claim free slot @p i for repair, racing acquirers.
+         * @brief Try to claim slot @p i for repair, racing acquirers.
          * @return true if the slot was free and is now claimed (its bit is 0, "down");
          *         false if a leaseholder currently has it (the caller should retry).
          *
          * Same CAS mechanism as try_acquire, aimed at one specific slot.
          */
         [[nodiscard]] bool try_claim_free_for_repair(const std::size_t i) noexcept {
-            assert(i < n_free_ && "ResourcePool::try_claim_free_for_repair index out of range");
+            assert(i < n_ && "ResourcePool::try_claim_free_for_repair index out of range");
             std::atomic<std::uint64_t>& word = free_words_[i / bits_per_word].bits;
             const std::uint64_t bit          = std::uint64_t{1} << (i % bits_per_word);
             std::uint64_t cur                = word.load(std::memory_order_relaxed);
@@ -285,20 +236,20 @@ namespace menagerie::starling {
         }
 
         /**
-         * @brief Return free slot @p i to circulation (sets its bit, notifies one waiter).
+         * @brief Return slot @p i to circulation (sets its bit, notifies one waiter).
          *
          * Used by the system thread after reconstructing a repaired slot. Identical to
          * the release performed by Lease's destructor.
          */
         void mark_healthy_free(const std::size_t i) noexcept {
-            assert(i < n_free_ && "ResourcePool::mark_healthy_free index out of range");
+            assert(i < n_ && "ResourcePool::mark_healthy_free index out of range");
             const std::uint64_t bit = std::uint64_t{1} << (i % bits_per_word);
             free_words_[i / bits_per_word].bits.fetch_or(bit, std::memory_order_release);
             free_waiters_.notify_one();
         }
 
     private:
-        /// Cache-line-isolated, write-hot free-region bitset word.
+        /// Cache-line-isolated, write-hot bitset word.
         struct alignas(std::hardware_destructive_interference_size) PaddedWord {
             std::atomic<std::uint64_t> bits{0};
         };
@@ -318,15 +269,10 @@ namespace menagerie::starling {
             return &storage_[i].value;
         }
 
-        const std::size_t n_pinned_;
-        const std::size_t n_free_;
-        const std::size_t n_free_words_;
+        const std::size_t n_;
+        const std::size_t n_words_;
 
         std::array<Slot, MaxSize> storage_{};
-        // The alignment isolates this array from the write-hot storage_/free_words_ regions.
-        // Cells are intentionally NOT padded from each other: they are publish-once at
-        // construction and read-mostly thereafter, so per-cell line sharing is harmless.
-        alignas(std::hardware_destructive_interference_size) std::array<std::atomic<T*>, MaxSize> pinned_cells_{};
         std::array<PaddedWord, word_count> free_words_{};
 
         /// Spin budget for acquire_for before parking on the EventCount.

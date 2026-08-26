@@ -38,33 +38,22 @@ common/concurrency-starling/
 
 `ResourcePool<T, MaxSize>` is a
 bounded pool of up to `MaxSize` interchangeable `T` resources, held entirely inline (no heap
-allocation for the pool's own storage) and partitioned at construction into two regions:
+allocation for the pool's own storage). Any thread can acquire any slot. Freedom is tracked by a
+bitset, one bit per slot, packed into cache-line-isolated 64-bit words
+(`struct alignas(64) PaddedWord`). `try_acquire()` scans the words starting from a
+`thread_local` hint (seeded from `hash(thread_id)`, so concurrent callers spread their CAS
+traffic across different words) and claims the lowest set bit with one
+`compare_exchange_weak(cur, cur & ~bit, acquire, relaxed)`. A `Lease<T>`
+(`detail/lease.hpp`) is a
+move-only RAII handle over the claimed slot; its destructor (or move-assignment over a live
+lease) does `word->fetch_or(bit, release)` then `waiters_->notify_one()` - the release publishes
+the holder's writes to `T` before the bit shows free again, and the notify is a cheap
+`fetch_add` with no syscall unless a thread is actually parked.
 
-- **Pinned slots** (`[0, n_pinned)`) are exclusively owned by one designated caller each. The
-  caller reads `pinned(i)` - an `std::atomic<T*>&` - once and caches it; every subsequent access is
-  a single `load(acquire)`, no CAS, no contention. A slot's `T*` briefly reads `nullptr` while a
-  repair thread swaps it out (`exchange(nullptr, acq_rel)` -> reconstruct -> `store(release)`); the
-  owner just skips its work for that iteration. The pointer load *is* the synchronization.
-- **Free slots** (`[n_pinned, n_pinned + n_free)`) are shared: any thread can acquire one. Freedom
-  is tracked by a bitset, one bit per slot, packed into cache-line-isolated 64-bit words
-  (`struct alignas(64) PaddedWord`). `try_acquire()` scans the words starting from a
-  `thread_local` hint (seeded from `hash(thread_id)`, so concurrent callers spread their CAS
-  traffic across different words) and claims the lowest set bit with one
-  `compare_exchange_weak(cur, cur & ~bit, acquire, relaxed)`. A `Lease<T>`
-  (`detail/lease.hpp`) is a
-  move-only RAII handle over the claimed slot; its destructor (or move-assignment over a live
-  lease) does `word->fetch_or(bit, release)` then `waiters_->notify_one()` - the release publishes
-  the holder's writes to `T` before the bit shows free again, and the notify is a cheap
-  `fetch_add` with no syscall unless a thread is actually parked.
-
-**Constructor set.** `ResourcePool` exposes five constructor overloads, all funneling into one
-canonical form: `ResourcePool(n_pinned, n_free, spin_budget, factory)`
-(`resource_pool.hpp-149`). The
-shorter overloads default `n_pinned` to `0` (a free-only pool, the common case) and/or the spin
-budget to a built-in constant. **`n_pinned` always precedes `n_free`** in every overload that takes
-both - getting the order backwards silently builds a pool with the two counts swapped rather than
-failing to compile, since both are plain `std::size_t`. The factory is a callable invoked once per
-live slot, either `(std::size_t index) -> T` or `() -> T`
+**Constructor set.** `ResourcePool` exposes three constructor overloads, all funneling into one
+canonical form: `ResourcePool(n, spin_budget, factory)`. The shorter overloads default the spin
+budget to a built-in constant and/or `n` to `MaxSize` (a full pool). The factory is a callable
+invoked once per slot, either `(std::size_t index) -> T` or `() -> T`
 (the `ResourceFactory` concept, `resource_pool.hpp-30`),
 so `T` need not be default-constructible - real resources (sockets, file descriptors, connections)
 get real per-slot construction arguments. If the factory throws while building slot `k`, the
@@ -76,16 +65,16 @@ deadline once (`t0 + timeout`), then spins with `pause_arc_agnostic()` until
 `min(t0 + spin_budget, deadline)`, then parks on the `EventCount` until the deadline
 (`resource_pool.hpp-235`). Both
 `spin_budget` and `timeout` are typed as `std::chrono::nanoseconds`, never a bare integer: a
-constructor overload set that accepted `(n_free, std::size_t, factory)` for one shape and
-`(n_free, nanoseconds, factory)` for another would let an integer literal silently bind to the
-wrong parameter and misconstruct the pool (swapping which count is which, or which argument is the
-spin budget) with no compiler error. Using `chrono::nanoseconds` exclusively makes every overload's
+constructor overload set that accepted `(n, std::size_t, factory)` for one shape and
+`(n, nanoseconds, factory)` for another would let an integer literal silently bind to the
+wrong parameter and misconstruct the pool (a slot count read as a spin budget, or vice versa)
+with no compiler error. Using `chrono::nanoseconds` exclusively makes every overload's
 third argument unambiguous at the call site and ill-formed if the caller passes a raw number.
 
 ## AsyncResourcePool
 
 `AsyncResourcePool<T, MaxSize>`
-is the coroutine-friendly sibling: the same inline storage, pinned region, and lock-free bitset
+is the coroutine-friendly sibling: the same inline storage and lock-free bitset
 `try_acquire()` fast path as `ResourcePool` (the file is self-contained rather than sharing a base
 with the sync pool - the storage/bitset/repair mechanics are duplicated on purpose so the sync pool
 is never put at risk by async-only changes), but a caller that finds no free slot **suspends a
@@ -261,10 +250,10 @@ sweep lets more entries drain per cache-line-crossing.
 **ResourcePool / AsyncResourcePool** (`benchmarks/concurrency-starling/resource_pool/`)
 is a Google Benchmark suite plus one standalone flagship binary:
 
-- Per-subject binaries (`Try`, `AcqFor1us`/`2us`/`10us`, `Pinned` for the sync pool;
+- Per-subject binaries (`Try`, `AcqFor1us`/`2us`/`10us` for the sync pool;
   `ArpAcqFor1us`/`2us`/`10us` for the async pool) sweep a fixed set of scenarios - steady load,
-  bursty load, timeout pressure, an asio-`post()`-driven producer, a pinned-cell zero-contention
-  floor, and a heavy SPMC-drain burst - across a range of worker counts
+  bursty load, timeout pressure, an asio-`post()`-driven producer, and a heavy SPMC-drain burst -
+  across a range of worker counts
   (`common/bench_scenarios.hpp`),
   each timing only the acquire call itself (`try_acquire` / `acquire_for` / `async_acquire_for`)
   around a synthetic `MockResource::work_for(duration)` busy-wait timed via TSC.

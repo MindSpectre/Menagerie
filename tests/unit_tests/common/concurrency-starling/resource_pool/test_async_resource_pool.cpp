@@ -209,8 +209,6 @@ TEST(AsyncResourcePoolConstruction, FreeOnlyPoolInvokesFactoryPerSlot) {
     {
         AsyncResourcePool<Probe, 32> pool{5, [](std::size_t i) { return Probe{i}; }};
         EXPECT_EQ(pool.capacity(), 5u);
-        EXPECT_EQ(pool.pinned_count(), 0u);
-        EXPECT_EQ(pool.free_count(), 5u);
         EXPECT_EQ(Probe::live.load(), 5);
         EXPECT_EQ(Probe::factory_calls.load(), 5);
         const std::vector<std::size_t> expected{0, 1, 2, 3, 4};
@@ -219,8 +217,8 @@ TEST(AsyncResourcePoolConstruction, FreeOnlyPoolInvokesFactoryPerSlot) {
     EXPECT_EQ(Probe::live.load(), 0);
 }
 
-TEST(AsyncResourcePoolConstruction, ThrowsWhenPartitionsExceedMaxSize) {
-    EXPECT_THROW((AsyncResourcePool<int, 8>{5, 5, [](std::size_t) { return 0; }}), std::invalid_argument);
+TEST(AsyncResourcePoolConstruction, ThrowsWhenCountExceedsMaxSize) {
+    EXPECT_THROW((AsyncResourcePool<int, 8>{9, [](std::size_t) { return 0; }}), std::invalid_argument);
 }
 
 TEST(AsyncResourcePoolConstruction, FactoryThrowMidConstructionLeaksNothing) {
@@ -243,11 +241,11 @@ TEST(AsyncResourcePoolConstruction, NullaryFactoryIsAccepted) {
                                        return 99;
                                    }};
     EXPECT_EQ(calls, 4);
-    EXPECT_EQ(pool.free_count(), 4u);
+    EXPECT_EQ(pool.capacity(), 4u);
 }
 
 // ===========================================================================
-// AsyncResourcePool — try_acquire, pinned, repair
+// AsyncResourcePool — try_acquire, repair
 // ===========================================================================
 
 TEST(AsyncResourcePoolTryAcquire, HandsOutDistinctSlotsThenEmpty) {
@@ -283,14 +281,6 @@ TEST(AsyncResourcePoolTryAcquire, SpansMultipleBitsetWords) {
         held.push_back(std::move(*lease));
     }
     EXPECT_FALSE(pool.try_acquire());
-}
-
-TEST(AsyncResourcePoolPinned, CellsPublishStorageSlots) {
-    AsyncResourcePool<int, 16> pool{3, 0, [](std::size_t i) { return static_cast<int>(i) + 10; }};
-    ASSERT_EQ(pool.pinned_count(), 3u);
-    EXPECT_EQ(*pool.pinned(0).load(), 10);
-    EXPECT_EQ(*pool.pinned(2).load(), 12);
-    EXPECT_NE(pool.pinned(0).load(), pool.pinned(2).load());
 }
 
 TEST(AsyncResourcePoolRepair, ClaimSucceedsOnFreeSlotThenMarkHealthyRestores) {

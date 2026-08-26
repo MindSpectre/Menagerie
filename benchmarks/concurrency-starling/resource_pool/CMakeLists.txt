@@ -64,7 +64,6 @@ add_pool_bench(Try sync/bench_rp_try.cpp)
 add_pool_bench(AcqFor1us sync/bench_rp_acqfor_1us.cpp)
 add_pool_bench(AcqFor2us sync/bench_rp_acqfor_2us.cpp)
 add_pool_bench(AcqFor10us sync/bench_rp_acqfor_10us.cpp)
-add_pool_bench(Pinned sync/bench_rp_pinned.cpp)
 
 # AsyncResourcePool — coroutine acquire_for, comparable to the sync AcqFor* subjects.
 add_pool_bench(ArpAcqFor1us async/bench_arp_acqfor_1us.cpp)
@@ -73,4 +72,12 @@ add_pool_bench(ArpAcqFor10us async/bench_arp_acqfor_10us.cpp)
 
 # Flagship: end-to-end burst latency, sync vs async, disruptor-fed.
 add_pool_bench(FlagshipBurst flagship/flagship_bench.cpp)
+
+# Unified Pool engine — A/B subjects against the legacy pools.
+add_pool_bench(PlAcqFor1us pool/bench_pl_acqfor_1us.cpp)
+add_pool_bench(PlAcqFor2us pool/bench_pl_acqfor_2us.cpp)
+add_pool_bench(PlAcqFor10us pool/bench_pl_acqfor_10us.cpp)
+add_pool_bench(PlArpAcqFor1us pool/bench_pl_arp_acqfor_1us.cpp)
+add_pool_bench(PlArpAcqFor2us pool/bench_pl_arp_acqfor_2us.cpp)
+add_pool_bench(PlArpAcqFor10us pool/bench_pl_arp_acqfor_10us.cpp)
 ##############################################################################

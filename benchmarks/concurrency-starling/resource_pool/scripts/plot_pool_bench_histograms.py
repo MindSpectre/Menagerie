@@ -8,8 +8,7 @@ The sync ResourcePool subjects (RP_*) and the async AsyncResourcePool subjects
 shared scenario (Steady / Burst / TimeoutPressure).
 
 Input:  /tmp/pool_bench_results/{floating,pinned}/{try,acqfor_1us,acqfor_2us,
-        acqfor_10us,rp_pinned,mutex_base,arp_acqfor_1us,arp_acqfor_2us,
-        arp_acqfor_10us}.json
+        acqfor_10us,arp_acqfor_1us,arp_acqfor_2us,arp_acqfor_10us}.json
         (Google Benchmark JSON output, one file per subject binary per variant)
 
 Output: benchmark_results/pool_histograms/{floating,pinned}/<scenario>_w<workers>.png
@@ -37,7 +36,6 @@ JSON_FILES = {
     "RP_AcqFor_1us": "acqfor_1us.json",
     "RP_AcqFor_2us": "acqfor_2us.json",
     "RP_AcqFor_10us": "acqfor_10us.json",
-    "RP_Pinned": "rp_pinned.json",
     "ARP_AcqFor_1us": "arp_acqfor_1us.json",
     "ARP_AcqFor_2us": "arp_acqfor_2us.json",
     "ARP_AcqFor_10us": "arp_acqfor_10us.json",
@@ -51,7 +49,6 @@ COLORS = {
     "RP_AcqFor_1us": "#17becf",
     "RP_AcqFor_2us": "#2ca02c",
     "RP_AcqFor_10us": "#9467bd",
-    "RP_Pinned": "#8c564b",
     "ARP_AcqFor_1us": "#ff7f0e",
     "ARP_AcqFor_2us": "#e377c2",
     "ARP_AcqFor_10us": "#bcbd22",
@@ -63,13 +60,12 @@ SCENARIOS = [
     "TimeoutPressure",
     "AsioPostSteady",
     "AsioPostBurst",
-    "PinnedZeroContention",
     "HeavyBurst",
 ]
 
 # Which scenarios each subject actually registers — used to suppress spurious
-# "missing" warnings (async subjects skip AsioPost*/Pinned; pinned/try are
-# scenario-specific). A subject is only "missing" if it should have run.
+# "missing" warnings (async subjects skip AsioPost*). A subject is only "missing"
+# if it should have run.
 _FREE5 = {"Steady", "Burst", "TimeoutPressure", "AsioPostSteady", "AsioPostBurst", "HeavyBurst"}
 _ASYNC3 = {"Steady", "Burst", "TimeoutPressure", "HeavyBurst"}
 SUBJECT_SCENARIOS = {
@@ -77,7 +73,6 @@ SUBJECT_SCENARIOS = {
     "RP_AcqFor_1us": _FREE5,
     "RP_AcqFor_2us": _FREE5,
     "RP_AcqFor_10us": _FREE5,
-    "RP_Pinned": {"PinnedZeroContention"},
     "ARP_AcqFor_1us": _ASYNC3,
     "ARP_AcqFor_2us": _ASYNC3,
     "ARP_AcqFor_10us": _ASYNC3,
@@ -95,7 +90,6 @@ SCENARIO_PARAMS = {
     "TimeoutPressure": "W=1µs    P=128",
     "AsioPostSteady": "1 producer → asio[N] → RP    W=500ns  P=128",
     "AsioPostBurst": "1 producer → asio[N] burst=8 idle=10µs → RP    P=128",
-    "PinnedZeroContention": "W=0      K=workers (1 pinned cell per worker; floor reference)",
     "HeavyBurst": "W=10µs  B=256  I=500µs  P=128  (slot held across async I/O → pool saturates/parks)",
 }
 
@@ -177,18 +171,7 @@ def format_axis_value(val, _pos):
     return f"{val:.2f}"
 
 
-def extract_pinned_floor(data):
-    """Return {workers: p50_us} for the PinnedZeroContention scenario."""
-    floor = {}
-    for workers, per_subject in data.get("PinnedZeroContention", {}).items():
-        rec = per_subject.get("RP_Pinned")
-        if rec is None:
-            continue
-        floor[workers] = rec.get("p50_us", 0.0)
-    return floor
-
-
-def plot_one(variant, scenario, workers, per_subject, out_dir, pinned_floor_us):
+def plot_one(variant, scenario, workers, per_subject, out_dir):
     fig, axes = plt.subplots(1, len(METRICS), figsize=(22, 4.8))
     fig.patch.set_facecolor("white")
 
@@ -236,16 +219,6 @@ def plot_one(variant, scenario, workers, per_subject, out_dir, pinned_floor_us):
             ax.axhline(rps_ceiling, color="#666", linestyle=":", linewidth=1.2,
                        label=f"ceiling {rps_ceiling:,.0f}")
             ax.legend(loc="upper right", fontsize=8, frameon=False)
-
-        # Overlay pinned floor as horizontal reference on latency subplots.
-        if (metric_key in ("p50_us", "p95_us", "p99_us")
-                and pinned_floor_us is not None
-                and pinned_floor_us > 0
-                and scenario != "PinnedZeroContention"):
-            ax.axhline(pinned_floor_us, color="#8c564b", linestyle="--",
-                       linewidth=1.0, alpha=0.7,
-                       label=f"pinned floor {format_label(pinned_floor_us, metric_key)}")
-            ax.legend(loc="upper left", fontsize=7, frameon=False)
 
         ymax = max(vals) if vals else 0
         for bar, v in zip(bars, vals):
@@ -338,7 +311,6 @@ def main():
 
         print(f"=== {variant} ===")
         data = load_variant(variant_dir)
-        pinned_floor = extract_pinned_floor(data)
         for scenario in SCENARIOS:
             if scenario not in data:
                 print(f"  SKIP scenario {scenario}: no data in {variant}")
@@ -352,15 +324,7 @@ def main():
                            if scenario in SUBJECT_SCENARIOS[s] and s not in per_subject]
                 if missing:
                     print(f"  WARN {variant}/{scenario}/{workers}: missing {missing}")
-                # Match the floor at the same worker count if available;
-                # otherwise fall back to the closest.
-                floor_us = pinned_floor.get(workers)
-                if floor_us is None and pinned_floor:
-                    closest = min(pinned_floor.keys(),
-                                  key=lambda w: abs(w - workers))
-                    floor_us = pinned_floor[closest]
-                out_path = plot_one(variant, scenario, workers, per_subject,
-                                    out_dir, floor_us)
+                out_path = plot_one(variant, scenario, workers, per_subject, out_dir)
                 total += 1
                 print(f"  wrote {out_path.relative_to(REPO_ROOT)}")
 

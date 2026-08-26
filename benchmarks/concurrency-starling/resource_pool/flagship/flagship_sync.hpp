@@ -16,6 +16,7 @@
 #include <future>
 #include <memory>
 #include <menagerie/starling>
+#include <optional>
 #include <span>
 #include <string>
 #include <thread>
@@ -32,9 +33,11 @@
 namespace bench::pool {
 
     inline Result run_sync(const std::string& name, const std::size_t n_consumers, const FlagshipConfig& cfg) {
-        using PoolT = menagerie::starling::ResourcePool<MockResource, 1024>;
+        using PoolT = menagerie::starling::Pool<menagerie::starling::Wait::sync, MockResource>;
         print_config(cfg, name);
-        PoolT pool{cfg.pool_size, [](const std::size_t i) noexcept { return MockResource{i}; }};
+        PoolT pool{cfg.pool_size, cfg.pool_size, [next = std::size_t{0}]() mutable -> std::optional<MockResource> {
+                       return MockResource{next++};
+                   }};
 
         std::vector<std::unique_ptr<Disruptor>> disruptors;
         disruptors.reserve(n_consumers);

@@ -19,7 +19,8 @@
 #include <iostream>
 #include <memory>
 #include <menagerie/chameleon>
-#include <menagerie/starling>  // AsyncResourcePool, ShardedAsioBackend, BusySpinWaitStrategy
+#include <menagerie/starling>  // Pool, ShardedAsioBackend, BusySpinWaitStrategy
+#include <optional>
 #include <span>
 #include <string>
 #include <thread>
@@ -39,7 +40,12 @@ namespace bench::pool {
 
     inline Result run_async(const std::string& name, const FlagshipConfig& cfg) {
         print_config(cfg, name);
-        AsyncPoolT pool{cfg.pool_size, [](std::size_t i) noexcept { return MockResource{i}; }};
+        AsyncPoolT pool{
+            RawAsyncPoolT{
+                          cfg.pool_size, cfg.pool_size, [next = std::size_t{0}]() mutable -> std::optional<MockResource> {
+                    return MockResource{next++};
+                }}
+        };
 
         // Pull/Channel: one disruptor per shard (workers share it). PullDedicated: one
         // disruptor per worker (SPSC, no shared claim cursor) → shards * workers_per_shard.

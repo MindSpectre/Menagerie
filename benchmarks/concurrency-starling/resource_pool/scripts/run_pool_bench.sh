@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build and run all 8 ResourcePool benchmark binaries (5 sync + 3 async), twice each
+# Build and run all 7 ResourcePool benchmark binaries (4 sync + 3 async), twice each
 # (floating workers + pinned 1:1), confined to cores 0..9 via taskset.
 # Output: /tmp/pool_bench_results/{floating,pinned}/<subject>.json
 #
@@ -27,7 +27,6 @@ TARGETS=(
     "${PREFIX}.AcqFor1us"
     "${PREFIX}.AcqFor2us"
     "${PREFIX}.AcqFor10us"
-    "${PREFIX}.Pinned"
     "${PREFIX}.ArpAcqFor1us"
     "${PREFIX}.ArpAcqFor2us"
     "${PREFIX}.ArpAcqFor10us"
@@ -47,7 +46,6 @@ declare -a SUBJECTS=(
     "acqfor_1us:AcqFor1us"
     "acqfor_2us:AcqFor2us"
     "acqfor_10us:AcqFor10us"
-    "rp_pinned:Pinned"
     "arp_acqfor_1us:ArpAcqFor1us"
     "arp_acqfor_2us:ArpAcqFor2us"
     "arp_acqfor_10us:ArpAcqFor10us"

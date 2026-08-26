@@ -8,10 +8,12 @@
 #include <chrono>
 #include <cstddef>
 #include <memory>
-#include <menagerie/starling>  // AsyncResourcePool
+#include <menagerie/starling>  // Pool
+#include <optional>
 #include <vector>
 
 #include <boost/asio/any_io_executor.hpp>
+#include <boost/asio/as_tuple.hpp>
 #include <boost/asio/awaitable.hpp>
 #include <boost/asio/buffer.hpp>
 #include <boost/asio/post.hpp>
@@ -25,7 +27,27 @@
 
 namespace bench::pool {
 
-    using AsyncPoolT = menagerie::starling::AsyncResourcePool<MockResource, 1024>;
+    using RawAsyncPoolT = menagerie::starling::Pool<menagerie::starling::Wait::async, MockResource>;
+
+    /// Keeps the workers' measured `co_await pool.async_acquire_for(exec, t)` line
+    /// byte-identical while the engine underneath changes. Synchronous fast path first
+    /// (try_acquire) so the common case resumes inline via symmetric transfer instead of
+    /// suspending — do NOT bind an immediate executor here (unbounded recursion, proven in
+    /// gate round 5).
+    struct AsyncPoolT {
+        RawAsyncPoolT pool;
+        boost::asio::awaitable<std::optional<RawAsyncPoolT::Handle>>
+        async_acquire_for(boost::asio::any_io_executor exec, std::chrono::nanoseconds timeout) {
+            if (auto h = pool.try_acquire()) {
+                co_return std::optional{std::move(*h)};
+            }
+            auto [ec, h] = co_await pool.acquire_for(exec, timeout, boost::asio::as_tuple(boost::asio::use_awaitable));
+            if (ec) {
+                co_return std::nullopt;
+            }
+            co_return std::optional{std::move(h)};
+        }
+    };
 
     /// State every dispatch worker references — a value bundle of references. Cheap to copy
     /// per spawn; the referenced objects all live in run_async's scope and outlive every

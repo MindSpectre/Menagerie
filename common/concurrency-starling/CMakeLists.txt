@@ -78,6 +78,25 @@ target_link_libraries(${STARLING}.ResourcePool.Async
 ##############################################################################
 
 ##############################################################################
+# Pool - unified runtime-sized resource pool (sync/async wait via NTTP)
+##############################################################################
+add_library(${STARLING}.Pool INTERFACE
+        resource_pool/pool/pool.hpp
+)
+target_include_directories(${STARLING}.Pool
+        INTERFACE
+        resource_pool/pool
+)
+target_link_libraries(${STARLING}.Pool
+        INTERFACE
+        Threads::Threads
+        Boost::asio
+        Boost::system
+        Menagerie::Common::Beaver
+)
+##############################################################################
+
+##############################################################################
 # AsioBackend - RAII io_context runners (single + sharded) for asio-based pools
 ##############################################################################
 add_library(${STARLING}.AsioBackend INTERFACE
@@ -153,6 +172,7 @@ add_combined_library(${STARLING}
         ${STARLING}.EventCount
         ${STARLING}.ResourcePool.Sync
         ${STARLING}.ResourcePool.Async
+        ${STARLING}.Pool
         ${STARLING}.AsioBackend
 )
 

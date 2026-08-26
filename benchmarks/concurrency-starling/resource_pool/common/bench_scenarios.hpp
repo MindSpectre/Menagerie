@@ -15,7 +15,6 @@ namespace bench::pool {
         TimeoutPressure,
         AsioPostSteady,
         AsioPostBurst,
-        PinnedZeroContention,
         HeavyBurst,
     };
 
@@ -30,7 +29,7 @@ namespace bench::pool {
     // Work durations are sized to "one small websocket frame write" (~500 ns
     // on Linux for serialize + small send()). TimeoutPressure holds slightly
     // longer (2 frames) to amplify contention against the short timeouts.
-    inline constexpr std::array<Scenario, 7> ALL_SCENARIOS = {
+    inline constexpr std::array<Scenario, 6> ALL_SCENARIOS = {
         {
          {"Steady", ScenarioKind::Steady, std::chrono::nanoseconds{500}, 0, std::chrono::nanoseconds{0}},
          {"Burst", ScenarioKind::Burst, std::chrono::nanoseconds{500}, 8, std::chrono::microseconds{10}},
@@ -53,16 +52,6 @@ namespace bench::pool {
              std::chrono::nanoseconds{500},
              8,
              std::chrono::microseconds{10}},
-         // W=0: pinned-cell load floor check. Pool.md claims 1–2 ns for the
-            // pinned path; with W=0 the runner skips work_for and measures only
-            // the amortized cell.load(acquire) cost, isolating that floor. This
-            // scenario is the *reference baseline* — plot script overlays its
-            // p50 as a horizontal line on the other scenarios' latency plots.
-            {"PinnedZeroContention",
-             ScenarioKind::PinnedZeroContention,
-             std::chrono::nanoseconds{0},
-             0,
-             std::chrono::nanoseconds{0}},
          // HeavyBurst: SPMC-drain spike. Each worker rips through burst_size=256
             // records back-to-back (a freelock queue dumped ~all at once), then a
             // long idle cooldown, repeat. The held work is W=10µs — for the async
@@ -117,14 +106,8 @@ namespace bench::pool {
             case ScenarioKind::AsioPostBurst:
             case ScenarioKind::HeavyBurst:
                 return FREE_POOL_SIZE;
-            case ScenarioKind::PinnedZeroContention:
-                return 0;
         }
         return 1;
-    }
-
-    [[nodiscard]] constexpr std::size_t pinned_pool_size(const Scenario& sc, const std::size_t workers) noexcept {
-        return sc.kind == ScenarioKind::PinnedZeroContention ? workers : 0;
     }
 
     [[nodiscard]] constexpr double rps_ceiling(const Scenario& sc, const std::size_t workers) noexcept {
@@ -147,8 +130,6 @@ namespace bench::pool {
                 // the misleading "P/W ceiling" reference line — the bars
                 // themselves show the producer-bound rate.
                 return 0.0;
-            case ScenarioKind::PinnedZeroContention:
-                return static_cast<double>(workers) * inv_w_s;
         }
         return 0.0;
     }
