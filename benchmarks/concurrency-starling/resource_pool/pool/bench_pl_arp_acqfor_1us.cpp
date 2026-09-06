@@ -3,9 +3,7 @@
 #include <menagerie/starling>
 #include <optional>
 
-#include <boost/asio/as_tuple.hpp>
 #include <boost/asio/awaitable.hpp>
-#include <boost/asio/use_awaitable.hpp>
 
 #include "async/async_bench_main.hpp"
 #include "common/bench_scenarios.hpp"
@@ -18,16 +16,12 @@ using RawPool = menagerie::starling::Pool<menagerie::starling::Wait::async, Mock
 // stays byte-identical; only the pool type behind it changes.
 struct PoolAdapter {
     RawPool pool;
-    boost::asio::awaitable<std::optional<RawPool::Handle>> async_acquire_for(boost::asio::any_io_executor exec,
+    boost::asio::awaitable<std::optional<RawPool::Handle>> async_acquire_for(boost::asio::any_io_executor /*exec*/,
                                                                              std::chrono::nanoseconds timeout) {
         if (auto h = pool.try_acquire()) {
             co_return std::optional{std::move(*h)};
         }
-        auto [ec, h] = co_await pool.acquire_for(exec, timeout, boost::asio::as_tuple(boost::asio::use_awaitable));
-        if (ec) {
-            co_return std::nullopt;
-        }
-        co_return std::optional{std::move(h)};
+        co_return co_await pool.acquire_for(timeout);
     }
 };
 

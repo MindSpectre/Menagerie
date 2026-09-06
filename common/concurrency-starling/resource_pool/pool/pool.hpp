@@ -25,12 +25,12 @@
 #include <boost/asio/any_io_executor.hpp>
 #include <boost/asio/associated_cancellation_slot.hpp>
 #include <boost/asio/associated_executor.hpp>
-#include <boost/asio/associated_immediate_executor.hpp>
 #include <boost/asio/async_result.hpp>
-#include <boost/asio/dispatch.hpp>
+#include <boost/asio/awaitable.hpp>
 #include <boost/asio/error.hpp>
 #include <boost/asio/post.hpp>
 #include <boost/asio/steady_timer.hpp>
+#include <boost/asio/use_awaitable.hpp>
 #include <boost/system/error_code.hpp>
 
 namespace menagerie::starling {
@@ -85,7 +85,7 @@ namespace menagerie::starling {
             T value;
         };
 
-        static constexpr std::size_t npos = static_cast<std::size_t>(-1);
+        static constexpr std::size_t NPOS = static_cast<std::size_t>(-1);
 
     public:
         using value_type = T;
@@ -114,7 +114,7 @@ namespace menagerie::starling {
                 }
                 return *this;
             }
-            ~Handle() {
+            ~Handle() noexcept {
                 release_now();
             }
 
@@ -194,7 +194,7 @@ namespace menagerie::starling {
             }
         }
 
-        ~Pool() {
+        ~Pool() noexcept {
             shutdown();
             assert(created_ == 0 && "Pool destroyed with outstanding Handles");
         }
@@ -207,14 +207,14 @@ namespace menagerie::starling {
             if (shutdown_.load(std::memory_order_acquire)) {
                 return std::nullopt;
             }
-            if (const std::size_t s = try_claim(); s != npos) {
+            if (const std::size_t s = try_claim(); s != NPOS) {
                 return Handle{this, slot_ptr(s), s};
             }
             std::unique_lock lk{mtx_};
             if (shutdown_.load(std::memory_order_acquire)) {
                 return std::nullopt;
             }
-            if (const std::size_t s = obtain_locked(lk); s != npos) {
+            if (const std::size_t s = obtain_locked(lk); s != NPOS) {
                 return Handle{this, slot_ptr(s), s};
             }
             return std::nullopt;
@@ -234,38 +234,35 @@ namespace menagerie::starling {
             return sync_acquire(timeout);
         }
 
-        /// Suspend until a resource frees (or shutdown/cancel). Wait::async only.
-        /// Completion: void(error_code, Handle). The fast path (free or creatable
-        /// resource) completes through the token's associated immediate executor —
-        /// by default that posts to @p exec; a bound immediate executor overrides
-        /// where fast-path completions dispatch — see the warning below before
-        /// binding an inline one.
-        /// Coroutine callers that want an inline fast path should call `try_acquire()`
-        /// first and fall back to the awaited verb — a non-suspending `co_return`
-        /// resumes the caller via symmetric transfer at constant stack. Do NOT bind an
-        /// inline immediate executor for this: inline dispatch has no trampoline and
-        /// recurses unboundedly in tight acquire/release loops. Immediate completions
-        /// default to a post to @p exec.
-        template <typename Token>
-        auto acquire(boost::asio::any_io_executor exec, Token&& token)
+        /// Suspend the awaiting coroutine until a resource frees; `co_await` yields
+        /// `std::optional<Handle>` — engaged on success, nullopt on shutdown or
+        /// cancellation — mirroring the sync verb exactly. Coroutine-only by design
+        /// (no completion-token parameter): completions post to the awaiting
+        /// coroutine's executor, which also runs the wait timer and creation kicks.
+        /// For an inline fast path in tight loops call `try_acquire()` first — a
+        /// non-suspending `co_return` resumes the caller via symmetric transfer at
+        /// constant stack; the awaited verbs always post. Wait::async only.
+        [[nodiscard]] boost::asio::awaitable<std::optional<Handle>> acquire()
             requires(Mode == Wait::async)
         {
-            return boost::asio::async_initiate<Token, void(boost::system::error_code, Handle)>(
-                [this, exec = std::move(exec)]<typename H>(H&& h) mutable {
-                    this->async_initiate_acquire(std::move(exec), std::nullopt, std::forward<H>(h));
+            boost::asio::use_awaitable_t<> token;
+            return boost::asio::async_initiate<boost::asio::use_awaitable_t<>, void(std::optional<Handle>)>(
+                [this]<typename Handler>(Handler&& h) {
+                    this->async_initiate_acquire(std::nullopt, std::forward<Handler>(h));
                 },
                 token);
         }
 
-        /// Bounded variant: completes with error::timed_out if @p timeout elapses first.
-        template <typename Token>
-        auto
-        acquire_for(boost::asio::any_io_executor exec, const std::chrono::steady_clock::duration timeout, Token&& token)
+        /// Bounded variant: additionally yields nullopt if @p timeout elapses first.
+        /// Wait::async only.
+        [[nodiscard]] boost::asio::awaitable<std::optional<Handle>>
+        acquire_for(const std::chrono::steady_clock::duration timeout)
             requires(Mode == Wait::async)
         {
-            return boost::asio::async_initiate<Token, void(boost::system::error_code, Handle)>(
-                [this, exec = std::move(exec), timeout]<typename H>(H&& h) mutable {
-                    this->async_initiate_acquire(std::move(exec), timeout, std::forward<H>(h));
+            boost::asio::use_awaitable_t<> token;
+            return boost::asio::async_initiate<boost::asio::use_awaitable_t<>, void(std::optional<Handle>)>(
+                [this, timeout]<typename Handler>(Handler&& h) {
+                    this->async_initiate_acquire(timeout, std::forward<Handler>(h));
                 },
                 token);
         }
@@ -325,24 +322,24 @@ namespace menagerie::starling {
 
     private:
         struct SyncWaiter {
-            std::size_t assigned = npos;  ///< Handed-off slot; npos until ready (or on shutdown).
+            std::size_t assigned = NPOS;  ///< Handed-off slot; npos until ready (or on shutdown).
             std::condition_variable cv;   ///< Signaled by handoff, capacity kick, or shutdown.
             bool ready  = false;          ///< True once assigned is valid or the wait was broken.
             bool kicked = false;          ///< Woken to retry creation on freed capacity (see kick_locked).
         };
         struct AsyncWaiter : beaver::NonCopyable {
-            using Handler = boost::asio::any_completion_handler<void(boost::system::error_code, Handle)>;
             AsyncWaiter(Pool* p, boost::asio::any_io_executor e)
                 : pool{p},
                   exec{std::move(e)},
                   timer{exec} {
             }
             Pool* pool;  ///< Reached by slot/timer callbacks only via a live waiter.
-            /// Resolved completion executor (the handler's associated executor, the
-            /// supplied exec as fallback); also runs the timer and kick jobs.
+            /// The awaiting coroutine's executor: completions post here; it also runs
+            /// the wait timer and creation kicks.
             boost::asio::any_io_executor exec;
             boost::asio::steady_timer timer;  ///< Armed only for bounded waits.
-            Handler handler{};                ///< Moved out exactly once by the claim winner.
+            boost::asio::any_completion_handler<void(std::optional<Handle>)>
+                handler{};                    ///< Moved out exactly once by the claim winner.
             std::atomic_bool claimed{false};  ///< First of {handoff, timeout, cancel, shutdown} wins.
         };
         using WaiterT = std::conditional_t<Mode == Wait::async, std::shared_ptr<AsyncWaiter>, SyncWaiter*>;
@@ -380,25 +377,25 @@ namespace menagerie::starling {
         /// Lock-free claim of any idle slot. `strong` = seq_cst loads/CAS, required for
         /// the parker's post-increment re-scan (see the gate invariant comment).
         [[nodiscard]] std::size_t try_claim(const bool strong = false) noexcept {
-            const auto load_order     = strong ? std::memory_order_seq_cst : std::memory_order_relaxed;
-            const auto ok_order       = strong ? std::memory_order_seq_cst : std::memory_order_acquire;
-            const std::size_t n_words = words_.size();
+            const std::memory_order load_order = strong ? std::memory_order_seq_cst : std::memory_order_relaxed;
+            const std::memory_order ok_order   = strong ? std::memory_order_seq_cst : std::memory_order_acquire;
+            const std::size_t n_words          = words_.size();
             if (n_words == 0) {
-                return npos;
+                return NPOS;
             }
             const std::size_t start = word_hint() % n_words;
             for (std::size_t k = 0; k < n_words; ++k) {
                 std::atomic<std::uint64_t>& word = words_[(start + k) % n_words].bits;
                 std::uint64_t cur                = word.load(load_order);
                 while (cur != 0) {
-                    const std::uint64_t bit = cur & (~cur + 1);
-                    if (word.compare_exchange_weak(cur, cur & ~bit, ok_order, std::memory_order_relaxed)) {
+                    if (const std::uint64_t bit = cur & (~cur + 1);
+                        word.compare_exchange_weak(cur, cur & ~bit, ok_order, std::memory_order_relaxed)) {
                         return ((start + k) % n_words) * bits_per_word +
                                static_cast<std::size_t>(std::countr_zero(bit));
                     }
                 }
             }
-            return npos;
+            return NPOS;
         }
 
         /// Claim an idle slot via the bitset fast path (already tried by the caller
@@ -408,11 +405,11 @@ namespace menagerie::starling {
         /// rolled back on failure so concurrent creators cannot overshoot capacity).
         /// Returns `npos` on exhaustion/failure.
         [[nodiscard]] std::size_t obtain_locked(std::unique_lock<std::mutex>& lk, const bool kick_on_fail = true) {
-            if (const std::size_t s = try_claim(); s != npos) {
+            if (const std::size_t s = try_claim(); s != NPOS) {
                 return s;
             }
             if (created_ >= capacity_) {
-                return npos;
+                return NPOS;
             }
             ++created_;  // optimistic; keeps concurrent creators under the cap
             const std::size_t slot = spare_slot_ids_.back();
@@ -429,7 +426,7 @@ namespace menagerie::starling {
                 if (kick_on_fail && !shutdown_.load(std::memory_order_acquire)) {
                     kick_locked();
                 }
-                return npos;
+                return NPOS;
             }
             std::construct_at(slot_ptr(slot), std::move(*v));
             return slot;  // handed to the caller; its bit stays clear
@@ -468,7 +465,7 @@ namespace menagerie::starling {
                 return;
             }
             const std::size_t s = obtain_locked(lk, /*kick_on_fail=*/false);
-            if (s == npos) {
+            if (s == NPOS) {
                 return;  // capacity re-claimed by others or factory failed; next event retries
             }
             if (!hand_off_locked(s, lk)) {
@@ -486,7 +483,7 @@ namespace menagerie::starling {
             if (shutdown_.load(std::memory_order_acquire)) {
                 return std::nullopt;
             }
-            if (const std::size_t s = try_claim(); s != npos) {
+            if (const std::size_t s = try_claim(); s != NPOS) {
                 return Handle{this, slot_ptr(s), s};
             }
             std::optional<std::chrono::steady_clock::time_point> deadline;
@@ -507,12 +504,12 @@ namespace menagerie::starling {
                 }
                 // First pass: the ordinary claim-or-create attempt. Kicked passes: the
                 // retry the kick paid for — its own failure must not cascade a new kick.
-                if (const std::size_t s = obtain_locked(lk, /*kick_on_fail=*/!kicked); s != npos) {
+                if (const std::size_t s = obtain_locked(lk, /*kick_on_fail=*/!kicked); s != NPOS) {
                     return Handle{this, slot_ptr(s), s};
                 }
                 kicked = false;
                 n_waiters_.fetch_add(1, std::memory_order_seq_cst);
-                if (const std::size_t s = try_claim(true); s != npos) {  // strong re-scan AFTER count publication
+                if (const std::size_t s = try_claim(true); s != NPOS) {  // strong re-scan AFTER count publication
                     n_waiters_.fetch_sub(1, std::memory_order_seq_cst);
                     return Handle{this, slot_ptr(s), s};
                 }
@@ -524,7 +521,7 @@ namespace menagerie::starling {
                 } else {
                     w.cv.wait(lk, pred);
                 }
-                if (w.ready && w.assigned != npos) {
+                if (w.ready && w.assigned != NPOS) {
                     return Handle{this, slot_ptr(w.assigned), w.assigned};
                 }
                 if (w.ready && w.kicked) {
@@ -539,40 +536,38 @@ namespace menagerie::starling {
             }
         }
 
-        template <typename H>
-        void async_initiate_acquire(boost::asio::any_io_executor exec,
-                                    const std::optional<std::chrono::steady_clock::duration> timeout,
-                                    H&& h)
+        template <typename Handler>
+        void async_initiate_acquire(const std::optional<std::chrono::steady_clock::duration> timeout, Handler&& handler)
             requires(Mode == Wait::async)
         {
-            // Fast/error paths complete with the CONCRETE handler (no type erasure):
-            // through the associated immediate executor. Its fallback is the handler's
-            // completion executor (a bound executor such as a strand is honored, as on
-            // the parked paths); an unadorned handler still gets a plain post to exec.
-            const auto imm =
-                boost::asio::get_associated_immediate_executor(h, boost::asio::get_associated_executor(h, exec));
-            const auto complete_now = [&](const boost::system::error_code ec, Handle hd) {
-                boost::asio::dispatch(imm, [h = std::forward<H>(h), ec, hd = std::move(hd)]() mutable {
-                    std::move(h)(ec, std::move(hd));
+            // The awaitable handler always carries the awaiting coroutine's executor;
+            // every completion — fast path and parked alike — is POSTED to it. Never
+            // dispatch inline: a resume under a release() call stack would recurse
+            // unboundedly in tight acquire/release loops (the try_acquire-first idiom
+            // is how callers get an inline fast path).
+            auto cex                = boost::asio::any_io_executor{boost::asio::get_associated_executor(handler)};
+            const auto complete_now = [&](std::optional<Handle> hd) {
+                boost::asio::post(cex, [h = std::forward<Handler>(handler), hd = std::move(hd)]() mutable {
+                    std::move(h)(std::move(hd));
                 });
             };
             if (shutdown_.load(std::memory_order_acquire)) {
-                complete_now(boost::asio::error::operation_aborted, Handle{});
+                complete_now(std::nullopt);
                 return;
             }
-            if (const std::size_t s = try_claim(); s != npos) {
-                complete_now(boost::system::error_code{}, Handle{this, slot_ptr(s), s});
+            if (const std::size_t s = try_claim(); s != NPOS) {
+                complete_now(Handle{this, slot_ptr(s), s});
                 return;
             }
             std::unique_lock lk{mtx_};
             if (shutdown_.load(std::memory_order_acquire)) {
                 lk.unlock();
-                complete_now(boost::asio::error::operation_aborted, Handle{});
+                complete_now(std::nullopt);
                 return;
             }
-            if (const std::size_t s = obtain_locked(lk); s != npos) {
+            if (const std::size_t s = obtain_locked(lk); s != NPOS) {
                 lk.unlock();
-                complete_now(boost::system::error_code{}, Handle{this, slot_ptr(s), s});
+                complete_now(Handle{this, slot_ptr(s), s});
                 return;
             }
             // Recheck shutdown: if it completed during obtain_locked's factory unlock window,
@@ -580,27 +575,22 @@ namespace menagerie::starling {
             // no timer to expire them). Hold the lock from here through waiters_.push_back.
             if (shutdown_.load(std::memory_order_acquire)) {
                 lk.unlock();
-                complete_now(boost::asio::error::operation_aborted, Handle{});
+                complete_now(std::nullopt);
                 return;
             }
             n_waiters_.fetch_add(1, std::memory_order_seq_cst);
-            if (const std::size_t s = try_claim(true); s != npos) {
+            if (const std::size_t s = try_claim(true); s != NPOS) {
                 n_waiters_.fetch_sub(1, std::memory_order_seq_cst);
                 lk.unlock();
-                complete_now(boost::system::error_code{}, Handle{this, slot_ptr(s), s});
+                complete_now(Handle{this, slot_ptr(s), s});
                 return;
             }
-            // Park. Read the cancellation slot and the associated executor from the
-            // CONCRETE handler BEFORE moving it into the waiter (after publication a
-            // concurrent completion may move the handler out from under us — the old
-            // async pool's hard-won lesson). Resolving the completion executor here,
-            // while the handler's concrete type is still visible, is what lets a bound
-            // executor (e.g. a strand) survive the type erasure: parked completions
-            // are posted to it, exec being only the fallback.
-            auto slot   = boost::asio::get_associated_cancellation_slot(h);
-            auto waiter = std::make_shared<AsyncWaiter>(
-                this, boost::asio::any_io_executor{boost::asio::get_associated_executor(h, exec)});
-            waiter->handler = std::forward<H>(h);
+            // Park. Read the cancellation slot from the CONCRETE handler BEFORE moving
+            // it into the waiter (after publication a concurrent completion may move
+            // the handler out from under us — the old async pool's hard-won lesson).
+            auto slot       = boost::asio::get_associated_cancellation_slot(handler);
+            auto waiter     = std::make_shared<AsyncWaiter>(this, std::move(cex));
+            waiter->handler = std::forward<Handler>(handler);
             if (slot.is_connected()) {
                 // Deliberate order: constructing the any_completion_handler above emplaced
                 // asio's cancellation-forwarding proxy into this same slot; assigning here
@@ -610,26 +600,27 @@ namespace menagerie::starling {
                 // weak_ptr proves the waiter (and therefore the pool) is still alive.
                 slot.assign([wp = std::weak_ptr<AsyncWaiter>{waiter}](boost::asio::cancellation_type) {
                     if (const auto w = wp.lock()) {
-                        w->pool->async_abort(w, boost::asio::error::operation_aborted);
+                        w->pool->async_abort(w);
                     }
                 });
             }
             waiters_.push_back(waiter);
             if (timeout) {
                 waiter->timer.expires_after(*timeout);
-                waiter->timer.async_wait([wp = std::weak_ptr<AsyncWaiter>{waiter}](const boost::system::error_code ec) {
-                    if (ec == boost::asio::error::operation_aborted) {
-                        return;  // cancelled by a successful handoff/shutdown
-                    }
-                    if (const auto w = wp.lock()) {
-                        w->pool->async_abort(w, boost::asio::error::timed_out);
-                    }
-                });
+                waiter->timer.async_wait(
+                    [wp = std::weak_ptr<AsyncWaiter>{waiter}](const boost::system::error_code& ec) {
+                        if (ec == boost::asio::error::operation_aborted) {
+                            return;  // cancelled by a successful handoff/shutdown
+                        }
+                        if (const auto w = wp.lock()) {
+                            w->pool->async_abort(w);
+                        }
+                    });
             }
         }
 
-        /// Timeout / cancellation arm: first claim wins; erase + complete empty.
-        void async_abort(const std::shared_ptr<AsyncWaiter>& w, const boost::system::error_code reason) noexcept
+        /// Timeout / cancellation arm: first claim wins; erase + complete nullopt.
+        void async_abort(const std::shared_ptr<AsyncWaiter>& w) noexcept
             requires(Mode == Wait::async)
         {
             std::unique_lock lk{mtx_};
@@ -639,10 +630,10 @@ namespace menagerie::starling {
             if (std::erase_if(waiters_, [&](const WaiterT& e) { return e.get() == w.get(); }) != 0) {
                 n_waiters_.fetch_sub(1, std::memory_order_seq_cst);
             }
-            auto handler    = std::move(w->handler);
-            const auto exec = std::move(w->exec);
+            boost::asio::any_completion_handler<void(std::optional<Handle>)> handler = std::move(w->handler);
+            const boost::asio::any_io_executor exec                                  = std::move(w->exec);
             lk.unlock();
-            boost::asio::post(exec, [h = std::move(handler), reason]() mutable { std::move(h)(reason, Handle{}); });
+            boost::asio::post(exec, [h = std::move(handler)]() mutable { std::move(h)(std::nullopt); });
         }
 
         /// Destroy the resource in `slot` and free the slot index for reuse.
@@ -705,7 +696,7 @@ namespace menagerie::starling {
         void serve_waiters_locked(std::unique_lock<std::mutex>& lk) noexcept {
             while (!waiters_.empty()) {
                 const std::size_t m = try_claim();
-                if (m == npos) {
+                if (m == NPOS) {
                     return;  // bits stolen by fast-path claimers; waiters stay parked
                 }
                 if (!hand_off_locked(m, lk)) {
@@ -753,12 +744,14 @@ namespace menagerie::starling {
                     continue;  // timer/cancel claimed it first (its erase is pending/no-op)
                 }
                 w->timer.cancel();  // best effort; the claim already decides the race
-                auto handler    = std::move(w->handler);
-                const auto exec = std::move(w->exec);
+                boost::asio::any_completion_handler<void(std::optional<Handle>)> handler = std::move(w->handler);
+                const boost::asio::any_io_executor exec                                  = std::move(w->exec);
                 lk.unlock();
-                boost::asio::post(exec, [h = std::move(handler), hd = Handle{this, slot_ptr(slot), slot}]() mutable {
-                    std::move(h)(boost::system::error_code{}, std::move(hd));
-                });
+                boost::asio::post(exec,
+                                  [h  = std::move(handler),
+                                   hd = std::optional<Handle>{
+                                       Handle{this, slot_ptr(slot), slot}
+                }]() mutable { std::move(h)(std::move(hd)); });
                 return true;
             }
             return false;
@@ -782,7 +775,9 @@ namespace menagerie::starling {
         void async_drain_locked(std::unique_lock<std::mutex>& lk) noexcept
             requires(Mode == Wait::async)
         {
-            std::vector<std::pair<boost::asio::any_io_executor, typename AsyncWaiter::Handler>> pending;
+            std::vector<std::pair<boost::asio::any_io_executor,
+                                  boost::asio::any_completion_handler<void(std::optional<Handle>)>>>
+                pending;
             for (const WaiterT& w : waiters_) {
                 if (bool expected = false;
                     !w->claimed.compare_exchange_strong(expected, true, std::memory_order_acq_rel)) {
@@ -795,9 +790,7 @@ namespace menagerie::starling {
             n_waiters_.store(0, std::memory_order_seq_cst);
             lk.unlock();
             for (auto& [exec, handler] : pending) {
-                boost::asio::post(exec, [h = std::move(handler)]() mutable {
-                    std::move(h)(boost::asio::error::operation_aborted, Handle{});
-                });
+                boost::asio::post(exec, [h = std::move(handler)]() mutable { std::move(h)(std::nullopt); });
             }
             lk.lock();  // shutdown() continues destroying free nodes under the lock
         }

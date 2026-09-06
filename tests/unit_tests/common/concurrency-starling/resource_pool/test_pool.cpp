@@ -10,14 +10,16 @@
 #include <utility>
 #include <vector>
 
+#include <boost/asio/awaitable.hpp>
 #include <boost/asio/bind_cancellation_slot.hpp>
-#include <boost/asio/bind_executor.hpp>
-#include <boost/asio/bind_immediate_executor.hpp>
 #include <boost/asio/cancellation_signal.hpp>
+#include <boost/asio/co_spawn.hpp>
+#include <boost/asio/detached.hpp>
 #include <boost/asio/executor_work_guard.hpp>
 #include <boost/asio/io_context.hpp>
+#include <boost/asio/post.hpp>
 #include <boost/asio/strand.hpp>
-#include <boost/asio/system_executor.hpp>
+#include <boost/asio/this_coro.hpp>
 #include <boost/system/error_code.hpp>
 #include <gtest/gtest.h>
 
@@ -252,32 +254,20 @@ TEST(PoolSyncWait, ShutdownWakesAllWaitersEmpty) {
     held.reset();  // post-shutdown release destroys inline; dtor assert holds
 }
 
-TEST(PoolAsyncWait, FastPathCompletesViaImmediateExecutorBeforeRun) {
+TEST(PoolAsyncWait, FastPathCompletesOnFirstRun) {
     Probe::reset();
     AsyncPool pool{1, 1, &Probe::make};
     boost::asio::io_context ioc;
     bool done = false;
-    pool.acquire(ioc.get_executor(),
-                 boost::asio::bind_immediate_executor(boost::asio::system_executor{},
-                                                      [&](const boost::system::error_code ec, AsyncPool::Handle h) {
-                                                          EXPECT_FALSE(ec);
-                                                          EXPECT_TRUE(static_cast<bool>(h));
-                                                          done = true;
-                                                      }));
-    EXPECT_TRUE(done);  // completed inline — ioc.run() never called
-}
-
-TEST(PoolAsyncWait, FastPathWithoutImmediateExecutorPosts) {
-    Probe::reset();
-    AsyncPool pool{1, 1, &Probe::make};
-    boost::asio::io_context ioc;
-    bool done = false;
-    pool.acquire(ioc.get_executor(), [&](const boost::system::error_code ec, AsyncPool::Handle h) {
-        EXPECT_FALSE(ec);
-        EXPECT_TRUE(static_cast<bool>(h));
-        done = true;
-    });
-    EXPECT_FALSE(done);  // not yet: default immediate executor == post to exec
+    boost::asio::co_spawn(
+        ioc,
+        [&]() -> boost::asio::awaitable<void> {
+            const std::optional<AsyncPool::Handle> h = co_await pool.acquire();
+            EXPECT_TRUE(h.has_value());
+            done = true;
+        },
+        boost::asio::detached);
+    EXPECT_FALSE(done);  // nothing runs inline on the spawning thread: completions post
     ioc.run();
     EXPECT_TRUE(done);
 }
@@ -288,16 +278,22 @@ TEST(PoolAsyncWait, ParkedWaiterWokenByRelease) {
     boost::asio::io_context ioc;
     auto held = pool.try_acquire();
     bool done = false;
-    pool.acquire(ioc.get_executor(), [&](const boost::system::error_code ec, AsyncPool::Handle h) {
-        EXPECT_FALSE(ec);
-        EXPECT_TRUE(static_cast<bool>(h));
-        done = true;
-    });
+    boost::asio::co_spawn(
+        ioc,
+        [&]() -> boost::asio::awaitable<void> {
+            const std::optional<AsyncPool::Handle> h = co_await pool.acquire();
+            EXPECT_TRUE(h.has_value());
+            done = true;
+        },
+        boost::asio::detached);
+    ioc.poll();  // starts the coroutine, which parks (the frame keeps work outstanding)
+    EXPECT_FALSE(done);
     EXPECT_EQ(pool.waiter_count(), 1u);
-    held.reset();  // direct handoff -> posts completion
+    held.reset();  // direct handoff -> posts the resumption
+    ioc.restart();
     ioc.run();
     EXPECT_TRUE(done);
-    EXPECT_EQ(pool.free_count(), 1u);  // handle inside the lambda released; resource returned
+    EXPECT_EQ(pool.free_count(), 1u);  // handle inside the coroutine released; resource returned
 }
 
 TEST(PoolAsyncWait, BoundedWaitTimesOut) {
@@ -305,13 +301,17 @@ TEST(PoolAsyncWait, BoundedWaitTimesOut) {
     AsyncPool pool{1, 1, &Probe::make};
     boost::asio::io_context ioc;
     auto held = pool.try_acquire();
-    boost::system::error_code seen{};
-    pool.acquire_for(ioc.get_executor(), 50ms, [&](const boost::system::error_code ec, AsyncPool::Handle h) {
-        seen = ec;
-        EXPECT_FALSE(static_cast<bool>(h));
-    });
-    ioc.run();
-    EXPECT_EQ(seen, boost::asio::error::timed_out);
+    bool done = false;
+    boost::asio::co_spawn(
+        ioc,
+        [&]() -> boost::asio::awaitable<void> {
+            const std::optional<AsyncPool::Handle> h = co_await pool.acquire_for(50ms);
+            EXPECT_FALSE(h.has_value());
+            done = true;
+        },
+        boost::asio::detached);
+    ioc.run();  // the wait timer keeps the context alive until the timeout fires
+    EXPECT_TRUE(done);
     EXPECT_EQ(pool.waiter_count(), 0u);
 }
 
@@ -320,11 +320,20 @@ TEST(PoolAsyncWait, ShutdownDrainsParkedWaiter) {
     AsyncPool pool{1, 1, &Probe::make};
     boost::asio::io_context ioc;
     auto held = pool.try_acquire();
-    boost::system::error_code seen{};
-    pool.acquire(ioc.get_executor(), [&](const boost::system::error_code ec, AsyncPool::Handle) { seen = ec; });
+    bool done = false;
+    boost::asio::co_spawn(
+        ioc,
+        [&]() -> boost::asio::awaitable<void> {
+            const std::optional<AsyncPool::Handle> h = co_await pool.acquire();
+            EXPECT_FALSE(h.has_value());
+            done = true;
+        },
+        boost::asio::detached);
+    ioc.poll();  // parks
     pool.shutdown();
+    ioc.restart();
     ioc.run();
-    EXPECT_EQ(seen, boost::asio::error::operation_aborted);
+    EXPECT_TRUE(done);
     held.reset();
 }
 
@@ -342,12 +351,20 @@ TEST(PoolAsyncWait, ShutdownDuringLazyCreateDoesNotStrandWaiter) {
                    }};
 
     boost::asio::io_context ioc;
-    boost::system::error_code seen{};
+    std::atomic<int> completions{0};
+    bool got_value = true;
 
-    // Acquire in a thread: will block inside the factory during obtain_locked
-    std::thread acquire_thread{[&] {
-        pool.acquire(ioc.get_executor(), [&](const boost::system::error_code ec, AsyncPool::Handle) { seen = ec; });
-    }};
+    // The coroutine's initiation runs on the ioc runner thread and blocks inside the
+    // factory during obtain_locked.
+    boost::asio::co_spawn(
+        ioc,
+        [&]() -> boost::asio::awaitable<void> {
+            const std::optional<AsyncPool::Handle> h = co_await pool.acquire();
+            completions.fetch_add(1);
+            got_value = h.has_value();
+        },
+        boost::asio::detached);
+    std::thread runner{[&] { ioc.run(); }};
 
     // Wait for factory to start
     while (!factory_started.load()) {
@@ -366,14 +383,11 @@ TEST(PoolAsyncWait, ShutdownDuringLazyCreateDoesNotStrandWaiter) {
         factory_cv.notify_all();
     }
 
-    // Join acquire thread
-    acquire_thread.join();
+    runner.join();
 
-    // Run io_context to execute any pending handlers
-    ioc.run();
-
-    // Assert: the handler completed exactly once with operation_aborted
-    EXPECT_EQ(seen, boost::asio::error::operation_aborted);
+    // Assert: the coroutine completed exactly once with nullopt (shutdown)
+    EXPECT_EQ(completions.load(), 1);
+    EXPECT_FALSE(got_value);
     EXPECT_EQ(pool.waiter_count(), 0u);
 }
 
@@ -384,21 +398,24 @@ TEST(PoolAsyncWait, CancellationSlotAbortsParkedWaiterExactlyOnce) {
     auto held = pool.try_acquire();
     boost::asio::cancellation_signal sig;
     std::atomic<int> completions{0};
-    boost::system::error_code seen{};
-    pool.acquire(
-        ioc.get_executor(),
-        boost::asio::bind_cancellation_slot(sig.slot(), [&](const boost::system::error_code ec, AsyncPool::Handle h) {
+    boost::asio::co_spawn(
+        ioc,
+        [&]() -> boost::asio::awaitable<void> {
+            // Deliver cancellation as a value (nullopt), not an exception at the co_await.
+            co_await boost::asio::this_coro::throw_if_cancelled(false);
+            const std::optional<AsyncPool::Handle> h = co_await pool.acquire();
             completions.fetch_add(1);
-            seen = ec;
-            EXPECT_FALSE(static_cast<bool>(h));
-        }));
+            EXPECT_FALSE(h.has_value());
+        },
+        boost::asio::bind_cancellation_slot(sig.slot(), boost::asio::detached));
+    ioc.poll();  // parks
     EXPECT_EQ(pool.waiter_count(), 1u);
     sig.emit(boost::asio::cancellation_type::terminal);
+    ioc.restart();
     ioc.run();
     EXPECT_EQ(completions.load(), 1);
-    EXPECT_EQ(seen, boost::asio::error::operation_aborted);
     EXPECT_EQ(pool.waiter_count(), 0u);
-    held.reset();  // release after cancel must take the publish path, not strand
+    held.reset();  // release after cancel must take the publish path, not handoff
     EXPECT_TRUE(pool.try_acquire().has_value());
 }
 
@@ -428,25 +445,27 @@ TEST(PoolAsyncWait, DeadReleaseCreatesReplacementForParkedWaiter) {
     auto held = pool.try_acquire();
     ASSERT_TRUE(held.has_value());
     std::atomic<int> completions{0};
-    boost::system::error_code seen{boost::asio::error::would_block};
-    pool.acquire_for(
-        ioc.get_executor(), std::chrono::seconds{2}, [&](const boost::system::error_code ec, AsyncPool::Handle h) {
+    boost::asio::co_spawn(
+        ioc,
+        [&]() -> boost::asio::awaitable<void> {
+            const std::optional<AsyncPool::Handle> h = co_await pool.acquire_for(std::chrono::seconds{2});
             completions.fetch_add(1);
-            seen = ec;
-            EXPECT_EQ(static_cast<bool>(h), !ec);
-            h = {};
-        });
-    EXPECT_EQ(pool.waiter_count(), 1u);
-    held->mark_dead();
-    held.reset();  // dead release must post a one-shot creator job for the parked waiter
-    ioc.run();     // runs the creator job (factory) and then the handed-off completion
+            EXPECT_TRUE(h.has_value());
+        },
+        boost::asio::detached);
+    // Queued behind the coroutine start: by the time this runs, the waiter is parked.
+    boost::asio::post(ioc, [&] {
+        EXPECT_EQ(pool.waiter_count(), 1u);
+        held->mark_dead();
+        held.reset();  // dead release must post a one-shot creator job for the parked waiter
+    });
+    ioc.run();  // parks, releases dead, runs the creator job, then the handed-off completion
     EXPECT_EQ(completions.load(), 1);
-    EXPECT_EQ(seen, boost::system::error_code{});
     EXPECT_EQ(Probe::made.load(), 2);
     EXPECT_EQ(pool.waiter_count(), 0u);
 }
 
-TEST(PoolAsyncWait, ParkedCompletionHonorsBoundExecutor) {
+TEST(PoolAsyncWait, ParkedCompletionResumesOnSpawnExecutor) {
     Probe::reset();
     AsyncPool pool{1, 1, &Probe::make};
     boost::asio::io_context ioc;
@@ -455,15 +474,19 @@ TEST(PoolAsyncWait, ParkedCompletionHonorsBoundExecutor) {
     ASSERT_TRUE(held.has_value());
     std::atomic<int> completions{0};
     bool in_strand = false;
-    pool.acquire(ioc.get_executor(),
-                 boost::asio::bind_executor(strand, [&](const boost::system::error_code ec, AsyncPool::Handle h) {
-                     completions.fetch_add(1);
-                     in_strand = strand.running_in_this_thread();
-                     EXPECT_FALSE(ec);
-                     h = {};
-                 }));
+    boost::asio::co_spawn(
+        strand,
+        [&]() -> boost::asio::awaitable<void> {
+            const std::optional<AsyncPool::Handle> h = co_await pool.acquire();
+            completions.fetch_add(1);
+            in_strand = strand.running_in_this_thread();
+            EXPECT_TRUE(h.has_value());
+        },
+        boost::asio::detached);
+    ioc.poll();  // starts the coroutine on the strand; it parks
     EXPECT_EQ(pool.waiter_count(), 1u);
-    held.reset();  // direct handoff: the completion must run on the bound strand
+    held.reset();  // direct handoff: the resumption must run on the spawn strand
+    ioc.restart();
     ioc.run();
     EXPECT_EQ(completions.load(), 1);
     EXPECT_TRUE(in_strand);
@@ -478,19 +501,21 @@ TEST(PoolAsyncWait, CancellationEmitAfterCompletionAndPoolDeathIsInert) {
         AsyncPool pool{1, 1, &Probe::make};
         auto held = pool.try_acquire();
         ASSERT_TRUE(held.has_value());
-        pool.acquire_for(ioc.get_executor(),
-                         std::chrono::seconds{2},
-                         boost::asio::bind_cancellation_slot(
-                             sig.slot(), [&](const boost::system::error_code ec, AsyncPool::Handle h) {
-                                 completions.fetch_add(1);
-                                 EXPECT_FALSE(ec);
-                                 h = {};
-                             }));
-        EXPECT_EQ(pool.waiter_count(), 1u);
-        held.reset();  // handoff completes the waiter
+        boost::asio::co_spawn(
+            ioc,
+            [&]() -> boost::asio::awaitable<void> {
+                const std::optional<AsyncPool::Handle> h = co_await pool.acquire_for(std::chrono::seconds{2});
+                completions.fetch_add(1);
+                EXPECT_TRUE(h.has_value());
+            },
+            boost::asio::bind_cancellation_slot(sig.slot(), boost::asio::detached));
+        boost::asio::post(ioc, [&] {
+            EXPECT_EQ(pool.waiter_count(), 1u);
+            held.reset();  // handoff completes the waiter
+        });
         ioc.run();
         EXPECT_EQ(completions.load(), 1);
-    }  // pool destroyed; the caller-owned slot still holds the pool's stale callback
+    }  // pool destroyed; the signal outlives it and every frame that held pool callbacks
     sig.emit(boost::asio::cancellation_type::terminal);  // must be inert: no UAF, no second completion
     EXPECT_EQ(completions.load(), 1);
 }
@@ -509,13 +534,18 @@ TEST(PoolAsyncWait, ReleaseVsTimeoutCompletesExactlyOnce) {
         ASSERT_TRUE(held.has_value());
         std::atomic<int> completions{0};
         std::atomic<bool> done{false};
-        pool.acquire_for(ioc.get_executor(),
-                         std::chrono::microseconds{500},
-                         [&](const boost::system::error_code, AsyncPool::Handle h) {
-                             completions.fetch_add(1);
-                             h = {};
-                             done.store(true, std::memory_order_release);
-                         });
+        boost::asio::co_spawn(
+            ioc,
+            [&]() -> boost::asio::awaitable<void> {
+                std::optional<AsyncPool::Handle> h = co_await pool.acquire_for(std::chrono::microseconds{500});
+                completions.fetch_add(1);
+                h.reset();
+                done.store(true, std::memory_order_release);
+            },
+            boost::asio::detached);
+        while (pool.waiter_count() == 0 && !done.load(std::memory_order_acquire)) {
+            std::this_thread::yield();  // the runner thread starts the coroutine, which parks
+        }
         std::this_thread::sleep_for(std::chrono::microseconds{300 + 137 * (round % 5)});
         held.reset();  // races the 500us timer, which the runner thread is actively driving
         while (!done.load(std::memory_order_acquire)) {
@@ -562,7 +592,7 @@ TEST(PoolStress, SyncChurnKeepsInvariants) {
 }
 
 TEST(PoolStress, AsyncTimeoutChurnCompletesEveryInitiation) {
-    // Every initiation must complete exactly once (success or timed_out), under
+    // Every initiation must complete exactly once (success or timeout), under
     // saturation with releases racing timers — the claimed-CAS contract.
     constexpr int kCoros = 64;
     constexpr int kLoops = 200;
@@ -570,18 +600,17 @@ TEST(PoolStress, AsyncTimeoutChurnCompletesEveryInitiation) {
     AsyncPool pool{4, 4, &Probe::make};
     boost::asio::io_context ioc;
     std::atomic<int> completions{0};
-    std::function<void(int)> spawn = [&](int remaining) {
-        if (remaining == 0) {
-            return;
-        }
-        pool.acquire_for(ioc.get_executor(), 1ms, [&, remaining](const boost::system::error_code, AsyncPool::Handle h) {
-            completions.fetch_add(1, std::memory_order_relaxed);
-            h = {};  // release (no-op on timeout)
-            spawn(remaining - 1);
-        });
-    };
     for (int c = 0; c < kCoros; ++c) {
-        spawn(kLoops);
+        boost::asio::co_spawn(
+            ioc,
+            [&]() -> boost::asio::awaitable<void> {
+                for (int i = 0; i < kLoops; ++i) {
+                    std::optional<AsyncPool::Handle> h = co_await pool.acquire_for(1ms);
+                    completions.fetch_add(1, std::memory_order_relaxed);
+                    h.reset();  // release (no-op on timeout)
+                }
+            },
+            boost::asio::detached);
     }
     ioc.run();
     EXPECT_EQ(completions.load(), kCoros * kLoops);

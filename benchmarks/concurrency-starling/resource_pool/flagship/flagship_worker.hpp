@@ -32,20 +32,15 @@ namespace bench::pool {
     /// Keeps the workers' measured `co_await pool.async_acquire_for(exec, t)` line
     /// byte-identical while the engine underneath changes. Synchronous fast path first
     /// (try_acquire) so the common case resumes inline via symmetric transfer instead of
-    /// suspending — do NOT bind an immediate executor here (unbounded recursion, proven in
-    /// gate round 5).
+    /// suspending; the awaited verb is coroutine-native and always posts.
     struct AsyncPoolT {
         RawAsyncPoolT pool;
         boost::asio::awaitable<std::optional<RawAsyncPoolT::Handle>>
-        async_acquire_for(boost::asio::any_io_executor exec, std::chrono::nanoseconds timeout) {
+        async_acquire_for(boost::asio::any_io_executor /*exec*/, std::chrono::nanoseconds timeout) {
             if (auto h = pool.try_acquire()) {
                 co_return std::optional{std::move(*h)};
             }
-            auto [ec, h] = co_await pool.acquire_for(exec, timeout, boost::asio::as_tuple(boost::asio::use_awaitable));
-            if (ec) {
-                co_return std::nullopt;
-            }
-            co_return std::optional{std::move(h)};
+            co_return co_await pool.acquire_for(timeout);
         }
     };
 
