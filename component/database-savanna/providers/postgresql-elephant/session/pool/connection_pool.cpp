@@ -1,4 +1,4 @@
-#include "blocking_pool.hpp"
+#include "connection_pool.hpp"
 
 #include <algorithm>
 #include <utility>
@@ -9,7 +9,7 @@
 
 namespace menagerie::savanna::elephant {
 
-    BlockingPool::BlockingPool(ConnectionConfig connection_config, PoolConfig pool_config)
+    ConnectionPool::ConnectionPool(ConnectionConfig connection_config, PoolConfig pool_config)
         : conn_cfg_{std::move(connection_config)},
           pool_cfg_{std::move(pool_config)} {
         const auto cap = pool_cfg_.capacity();
@@ -25,29 +25,23 @@ namespace menagerie::savanna::elephant {
         }
     }
 
-    BlockingPool::~BlockingPool() {
+    ConnectionPool::~ConnectionPool() {
         shutdown();
     }
 
-    std::shared_ptr<QueuedHolder> BlockingPool::try_create_holder() {
-        PGconn* c = create_connection();
-        if (!c)
+    std::shared_ptr<QueuedHolder> ConnectionPool::try_create_holder() {
+        Connection c = create_connection();
+        if (!c.ready())
             return nullptr;
-        return std::make_shared<QueuedHolder>(c, this);
+        return std::make_shared<QueuedHolder>(std::move(c), this);
     }
 
-    PGconn* BlockingPool::create_connection() const {
+    Connection ConnectionPool::create_connection() const {
         const auto s = conn_cfg_.to_connection_string();
-        PGconn* c    = PQconnectdb(s.c_str());
-        if (!c || PQstatus(c) != CONNECTION_OK) {
-            if (c)
-                PQfinish(c);
-            return nullptr;
-        }
-        return c;
+        return Connection::open(s.c_str());
     }
 
-    std::weak_ptr<ConnectionHolder> BlockingPool::try_acquire() noexcept {
+    std::weak_ptr<ConnectionHolder> ConnectionPool::try_acquire() noexcept {
         if (shutdown_.load(std::memory_order_acquire))
             return {};
 
@@ -75,7 +69,7 @@ namespace menagerie::savanna::elephant {
         return {};
     }
 
-    std::weak_ptr<ConnectionHolder> BlockingPool::acquire(std::chrono::steady_clock::duration timeout) noexcept {
+    std::weak_ptr<ConnectionHolder> ConnectionPool::acquire(std::chrono::steady_clock::duration timeout) noexcept {
         if (shutdown_.load(std::memory_order_acquire))
             return {};
 
@@ -116,7 +110,7 @@ namespace menagerie::savanna::elephant {
         return {};
     }
 
-    std::weak_ptr<ConnectionHolder> BlockingPool::acquire() noexcept {
+    std::weak_ptr<ConnectionHolder> ConnectionPool::acquire() noexcept {
         if (shutdown_.load(std::memory_order_acquire))
             return {};
 
@@ -157,9 +151,9 @@ namespace menagerie::savanna::elephant {
         return {};
     }
 
-    void BlockingPool::initiate_async_acquire(const boost::asio::any_io_executor& exec,
-                                              const std::chrono::steady_clock::duration timeout,
-                                              AsyncWaiter::Handler handler) {
+    void ConnectionPool::initiate_async_acquire(const boost::asio::any_io_executor& exec,
+                                                const std::chrono::steady_clock::duration timeout,
+                                                AsyncWaiter::Handler handler) {
         const auto post_error =
             [](const boost::asio::any_io_executor& e, AsyncWaiter::Handler h, boost::system::error_code ec) {
                 boost::asio::post(
@@ -241,7 +235,7 @@ namespace menagerie::savanna::elephant {
         // until a release (return_holder) or shutdown claims it.
     }
 
-    void BlockingPool::on_async_waiter_timeout(const std::shared_ptr<AsyncWaiter>& waiter) noexcept {
+    void ConnectionPool::on_async_waiter_timeout(const std::shared_ptr<AsyncWaiter>& waiter) noexcept {
         std::unique_lock lk{mtx_};
 
         if (bool expected = false;
@@ -264,7 +258,7 @@ namespace menagerie::savanna::elephant {
         });
     }
 
-    void BlockingPool::return_holder(QueuedHolder* raw) noexcept {
+    void ConnectionPool::return_holder(QueuedHolder* raw) noexcept {
         std::unique_lock lk{mtx_};
         if (shutdown_.load(std::memory_order_acquire))
             return;
@@ -310,7 +304,7 @@ namespace menagerie::savanna::elephant {
         free_.push_back(raw);
     }
 
-    void BlockingPool::drop_dead(QueuedHolder* raw) noexcept {
+    void ConnectionPool::drop_dead(QueuedHolder* raw) noexcept {
         std::lock_guard lk{mtx_};
         if (shutdown_.load(std::memory_order_acquire))
             return;
@@ -322,7 +316,7 @@ namespace menagerie::savanna::elephant {
         }
     }
 
-    void BlockingPool::shutdown() {
+    void ConnectionPool::shutdown() {
         if (shutdown_.exchange(true, std::memory_order_acq_rel))
             return;
 
@@ -357,33 +351,33 @@ namespace menagerie::savanna::elephant {
         }
     }
 
-    std::size_t BlockingPool::capacity() const noexcept {
+    std::size_t ConnectionPool::capacity() const noexcept {
         return pool_cfg_.capacity();
     }
 
-    std::size_t BlockingPool::free_count() const noexcept {
+    std::size_t ConnectionPool::free_count() const noexcept {
         std::lock_guard lk{mtx_};
         return free_.size();
     }
 
-    std::size_t BlockingPool::active_count() const noexcept {
+    std::size_t ConnectionPool::active_count() const noexcept {
         std::lock_guard lk{mtx_};
         return created_ - free_.size();
     }
 
-    std::size_t BlockingPool::waiter_count() const noexcept {
+    std::size_t ConnectionPool::waiter_count() const noexcept {
         std::lock_guard lk{mtx_};
         return waiters_.size();
     }
 
-    bool BlockingPool::is_shutdown() const noexcept {
+    bool ConnectionPool::is_shutdown() const noexcept {
         return shutdown_.load(std::memory_order_acquire);
     }
 
-    const ConnectionConfig& BlockingPool::connection_config() const noexcept {
+    const ConnectionConfig& ConnectionPool::connection_config() const noexcept {
         return conn_cfg_;
     }
-    const PoolConfig& BlockingPool::pool_config() const noexcept {
+    const PoolConfig& ConnectionPool::pool_config() const noexcept {
         return pool_cfg_;
     }
 

@@ -78,6 +78,33 @@ target_link_libraries(${STARLING}.ResourcePool.Async
 ##############################################################################
 
 ##############################################################################
+# Pool - passive fixed-arena resource pool
+##############################################################################
+add_library(${STARLING}.Pool INTERFACE
+        resource_pool/pool/pool.hpp
+        resource_pool/pool/types.hpp
+        resource_pool/pool/detail/deadline.hpp
+        resource_pool/pool/detail/lifetime.hpp
+        resource_pool/pool/detail/waiter.hpp
+        resource_pool/pool/detail/borrowed.hpp
+        resource_pool/pool/detail/reserved_slot.hpp
+        resource_pool/pool/detail/sync_acquire.hpp
+        resource_pool/pool/detail/async_acquire.hpp
+)
+target_include_directories(${STARLING}.Pool
+        INTERFACE
+        resource_pool/pool
+)
+target_link_libraries(${STARLING}.Pool
+        INTERFACE
+        Threads::Threads
+        Boost::asio
+        Boost::system
+        Menagerie::Common::Beaver
+)
+##############################################################################
+
+##############################################################################
 # AsioBackend - RAII io_context runners (single + sharded) for asio-based pools
 ##############################################################################
 add_library(${STARLING}.AsioBackend INTERFACE
@@ -153,6 +180,7 @@ add_combined_library(${STARLING}
         ${STARLING}.EventCount
         ${STARLING}.ResourcePool.Sync
         ${STARLING}.ResourcePool.Async
+        ${STARLING}.Pool
         ${STARLING}.AsioBackend
 )
 

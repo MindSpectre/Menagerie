@@ -13,8 +13,7 @@
 
 namespace menagerie::savanna::elephant {
 
-    class LockFreeSession;
-    class BlockingSession;
+    class Session;
     class Savepoint;
 
     /**
@@ -112,8 +111,7 @@ namespace menagerie::savanna::elephant {
         }
 
     private:
-        friend class LockFreeSession;
-        friend class BlockingSession;
+        friend class Session;
 
         CROW_COMPONENT_PREFIX("Transaction");
 

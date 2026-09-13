@@ -8,10 +8,10 @@
 #include <chrono>
 #include <cstddef>
 #include <memory>
-#include <menagerie/starling>  // AsyncResourcePool
 #include <vector>
 
 #include <boost/asio/any_io_executor.hpp>
+#include <boost/asio/as_tuple.hpp>
 #include <boost/asio/awaitable.hpp>
 #include <boost/asio/buffer.hpp>
 #include <boost/asio/post.hpp>
@@ -21,11 +21,12 @@
 #include "common/mock_resource.hpp"
 #include "flagship_config.hpp"  // FlagshipConfig, Work
 #include "flagship_producer.hpp"
+#include "pool/populated_pool.hpp"
 #include "ws_harness.hpp"
 
 namespace bench::pool {
 
-    using AsyncPoolT = menagerie::starling::AsyncResourcePool<MockResource, 1024>;
+    using AsyncPoolT = PopulatedPool;
 
     /// State every dispatch worker references — a value bundle of references. Cheap to copy
     /// per spawn; the referenced objects all live in run_async's scope and outlive every

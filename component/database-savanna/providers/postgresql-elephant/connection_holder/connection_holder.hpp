@@ -1,8 +1,11 @@
 #pragma once
 
 #include <cstdint>
+#include <utility>
 
 #include <libpq-fe.h>
+
+#include "connection.hpp"
 
 namespace menagerie::savanna::elephant {
 
@@ -35,43 +38,16 @@ namespace menagerie::savanna::elephant {
         return nullptr;
     }
 
-    // -------- SlotStatus --------
-
-    /// Lifecycle state of a pool-managed connection slot.
-    enum class SlotStatus : std::uint8_t {
-        FREE,      ///< Idle and available to be acquired.
-        USED,      ///< Currently borrowed by a capability.
-        WAITING,   ///< Reserved for a slot mid-handoff to a waiter; treated like USED where checked.
-        DEAD,      ///< Connection failed and is pending replacement by the pool janitor.
-        INACTIVE,  ///< Never initialized; CAS'd directly to USED (handed out immediately) on
-                   ///< first acquire that needs it, not to FREE.
-    };
-
-    /// Maps a SlotStatus to its debug name, or "UNKNOWN" if the value is out of range.
-    [[nodiscard]] constexpr const char* to_string(const SlotStatus status) noexcept {
-        switch (status) {
-            case SlotStatus::FREE:
-                return "FREE";
-            case SlotStatus::USED:
-                return "USED";
-            case SlotStatus::WAITING:
-                return "WAITING";
-            case SlotStatus::DEAD:
-                return "DEAD";
-            case SlotStatus::INACTIVE:
-                return "INACTIVE";
-        }
-        return "UNKNOWN";
-    }
-
     // -------- ConnectionHolder base class --------
 
     /**
      * @brief Polymorphic base class for pool-managed PostgreSQL connection handles.
      *
-     * Capabilities receive std::weak_ptr<ConnectionHolder>. On capability
-     * destruction the weak_ptr is locked to a temporary shared_ptr and reset()
-     * is invoked, which runs cleanup SQL and returns the connection via a
+     * Owns its connection as a Connection, so lifecycle state (READY / BROKEN /
+     * DISCONNECTED) travels with the handle instead of being re-derived from libpq
+     * at each call site. Capabilities receive std::weak_ptr<ConnectionHolder>. On
+     * capability destruction the weak_ptr is locked to a temporary shared_ptr and
+     * reset() is invoked, which runs cleanup SQL and returns the connection via a
      * pool-specific release path.
      */
     class ConnectionHolder {
@@ -89,7 +65,7 @@ namespace menagerie::savanna::elephant {
 
         /// The raw libpq connection handle; valid only while this holder is alive.
         [[nodiscard]] PGconn* conn() const noexcept {
-            return conn_;
+            return connection_.native_handle();
         }
 
         /// Selects the SQL that reset() runs before the connection goes back into
@@ -100,27 +76,25 @@ namespace menagerie::savanna::elephant {
 
     protected:
         ConnectionHolder() noexcept = default;
-        /// Wraps an already-open connection handle `conn`.
-        explicit ConnectionHolder(PGconn* conn) noexcept
-            : conn_{conn} {
+        /// Takes ownership of an already-open connection.
+        explicit ConnectionHolder(Connection conn) noexcept
+            : connection_{std::move(conn)} {
         }
 
-        /// Runs the pending cleanup SQL (if any); returns false if the connection
-        /// is not in a usable state or the cleanup query itself failed.
-        [[nodiscard]] bool run_cleanup_sql() noexcept {
-            if (!conn_ || PQstatus(conn_) != CONNECTION_OK)
-                return false;
-            if (cleanup_sql_ == nullptr || cleanup_sql_[0] == '\0')
-                return true;
-            PGresult* res = PQexec(conn_, cleanup_sql_);
-            const bool ok = res && PQresultStatus(res) == PGRES_COMMAND_OK;
-            PQclear(res);
-            cleanup_sql_ = nullptr;
-            return ok;
+        /**
+         * @brief Runs the pending cleanup SQL, falling back to @p fallback_sql when the
+         *        borrower set none (nullptr or empty means no cleanup).
+         * @return false if the connection is not READY or the cleanup statement failed;
+         *         the connection is left BROKEN, and the pool should drop it.
+         */
+        [[nodiscard]] bool run_cleanup_sql(const char* fallback_sql = nullptr) noexcept {
+            const char* sql = cleanup_sql_ != nullptr ? cleanup_sql_ : fallback_sql;
+            cleanup_sql_    = nullptr;
+            return connection_.run_cleanup(sql);
         }
 
-        PGconn* conn_            = nullptr;  ///< The wrapped libpq connection handle.
-        const char* cleanup_sql_ = nullptr;  ///< SQL to run on reset(), or null for none.
+        Connection connection_;              ///< The owned connection and its lifecycle FSM.
+        const char* cleanup_sql_ = nullptr;  ///< Explicit per-borrow cleanup, or null for the pool default.
     };
 
 }  // namespace menagerie::savanna::elephant

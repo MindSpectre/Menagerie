@@ -26,9 +26,6 @@ namespace bench::pool {
             }
         }
 
-        template <typename Pool>
-        concept HasPinnedApi = requires(Pool& p) { p.pinned(std::size_t{0}); };
-
         template <typename Pool, typename Strategy>
         void run_acquire_frame(const Scenario& sc,
                                Strategy& strategy,
@@ -78,43 +75,11 @@ namespace bench::pool {
                     }
                     break;
                 }
-                case ScenarioKind::PinnedZeroContention:
                 case ScenarioKind::AsioPostSteady:
                 case ScenarioKind::AsioPostBurst:
-                    // Dispatched separately (run_pinned_frame / run_asio_workload);
-                    // not entered through run_acquire_frame.
+                    // Dispatched separately (run_asio_workload); not entered through
+                    // run_acquire_frame.
                     break;
-            }
-        }
-
-        template <typename Pool>
-        void run_pinned_frame(const Scenario& sc,
-                              Pool& pool,
-                              LatencyCollector& collector,
-                              std::atomic<std::int64_t>& completed,
-                              const std::uint64_t frame_end_cycles,
-                              const std::size_t my_slot,
-                              std::atomic<bool>& stop) noexcept
-            requires HasPinnedApi<Pool>
-        {
-            constexpr int BATCH                           = 1024;
-            std::atomic<typename Pool::value_type*>& cell = pool.pinned(my_slot);
-
-            while (TscClock::now() < frame_end_cycles && !stop.load(std::memory_order_acquire)) {
-                const std::uint64_t t0 = TscClock::now();
-                for (int k = 0; k < BATCH; ++k) {
-                    auto* r = cell.load(std::memory_order_acquire);
-                    benchmark::DoNotOptimize(r);
-                    if (r != nullptr) [[likely]] {
-                        if (sc.work_duration.count() > 0) {
-                            r->work_for(sc.work_duration);
-                        }
-                    }
-                    menagerie::starling::pause_arc_agnostic();
-                }
-                const std::uint64_t t1 = TscClock::now();
-                collector.record(TscClock::to_duration((t1 - t0) / BATCH));
-                completed.fetch_add(BATCH, std::memory_order_relaxed);
             }
         }
 
@@ -174,13 +139,6 @@ namespace bench::pool {
                         return;
                     }
                     const std::uint64_t frame_end = TscClock::now() + frame_budget_cycles;
-                    if constexpr (detail::HasPinnedApi<Pool>) {
-                        if (sc.kind == ScenarioKind::PinnedZeroContention) {
-                            detail::run_pinned_frame(sc, pool, collectors[i], completed, frame_end, i, stop);
-                            done_gate.arrive_and_wait();
-                            continue;
-                        }
-                    }
                     detail::run_acquire_frame(sc, strategy, pool, collectors[i], completed, skipped, frame_end, stop);
                     done_gate.arrive_and_wait();
                 }

@@ -46,8 +46,8 @@ namespace menagerie::starling {
      * @brief A bounded pool of @p MaxSize interchangeable @c T resources for coroutine
      *        callers - the async sibling of @c ResourcePool.
      *
-     * Same lock-free bitset fast path, pinned region, and repair protocol as
-     * @c ResourcePool, but a caller that finds no free slot suspends a coroutine
+     * Same lock-free bitset fast path and repair protocol as @c ResourcePool, but a
+     * caller that finds no free slot suspends a coroutine
      * (via @c async_acquire_for / @c async_acquire) instead of parking a thread.
      * A given instance serves a single waiter population (coroutines), so there is
      * no sync/async arbitration.
@@ -84,64 +84,31 @@ namespace menagerie::starling {
         static constexpr std::size_t max_size   = MaxSize;  ///< Compile-time capacity cap.
         static constexpr std::size_t word_count = (MaxSize + bits_per_word - 1) / bits_per_word;  ///< Number of 64-bit free-bitset words.
 
-        /// Construct a free-only pool (n_pinned == 0) with an explicit spin budget.
-        template <typename Factory>
-            requires AsyncResourceFactory<Factory&, T>
-        constexpr explicit AsyncResourcePool(const std::size_t n_free,
-                                             const std::chrono::nanoseconds spin_budget,
-                                             Factory&& make)
-            : AsyncResourcePool{std::size_t{0}, n_free, spin_budget, std::forward<Factory>(make)} {
-        }
-
-        /// Construct a free-only pool (n_pinned == 0) with the default spin budget.
-        template <typename Factory>
-            requires AsyncResourceFactory<Factory&, T>
-        constexpr explicit AsyncResourcePool(const std::size_t n_free, Factory&& make)
-            : AsyncResourcePool{std::size_t{0}, n_free, std::chrono::nanoseconds{100}, std::forward<Factory>(make)} {
-        }
-
-        /// Construct a full free pool (n_free == MaxSize) with the default spin budget.
-        template <typename Factory>
-            requires AsyncResourceFactory<Factory&, T>
-        constexpr explicit AsyncResourcePool(Factory&& make)
-            : AsyncResourcePool{std::size_t{0}, MaxSize, std::chrono::nanoseconds{100}, std::forward<Factory>(make)} {
-        }
-
-        /// Construct a partitioned pool with the default spin budget.
-        template <typename Factory>
-            requires AsyncResourceFactory<Factory&, T>
-        constexpr explicit AsyncResourcePool(const std::size_t n_pinned, const std::size_t n_free, Factory&& make)
-            : AsyncResourcePool{n_pinned, n_free, std::chrono::nanoseconds{100}, std::forward<Factory>(make)} {
-        }
-
         /**
-         * @brief Construct a partitioned pool: the canonical constructor every other
-         *        overload funnels into.
+         * @brief Construct a pool of @p n slots with an explicit spin budget: the
+         *        canonical constructor every other overload funnels into.
          *
-         * The factory is invoked once per live slot ([0, n_pinned + n_free)); if it
-         * throws while building slot k, the already-built [0, k) slots are destroyed
-         * before rethrowing.
+         * The factory is invoked once per slot ([0, n)); if it throws while building
+         * slot k, the already-built [0, k) slots are destroyed before rethrowing.
          *
-         * @throw std::invalid_argument if `n_pinned + n_free` exceeds `MaxSize`.
+         * @throw std::invalid_argument if `n` exceeds `MaxSize`.
          * @throw whatever `make` throws, propagated after cleaning up any slots
          *        already constructed.
          */
         template <typename Factory>
             requires AsyncResourceFactory<Factory&, T>
-        constexpr explicit AsyncResourcePool(const std::size_t n_pinned,
-                                             const std::size_t n_free,
+        constexpr explicit AsyncResourcePool(const std::size_t n,
                                              const std::chrono::nanoseconds spin_budget,
                                              Factory&& make)
-            : n_pinned_{n_pinned},
-              n_free_{n_free},
-              n_free_words_{(n_free + bits_per_word - 1) / bits_per_word},
+            : n_{n},
+              n_words_{(n + bits_per_word - 1) / bits_per_word},
               spin_budget_{spin_budget} {
-            if (n_pinned + n_free > MaxSize) {
-                throw std::invalid_argument{"AsyncResourcePool: n_pinned + n_free exceeds MaxSize"};
+            if (n > MaxSize) {
+                throw std::invalid_argument{"AsyncResourcePool: n exceeds MaxSize"};
             }
             std::size_t built = 0;
             try {
-                for (; built < n_pinned_ + n_free_; ++built) {
+                for (; built < n_; ++built) {
                     if constexpr (std::invocable<Factory&, std::size_t>) {
                         std::construct_at(slot_ptr(built), std::invoke(make, built));
                     } else {
@@ -154,70 +121,66 @@ namespace menagerie::starling {
                 }
                 throw;
             }
-            for (std::size_t i = 0; i < n_pinned_; ++i) {
-                pinned_cells_[i].store(slot_ptr(i), std::memory_order_relaxed);
-            }
-            for (std::size_t w = 0; w < n_free_words_; ++w) {
+            for (std::size_t w = 0; w < n_words_; ++w) {
                 const std::size_t base  = w * bits_per_word;
-                const std::size_t count = (n_free_ - base < bits_per_word) ? n_free_ - base : bits_per_word;
+                const std::size_t count = (n_ - base < bits_per_word) ? n_ - base : bits_per_word;
                 const std::uint64_t mask =
                     (count >= bits_per_word) ? ~std::uint64_t{0} : ((std::uint64_t{1} << count) - 1);
                 free_words_[w].bits.store(mask, std::memory_order_relaxed);
             }
         }
 
+        /// Construct a pool of @p n slots with the default spin budget.
+        template <typename Factory>
+            requires AsyncResourceFactory<Factory&, T>
+        constexpr explicit AsyncResourcePool(const std::size_t n, Factory&& make)
+            : AsyncResourcePool{n, std::chrono::nanoseconds{100}, std::forward<Factory>(make)} {
+        }
+
+        /// Construct a full pool (n == MaxSize) with the default spin budget.
+        template <typename Factory>
+            requires AsyncResourceFactory<Factory&, T>
+        constexpr explicit AsyncResourcePool(Factory&& make)
+            : AsyncResourcePool{MaxSize, std::chrono::nanoseconds{100}, std::forward<Factory>(make)} {
+        }
+
         ~AsyncResourcePool() noexcept {
             assert(waiters_.empty() && "AsyncResourcePool destroyed with parked waiters; call shutdown() first");
-            for (std::size_t i = 0; i < n_pinned_ + n_free_; ++i) {
+            for (std::size_t i = 0; i < n_; ++i) {
                 std::destroy_at(slot_ptr(i));
             }
         }
 
-        /// Total live slot count (`pinned_count() + free_count()`).
+        /// Number of slots (`n` as passed to the constructor).
         [[nodiscard]] constexpr std::size_t capacity() const noexcept {
-            return n_pinned_ + n_free_;
-        }
-        /// Number of slots exclusively owned by pinned-slot accessors (`pinned(i)`).
-        [[nodiscard]] constexpr std::size_t pinned_count() const noexcept {
-            return n_pinned_;
-        }
-        /// Number of slots managed by the shared free-bitset pool.
-        [[nodiscard]] constexpr std::size_t free_count() const noexcept {
-            return n_free_;
+            return n_;
         }
 
         /// Non-suspending fast path. Lock-free bitset CAS scan; @c std::nullopt if no
         /// free slot is available.
         [[nodiscard]] std::optional<AsyncLease<T>> try_acquire() noexcept {
-            if (n_free_words_ == 0) {
+            if (n_words_ == 0) {
                 return std::nullopt;
             }
-            const std::size_t start = word_hint() % n_free_words_;
-            for (std::size_t k = 0; k < n_free_words_; ++k) {
-                const std::size_t w              = (start + k) % n_free_words_;
+            const std::size_t start = word_hint() % n_words_;
+            for (std::size_t k = 0; k < n_words_; ++k) {
+                const std::size_t w              = (start + k) % n_words_;
                 std::atomic<std::uint64_t>& word = free_words_[w].bits;
                 std::uint64_t cur                = word.load(std::memory_order_relaxed);
                 while (cur != 0) {
                     if (const std::uint64_t bit = cur & (~cur + 1); word.compare_exchange_weak(
                             cur, cur & ~bit, std::memory_order_acquire, std::memory_order_relaxed)) {
-                        const std::size_t free_idx =
-                            w * bits_per_word + static_cast<std::size_t>(std::countr_zero(bit));
-                        return AsyncLease<T>{slot_ptr(n_pinned_ + free_idx), &word, bit, &waiters_};
+                        const std::size_t idx = w * bits_per_word + static_cast<std::size_t>(std::countr_zero(bit));
+                        return AsyncLease<T>{slot_ptr(idx), &word, bit, &waiters_};
                     }
                 }
             }
             return std::nullopt;
         }
 
-        /// Access the pinned cell for index @p i (Tier 1, zero contention).
-        [[nodiscard]] std::atomic<T*>& pinned(const std::size_t i) noexcept {
-            assert(i < n_pinned_ && "AsyncResourcePool::pinned index out of range");
-            return pinned_cells_[i];
-        }
-
-        /// Try to claim free slot @p i for repair, racing acquirers.
+        /// Try to claim slot @p i for repair, racing acquirers.
         [[nodiscard]] bool try_claim_free_for_repair(const std::size_t i) noexcept {
-            assert(i < n_free_ && "try_claim_free_for_repair index out of range");
+            assert(i < n_ && "try_claim_free_for_repair index out of range");
             std::atomic<std::uint64_t>& word = free_words_[i / bits_per_word].bits;
             const std::uint64_t bit          = std::uint64_t{1} << (i % bits_per_word);
             std::uint64_t cur                = word.load(std::memory_order_relaxed);
@@ -229,9 +192,9 @@ namespace menagerie::starling {
             return false;
         }
 
-        /// Return free slot @p i to circulation (sets its bit, wakes one waiter).
+        /// Return slot @p i to circulation (sets its bit, wakes one waiter).
         void mark_healthy_free(const std::size_t i) noexcept {
-            assert(i < n_free_ && "mark_healthy_free index out of range");
+            assert(i < n_ && "mark_healthy_free index out of range");
             const std::uint64_t bit = std::uint64_t{1} << (i % bits_per_word);
             free_words_[i / bits_per_word].bits.fetch_or(bit, std::memory_order_release);
             waiters_.wake_one();
@@ -384,7 +347,7 @@ namespace menagerie::starling {
         /// lost-wakeup gap; correctness rests on the WaiterList mutex providing the
         /// happens-before edge with a concurrent release.
         [[nodiscard]] bool has_free_bit() const noexcept {
-            for (std::size_t w = 0; w < n_free_words_; ++w) {
+            for (std::size_t w = 0; w < n_words_; ++w) {
                 if (free_words_[w].bits.load(std::memory_order_relaxed) != 0) {
                     return true;
                 }
@@ -414,12 +377,10 @@ namespace menagerie::starling {
             return hint;
         }
 
-        const std::size_t n_pinned_;
-        const std::size_t n_free_;
-        const std::size_t n_free_words_;
+        const std::size_t n_;
+        const std::size_t n_words_;
 
         std::array<Slot, MaxSize> storage_{};
-        alignas(std::hardware_destructive_interference_size) std::array<std::atomic<T*>, MaxSize> pinned_cells_{};
         std::array<PaddedWord, word_count> free_words_{};
         detail::WaiterList waiters_{};
         std::atomic<bool> shutdown_{false};

@@ -172,6 +172,22 @@ target_link_libraries(${UNIT_TESTING_TARGET}.AsyncResourcePool
 ##############################################################################
 
 ##############################################################################
+# Test Pool (unified engine)
+##############################################################################
+add_unit_test(${UNIT_TESTING_TARGET}.Pool
+        concurrency-starling/resource_pool/test_pool.cpp
+        concurrency-starling/resource_pool/test_pool_async.cpp
+        concurrency-starling/resource_pool/test_pool_stress.cpp
+)
+set_tests_properties(${UNIT_TESTING_TARGET}.Pool PROPERTIES ENVIRONMENT "GTEST_DEATH_TEST_STYLE=threadsafe")
+target_link_libraries(${UNIT_TESTING_TARGET}.Pool
+        PRIVATE
+        Menagerie::Common::Starling
+        ${TEST_LIBS}
+)
+##############################################################################
+
+##############################################################################
 # Test Pangolin (ConfigInterface machinery + JSON field codecs)
 ##############################################################################
 add_unit_test(${UNIT_TESTING_TARGET}.Pangolin
@@ -209,4 +225,3 @@ target_link_libraries(${UNIT_TESTING_TARGET}.SharedResource
         ${TEST_LIBS}
 )
 ##############################################################################
-

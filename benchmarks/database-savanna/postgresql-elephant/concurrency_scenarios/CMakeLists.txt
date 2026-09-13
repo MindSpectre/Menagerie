@@ -1,27 +1,16 @@
 ##############################################################################
 # Concurrency Scenario Benchmarks
-# One binary per subject (libpq, pqxx, SyncExecutor, LockFreeSession,
-# BlockingSession). Each binary registers all 5 scenarios from
-# bench_scenarios.hpp and sweeps WORKER_COUNTS.
+# One binary per subject (libpq, pqxx, SyncExecutor, Session). Each binary
+# registers all 5 scenarios from bench_scenarios.hpp and sweeps WORKER_COUNTS;
+# the Session binary registers each scenario twice, once per acquisition verb
+# (try_with_async fail-fast vs co_await with_async FIFO parking).
 ##############################################################################
 
-# Targets are added by later tasks in the benchmark refactor plan.
-
-# --- LockFreeSession ---
-add_executable(${BENCHMARKS_ELEPHANT}.Scenarios.LockFreeSession
-        benchmark_lock_free_session.cpp
+# --- Session (try + await acquisition verbs) ---
+add_executable(${BENCHMARKS_ELEPHANT}.Scenarios.Session
+        benchmark_session.cpp
 )
-target_link_libraries(${BENCHMARKS_ELEPHANT}.Scenarios.LockFreeSession
-        PRIVATE
-        ${BENCHMARKS_ELEPHANT}.Common
-        Menagerie::Component::Savanna::Elephant
-)
-
-# --- BlockingSession ---
-add_executable(${BENCHMARKS_ELEPHANT}.Scenarios.BlockingSession
-        benchmark_blocking_session.cpp
-)
-target_link_libraries(${BENCHMARKS_ELEPHANT}.Scenarios.BlockingSession
+target_link_libraries(${BENCHMARKS_ELEPHANT}.Scenarios.Session
         PRIVATE
         ${BENCHMARKS_ELEPHANT}.Common
         Menagerie::Component::Savanna::Elephant

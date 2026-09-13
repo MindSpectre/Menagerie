@@ -128,27 +128,12 @@ TEST(ResourcePoolConstruction, FreeOnlyPoolInvokesFactoryPerSlot) {
     {
         ResourcePool<Probe, 32> pool{5, [](std::size_t i) { return Probe{i}; }};
         EXPECT_EQ(pool.capacity(), 5u);
-        EXPECT_EQ(pool.pinned_count(), 0u);
-        EXPECT_EQ(pool.free_count(), 5u);
         EXPECT_EQ(Probe::live.load(), 5);           // 5 slots alive (factory temps already gone)
         EXPECT_EQ(Probe::factory_calls.load(), 5);  // factory produced exactly 5
         const std::vector<std::size_t> expected{0, 1, 2, 3, 4};
         EXPECT_EQ(Probe::indices, expected);
     }
     EXPECT_EQ(Probe::live.load(), 0);  // destructor destroyed every slot
-}
-
-TEST(ResourcePoolConstruction, PartitionedPoolCountsAndIndices) {
-    Probe::reset();
-    {
-        ResourcePool<Probe, 32> pool{3, 7, [](std::size_t i) { return Probe{i}; }};
-        EXPECT_EQ(pool.capacity(), 10u);
-        EXPECT_EQ(pool.pinned_count(), 3u);
-        EXPECT_EQ(pool.free_count(), 7u);
-        EXPECT_EQ(Probe::live.load(), 10);
-        EXPECT_EQ(Probe::factory_calls.load(), 10);
-    }
-    EXPECT_EQ(Probe::live.load(), 0);
 }
 
 TEST(ResourcePoolConstruction, NullaryFactoryIsAccepted) {
@@ -158,11 +143,11 @@ TEST(ResourcePoolConstruction, NullaryFactoryIsAccepted) {
                                   return 99;
                               }};
     EXPECT_EQ(calls, 4);
-    EXPECT_EQ(pool.free_count(), 4u);
+    EXPECT_EQ(pool.capacity(), 4u);
 }
 
-TEST(ResourcePoolConstruction, ThrowsWhenPartitionsExceedMaxSize) {
-    EXPECT_THROW((ResourcePool<int, 8>{5, 5, [](std::size_t) { return 0; }}), std::invalid_argument);
+TEST(ResourcePoolConstruction, ThrowsWhenCountExceedsMaxSize) {
+    EXPECT_THROW((ResourcePool<int, 8>{9, [](std::size_t) { return 0; }}), std::invalid_argument);
 }
 
 TEST(ResourcePoolConstruction, FactoryThrowMidConstructionLeaksNothing) {
@@ -178,26 +163,21 @@ TEST(ResourcePoolConstruction, FactoryThrowMidConstructionLeaksNothing) {
     EXPECT_EQ(Probe::factory_calls.load(), 4);  // factory ran for slots 0..3, threw on slot 4
 }
 
-TEST(ResourcePoolConstruction, PartitionsSummingToMaxSizeDoNotThrow) {
-    // n_pinned + n_free == MaxSize is the inclusive boundary — must NOT throw
-    // (the ctor guard is `> MaxSize`, strict).
-    ResourcePool<int, 8> pool{3, 5, [](std::size_t i) { return static_cast<int>(i); }};
+TEST(ResourcePoolConstruction, CountEqualToMaxSizeDoesNotThrow) {
+    // n == MaxSize is the inclusive boundary — must NOT throw (the ctor guard is
+    // `> MaxSize`, strict).
+    ResourcePool<int, 8> pool{8, [](std::size_t i) { return static_cast<int>(i); }};
     EXPECT_EQ(pool.capacity(), 8u);
-    EXPECT_EQ(pool.pinned_count(), 3u);
-    EXPECT_EQ(pool.free_count(), 5u);
 }
 
-TEST(ResourcePoolConstruction, PurePinnedPoolHasEmptyFreeRegion) {
-    // n_free == 0: a pinned-only pool. The free-bit-init loop must run zero times
-    // and construction must still succeed and destroy every slot.
+TEST(ResourcePoolConstruction, ZeroSlotPoolConstructsNothing) {
+    // n == 0: the bit-init loop must run zero times and construction must still succeed.
     Probe::reset();
     {
-        ResourcePool<Probe, 16> pool{4, 0, [](std::size_t i) { return Probe{i}; }};
-        EXPECT_EQ(pool.capacity(), 4u);
-        EXPECT_EQ(pool.pinned_count(), 4u);
-        EXPECT_EQ(pool.free_count(), 0u);
-        EXPECT_EQ(Probe::live.load(), 4);
-        EXPECT_EQ(Probe::factory_calls.load(), 4);
+        ResourcePool<Probe, 16> pool{0, [](std::size_t i) { return Probe{i}; }};
+        EXPECT_EQ(pool.capacity(), 0u);
+        EXPECT_EQ(Probe::live.load(), 0);
+        EXPECT_EQ(Probe::factory_calls.load(), 0);
     }
     EXPECT_EQ(Probe::live.load(), 0);
 }
@@ -244,8 +224,8 @@ TEST(ResourcePoolTryAcquire, SpansMultipleBitsetWords) {
     EXPECT_FALSE(pool.try_acquire());
 }
 
-TEST(ResourcePoolTryAcquire, EmptyFreeRegionAlwaysReturnsNullopt) {
-    ResourcePool<int, 8> pool{2, 0, [](std::size_t) { return 1; }};  // pinned only
+TEST(ResourcePoolTryAcquire, ZeroSlotPoolAlwaysReturnsNullopt) {
+    ResourcePool<int, 8> pool{0, [](std::size_t) { return 1; }};
     EXPECT_FALSE(pool.try_acquire());
 }
 
@@ -298,40 +278,6 @@ TEST(ResourcePoolAcquireFor, WakesWhenAnotherThreadReleases) {
     waiter.join();
 
     EXPECT_TRUE(acquired.load(std::memory_order_acquire));
-}
-
-TEST(ResourcePoolPinned, CellsPublishTheirStorageSlots) {
-    ResourcePool<int, 16> pool{3, 0, [](std::size_t i) { return static_cast<int>(i) + 10; }};
-    ASSERT_EQ(pool.pinned_count(), 3u);
-
-    std::atomic<int*>& cell0 = pool.pinned(0);
-    std::atomic<int*>& cell2 = pool.pinned(2);
-    ASSERT_NE(cell0.load(), nullptr);
-    ASSERT_NE(cell2.load(), nullptr);
-    EXPECT_EQ(*cell0.load(), 10);
-    EXPECT_EQ(*cell2.load(), 12);
-    EXPECT_NE(cell0.load(), cell2.load());
-}
-
-TEST(ResourcePoolPinned, AccessorReturnsAStableReference) {
-    ResourcePool<int, 16> pool{2, 0, [](std::size_t i) { return static_cast<int>(i); }};
-    EXPECT_EQ(&pool.pinned(1), &pool.pinned(1));  // same cell every call
-}
-
-TEST(ResourcePoolPinned, CooperativePointerSwapRepairCycle) {
-    ResourcePool<int, 16> pool{1, 0, [](std::size_t) { return 7; }};
-    std::atomic<int*>& cell = pool.pinned(0);
-
-    // Repairer takes exclusive ownership; the owner would see nullptr meanwhile.
-    int* p = cell.exchange(nullptr, std::memory_order_acq_rel);
-    ASSERT_NE(p, nullptr);
-    EXPECT_EQ(cell.load(std::memory_order_acquire), nullptr);
-
-    *p = 99;  // "reconstruct in place"
-    cell.store(p, std::memory_order_release);
-
-    EXPECT_EQ(cell.load(std::memory_order_acquire), p);
-    EXPECT_EQ(*cell.load(), 99);
 }
 
 TEST(ResourcePoolRepair, ClaimSucceedsOnFreeSlotAndBlocksAcquire) {
@@ -528,41 +474,6 @@ TEST(ResourcePoolStress, RepairRacesAcquirers) {
         w.join();
     }
     EXPECT_FALSE(race_detected.load());
-}
-
-// A pinned owner loops load(acquire) while a repairer swaps the cell's pointer; the
-// owner must only ever observe the real slot pointer or nullptr, never a torn value.
-// (Concurrent reconstruction of *p is the caller's cooperative responsibility and is
-// covered single-threaded in Task 8 — this test exercises the atomic cell mechanic.)
-TEST(ResourcePoolStress, PinnedCellSwapIsAtomic) {
-    ResourcePool<std::size_t, 8> pool{1, 0, [](std::size_t) { return std::size_t{777}; }};
-    std::atomic<std::size_t*>& cell = pool.pinned(0);
-    std::size_t* const real         = cell.load(std::memory_order_acquire);
-    ASSERT_NE(real, nullptr);
-
-    std::atomic<bool> stop{false};
-    std::atomic<bool> torn{false};
-
-    std::thread owner{[&] {
-        while (!stop.load(std::memory_order_acquire)) {
-            std::size_t* p = cell.load(std::memory_order_acquire);
-            if (p != nullptr && p != real) {
-                torn.store(true, std::memory_order_relaxed);
-            }
-        }
-    }};
-
-    std::thread repairer{[&] {
-        for (int i = 0; i < 100'000; ++i) {
-            std::size_t* p = cell.exchange(nullptr, std::memory_order_acq_rel);
-            cell.store(p, std::memory_order_release);
-        }
-        stop.store(true, std::memory_order_release);
-    }};
-
-    owner.join();
-    repairer.join();
-    EXPECT_FALSE(torn.load());
 }
 
 int main(int argc, char** argv) {

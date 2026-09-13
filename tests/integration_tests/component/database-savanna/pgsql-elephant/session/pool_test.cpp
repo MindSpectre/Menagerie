@@ -1,7 +1,9 @@
 // PostgreSQL Pool Integration Tests
-// Tests connection pool behavior: multi-executor, exhaustion, shutdown, stats, concurrency
+// Tests connection pool behavior through Session: multi-executor, exhaustion,
+// shutdown, stats, concurrency, and connection cleanup on release.
 
 #include <thread>
+#include <tuple>
 #include <vector>
 
 #include <boost/asio.hpp>
@@ -23,6 +25,10 @@ static ConnectionConfig make_test_config() {
                            .password(menagerie::beaver::value_or(std::getenv("POSTGRES_PASSWORD"), "test_password"))
                            .finalize();
     return ConnectionConfig::Builder{}.credentials(std::move(credentials)).ssl_mode(SslMode::DISABLE).finalize();
+}
+
+static PoolConfig make_pool_config(std::size_t cap, std::size_t min) {
+    return PoolConfig::Builder{}.capacity(cap).min_connections(min).finalize();
 }
 
 // ============== Test Fixture ==============
@@ -47,8 +53,7 @@ protected:
 // ============== MultipleSyncExecutors ==============
 
 TEST_F(PoolTest, MultipleSyncExecutorsRunQueriesAndRelease) {
-    auto session = LockFreeSession{
-        make_test_config(), PoolConfig::Builder{}.capacity(4).min_connections(2).health_check_interval(2s).finalize()};
+    Session session{make_test_config(), make_pool_config(4, 2)};
 
     // Acquire 3 executors simultaneously from a capacity-4 pool
     {
@@ -75,7 +80,7 @@ TEST_F(PoolTest, MultipleSyncExecutorsRunQueriesAndRelease) {
     }
     // All 3 executors destroyed — slots returned
 
-    // LockFreeSession is still usable after releasing all executors
+    // Session is still usable after releasing all executors
     auto exec = session.with_sync().value();
     ASSERT_TRUE(exec.valid());
     auto result = exec.execute("SELECT 42 AS answer");
@@ -87,25 +92,24 @@ TEST_F(PoolTest, MultipleSyncExecutorsRunQueriesAndRelease) {
 
 // ============== PoolExhaustion ==============
 
-TEST_F(PoolTest, PoolExhaustionReturnsInvalidExecutor) {
-    auto session = LockFreeSession{
-        make_test_config(), PoolConfig::Builder{}.capacity(2).min_connections(1).health_check_interval(2s).finalize()};
+TEST_F(PoolTest, PoolExhaustionFailsTryAcquire) {
+    Session session{make_test_config(), make_pool_config(2, 1)};
 
     // Exhaust the pool (capacity=2)
-    auto exec1 = session.with_sync().value();
-    auto exec2 = session.with_sync().value();
+    auto exec1 = session.try_with_sync().value();
+    auto exec2 = session.try_with_sync().value();
     ASSERT_TRUE(exec1.valid());
     ASSERT_TRUE(exec2.valid());
 
-    // 3rd acquire should fail — pool exhausted
-    auto result3 = session.with_sync();
+    // 3rd try-acquire should fail fast — pool exhausted
+    auto result3 = session.try_with_sync();
     EXPECT_FALSE(result3.has_value());
 
     // Release one executor by moving it out of scope
     { [[maybe_unused]] auto released = std::move(exec1); }
 
     // Now acquire should succeed again
-    auto exec4 = session.with_sync().value();
+    auto exec4 = session.try_with_sync().value();
     EXPECT_TRUE(exec4.valid());
 
     auto result = exec4.execute("SELECT 1");
@@ -114,11 +118,10 @@ TEST_F(PoolTest, PoolExhaustionReturnsInvalidExecutor) {
     session.shutdown();
 }
 
-// ============== LockFreeSessionShutdown ==============
+// ============== Shutdown ==============
 
 TEST_F(PoolTest, ShutdownPreventsNewAcquisitions) {
-    auto session = LockFreeSession{
-        make_test_config(), PoolConfig::Builder{}.capacity(4).min_connections(1).health_check_interval(2s).finalize()};
+    Session session{make_test_config(), make_pool_config(4, 1)};
 
     // Verify session works before shutdown
     {
@@ -137,11 +140,22 @@ TEST_F(PoolTest, ShutdownPreventsNewAcquisitions) {
     EXPECT_FALSE(result.has_value());
 }
 
+TEST_F(PoolTest, DoubleShutdownIdempotent) {
+    Session session{make_test_config(), make_pool_config(4, 1)};
+
+    // First shutdown
+    EXPECT_NO_THROW(session.shutdown());
+    EXPECT_TRUE(session.is_shutdown());
+
+    // Second shutdown — should not crash or throw
+    EXPECT_NO_THROW(session.shutdown());
+    EXPECT_TRUE(session.is_shutdown());
+}
+
 // ============== ExecutorLifecycleScope ==============
 
 TEST_F(PoolTest, ExecutorLifecycleScopeReleasesSlot) {
-    auto session = LockFreeSession{
-        make_test_config(), PoolConfig::Builder{}.capacity(4).min_connections(1).health_check_interval(2s).finalize()};
+    Session session{make_test_config(), make_pool_config(4, 1)};
 
     const auto free_before = session.pool_free_count();
 
@@ -150,15 +164,12 @@ TEST_F(PoolTest, ExecutorLifecycleScopeReleasesSlot) {
         auto exec = session.with_sync().value();
         ASSERT_TRUE(exec.valid());
 
-        // Free count should have decreased
-        EXPECT_LT(session.pool_free_count(), free_before + session.pool_capacity());
-
         auto result = exec.execute("SELECT pg_backend_pid()");
         ASSERT_TRUE(result.has_value()) << result.error().format();
     }
     // Executor destroyed — slot returned to pool
 
-    // LockFreeSession recovers: can acquire again and execute queries
+    // Session recovers: can acquire again and execute queries
     auto exec = session.with_sync().value();
     ASSERT_TRUE(exec.valid());
     auto result = exec.execute("SELECT 1");
@@ -170,11 +181,10 @@ TEST_F(PoolTest, ExecutorLifecycleScopeReleasesSlot) {
     session.shutdown();
 }
 
-// ============== LockFreeSessionStatsAccuracy ==============
+// ============== StatsAccuracy ==============
 
-TEST_F(PoolTest, LockFreeSessionStatsAccuracy) {
-    auto session = LockFreeSession{
-        make_test_config(), PoolConfig::Builder{}.capacity(4).min_connections(2).health_check_interval(2s).finalize()};
+TEST_F(PoolTest, StatsAccuracy) {
+    Session session{make_test_config(), make_pool_config(4, 2)};
 
     // Capacity is always 4
     EXPECT_EQ(session.pool_capacity(), 4u);
@@ -207,26 +217,40 @@ TEST_F(PoolTest, LockFreeSessionStatsAccuracy) {
     session.shutdown();
 }
 
-// ============== DoubleShutdownIdempotent ==============
+// ============== Query Surface ==============
 
-TEST_F(PoolTest, DoubleShutdownIdempotent) {
-    auto session = LockFreeSession{
-        make_test_config(), PoolConfig::Builder{}.capacity(4).min_connections(1).health_check_interval(2s).finalize()};
+TEST_F(PoolTest, WithSyncVariadicParameters) {
+    Session session{make_test_config(), make_pool_config(2, 1)};
 
-    // First shutdown
-    EXPECT_NO_THROW(session.shutdown());
-    EXPECT_TRUE(session.is_shutdown());
+    auto exec   = session.with_sync().value();
+    auto create = exec.execute("CREATE TABLE IF NOT EXISTS pool_variadic_test (name VARCHAR(100), value INTEGER)");
+    ASSERT_TRUE(create.has_value()) << create.error().format();
+    ASSERT_TRUE(exec.execute("TRUNCATE pool_variadic_test").has_value());
 
-    // Second shutdown — should not crash or throw
-    EXPECT_NO_THROW(session.shutdown());
-    EXPECT_TRUE(session.is_shutdown());
+    auto insert = exec.execute("INSERT INTO pool_variadic_test (name, value) VALUES ($1, $2)", std::string{"Bob"}, 99);
+    ASSERT_TRUE(insert.has_value()) << insert.error().format();
+
+    auto select = exec.execute("SELECT value FROM pool_variadic_test WHERE name = $1", std::string{"Bob"});
+    ASSERT_TRUE(select.has_value());
+    EXPECT_EQ(select.value().get<int>(0, 0), 99);
+
+    std::ignore = exec.execute("DROP TABLE IF EXISTS pool_variadic_test");
+}
+
+TEST_F(PoolTest, WithSyncReturnsErrorOnBadQuery) {
+    Session session{make_test_config(), make_pool_config(2, 1)};
+
+    auto exec   = session.with_sync().value();
+    auto result = exec.execute("SELCT 1");  // typo
+
+    ASSERT_FALSE(result.has_value());
+    EXPECT_EQ(result.error().sqlstate.substr(0, 2), "42");
 }
 
 // ============== ConcurrentAsyncQueries ==============
 
 TEST_F(PoolTest, ConcurrentAsyncQueriesComplete) {
-    auto session = LockFreeSession{
-        make_test_config(), PoolConfig::Builder{}.capacity(4).min_connections(2).health_check_interval(2s).finalize()};
+    Session session{make_test_config(), make_pool_config(4, 2)};
 
     boost::asio::io_context ioc;
 
@@ -238,10 +262,13 @@ TEST_F(PoolTest, ConcurrentAsyncQueriesComplete) {
         boost::asio::co_spawn(
             ioc,
             [&session, &ioc, &success_count, &completion_count, i]() -> boost::asio::awaitable<void> {
-                auto exec = session.with_async(ioc.get_executor()).value();
-                if (auto result = co_await exec.execute("SELECT $1::integer AS n", i);
-                    result.has_value() && result.value().get<int>(0, 0) == i) {
-                    ++success_count;
+                auto acquired = co_await session.with_async(ioc.get_executor(), 5s);
+                if (acquired.has_value()) {
+                    auto exec = std::move(acquired).value();
+                    if (auto result = co_await exec.execute("SELECT $1::integer AS n", i);
+                        result.has_value() && result.value().get<int>(0, 0) == i) {
+                        ++success_count;
+                    }
                 }
                 ++completion_count;
                 co_return;
@@ -257,11 +284,32 @@ TEST_F(PoolTest, ConcurrentAsyncQueriesComplete) {
     session.shutdown();
 }
 
+TEST_F(PoolTest, AsyncExecutorReleasesConnectionAfterScope) {
+    Session session{make_test_config(), make_pool_config(2, 1)};
+
+    boost::asio::io_context ioc;
+    const auto free_before = session.pool_free_count();
+
+    boost::asio::co_spawn(
+        ioc,
+        [&]() -> boost::asio::awaitable<void> {
+            auto exec   = session.try_with_async(ioc.get_executor()).value();
+            std::ignore = co_await exec.execute("SELECT 1");
+            co_return;
+        },
+        boost::asio::detached);
+    ioc.run();
+
+    // Connection must be returned after scope (slot reset by AsyncExecutor destructor)
+    EXPECT_GE(session.pool_free_count(), free_before);
+
+    session.shutdown();
+}
+
 // ============== ConcurrentSyncFromThreads ==============
 
 TEST_F(PoolTest, ConcurrentSyncExecutorsFromMultipleThreads) {
-    auto session = LockFreeSession{
-        make_test_config(), PoolConfig::Builder{}.capacity(4).min_connections(2).health_check_interval(2s).finalize()};
+    Session session{make_test_config(), make_pool_config(4, 2)};
 
     constexpr int kThreads = 4;
     std::vector<std::thread> threads;
@@ -289,4 +337,58 @@ TEST_F(PoolTest, ConcurrentSyncExecutorsFromMultipleThreads) {
     EXPECT_EQ(success_count.load(), kThreads);
 
     session.shutdown();
+}
+
+// ============== Cleanup on Release ==============
+
+TEST_F(PoolTest, NoCleanupKeepsSessionState) {
+    // Control for the two cleanup tests below: with neither do_cleanup() nor a
+    // pool default, session-local state survives the release/reacquire cycle.
+    Session session{make_test_config(), make_pool_config(1, 1)};
+
+    {
+        auto exec   = session.with_sync().value();
+        auto result = exec.execute("CREATE TEMP TABLE _pool_marker (x INT)");
+        ASSERT_TRUE(result.has_value()) << result.error().format();
+    }
+    // Capacity is 1, so the next borrow reuses the same connection — uncleaned.
+
+    auto exec   = session.with_sync().value();
+    auto result = exec.execute("SELECT * FROM _pool_marker");
+    EXPECT_TRUE(result.has_value()) << "temp table must survive when no cleanup is configured";
+}
+
+TEST_F(PoolTest, ExplicitDoCleanupDiscardsSessionState) {
+    Session session{make_test_config(), make_pool_config(1, 1)};
+
+    // Set session-local state on the only connection, with an explicit DISCARD ALL on release.
+    {
+        auto exec   = session.with_sync().value().do_cleanup(CleanupQuery::DiscardAll);
+        auto result = exec.execute("CREATE TEMP TABLE _pool_marker (x INT)");
+        ASSERT_TRUE(result.has_value()) << result.error().format();
+    }
+    // Capacity is 1, so the next borrow reuses the same connection — cleaned.
+
+    auto exec   = session.with_sync().value();
+    auto result = exec.execute("SELECT * FROM _pool_marker");
+    EXPECT_FALSE(result.has_value()) << "temp table must be gone after explicit DISCARD ALL";
+}
+
+TEST_F(PoolTest, PoolDefaultCleanupRunsWhenBorrowerSetNone) {
+    // The pool-wide default cleanup (PoolConfig::cleanup_sql) applies when the
+    // borrower never called do_cleanup().
+    auto pool_cfg = PoolConfig::Builder{}.capacity(1).min_connections(1).cleanup_sql("DISCARD ALL").finalize();
+    Session session{make_test_config(), std::move(pool_cfg)};
+
+    {
+        auto exec   = session.with_sync().value();  // no do_cleanup()
+        auto result = exec.execute("CREATE TEMP TABLE _pool_default_marker (x INT)");
+        ASSERT_TRUE(result.has_value()) << result.error().format();
+    }
+    // Capacity is 1, so the next borrow reuses the same connection — the pool
+    // default DISCARD ALL must have wiped the temp table.
+
+    auto exec   = session.with_sync().value();
+    auto result = exec.execute("SELECT * FROM _pool_default_marker");
+    EXPECT_FALSE(result.has_value()) << "temp table must be gone after pool-default DISCARD ALL";
 }

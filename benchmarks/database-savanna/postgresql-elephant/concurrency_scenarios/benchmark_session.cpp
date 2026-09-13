@@ -18,15 +18,22 @@
 
 namespace {
 
-    using menagerie::savanna::elephant::BlockingSession;
     using menagerie::savanna::elephant::ConnectionConfig;
     using menagerie::savanna::elephant::PoolConfig;
+    using menagerie::savanna::elephant::Session;
 
-    class BlockingBackend {
+    /// Which acquisition verb the workload exercises on the one Session.
+    enum class AcquireMode {
+        Try,    ///< try_with_async: fail-fast, sheds load on exhaustion.
+        Await,  ///< co_await with_async: parks the coroutine on the FIFO queue.
+    };
+
+    class SessionBackend {
     public:
-        explicit BlockingBackend(const bench::pg::Scenario& scenario)
+        SessionBackend(const bench::pg::Scenario& scenario, const AcquireMode mode)
             : session_{ConnectionConfig::testing(), make_pool_config(scenario)},
-              work_guard_{boost::asio::make_work_guard(io_)} {
+              work_guard_{boost::asio::make_work_guard(io_)},
+              mode_{mode} {
             io_threads_.reserve(scenario.executor_threads);
             for (std::size_t i = 0; i < scenario.executor_threads; ++i) {
                 io_threads_.emplace_back([this] { io_.run(); });
@@ -34,21 +41,21 @@ namespace {
             query_ = bench::pg::query_for(scenario);
         }
 
-        ~BlockingBackend() {
+        ~SessionBackend() {
             if (running_) {
                 wait_and_shutdown();
             }
         }
 
-        BlockingBackend(const BlockingBackend&)            = delete;
-        BlockingBackend& operator=(const BlockingBackend&) = delete;
+        SessionBackend(const SessionBackend&)            = delete;
+        SessionBackend& operator=(const SessionBackend&) = delete;
 
         boost::asio::io_context& io() noexcept {
             return io_;
         }
 
         boost::asio::awaitable<bool> run_query(int id, boost::asio::any_io_executor e) {
-            auto acquired = session_.try_with_async(e);
+            auto acquired = mode_ == AcquireMode::Try ? session_.try_with_async(e) : co_await session_.with_async(e);
             if (!acquired.has_value()) {
                 co_return false;
             }
@@ -78,26 +85,33 @@ namespace {
             return PoolConfig::Builder{}.capacity(s.connections).min_connections(s.connections).finalize();
         }
 
-        BlockingSession session_;
+        Session session_;
         boost::asio::io_context io_{};
         boost::asio::executor_work_guard<boost::asio::io_context::executor_type> work_guard_;
         std::vector<std::thread> io_threads_{};
         const char* query_ = bench::pg::BENCH_QUERY;
-        bool running_      = true;
+        AcquireMode mode_;
+        bool running_ = true;
     };
 
-    void RunScenario(::benchmark::State& state, std::size_t scenario_index) {
+    void RunScenario(::benchmark::State& state, const std::size_t scenario_index, const AcquireMode mode) {
         const auto& scenario = bench::pg::SCENARIOS[scenario_index];
-        BlockingBackend backend{scenario};
+        SessionBackend backend{scenario, mode};
         bench::pg::run_async_workload(state, scenario, backend);
         backend.wait_and_shutdown();
     }
 
     int RegisterAll() {
         for (std::size_t i = 0; i < bench::pg::SCENARIOS.size(); ++i) {
-            const auto name = std::format("BM_Blocking_{}", bench::pg::SCENARIOS[i].name);
-            auto* b         = ::benchmark::RegisterBenchmark(name, [i](::benchmark::State& st) { RunScenario(st, i); });
-            bench::pg::register_workers(b);
+            const auto try_name = std::format("BM_SessionTry_{}", bench::pg::SCENARIOS[i].name);
+            auto* t             = ::benchmark::RegisterBenchmark(
+                try_name, [i](::benchmark::State& st) { RunScenario(st, i, AcquireMode::Try); });
+            bench::pg::register_workers(t);
+
+            const auto await_name = std::format("BM_SessionAwait_{}", bench::pg::SCENARIOS[i].name);
+            auto* a               = ::benchmark::RegisterBenchmark(
+                await_name, [i](::benchmark::State& st) { RunScenario(st, i, AcquireMode::Await); });
+            bench::pg::register_workers(a);
         }
         return 0;
     }
