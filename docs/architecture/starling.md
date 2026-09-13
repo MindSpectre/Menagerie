@@ -1,7 +1,8 @@
 # Starling Library
 
 The starling library (`common/concurrency-starling/`) is Menagerie's collection of concurrency primitives:
-bounded resource pools for both thread-blocking and coroutine callers, a futex-based park/notify
+a unified passive resource pool for thread-blocking and coroutine callers, two legacy standalone
+bounded pools, a futex-based park/notify
 primitive, an LMAX-style lock-free ring buffer, a growable thread pool, and a handful of small
 supporting utilities (mutex-wrapped resource access, `io_context` runners, pause/pin helpers).
 Every primitive here is a standalone, header-mostly (`INTERFACE`) CMake target; consumers either
@@ -13,18 +14,19 @@ through the umbrella `#include <menagerie/starling>`, linking the combined
 The library has no single "front door" type: each primitive solves a different concurrency problem,
 and the choice between them is a choice about the calling code's execution model.
 
-- **A thread that can block** waiting for a resource reaches for the ResourcePool section below (or
-  EventCount directly, for a bespoke wait).
-- **A coroutine on an `io_context`** that must never block its executor thread reaches for the
-  AsyncResourcePool section below.
+- **New pooled-resource code** reaches for `Pool`, which serves thread-blocking and coroutine
+  callers from one fixed arena and one FIFO.
+- **Existing code using the standalone blocking or coroutine pools** can continue to use the legacy
+  ResourcePool and AsyncResourcePool types below (or EventCount directly, for a bespoke wait).
 - **A single producer (or a bounded set of producers) publishing to one or more consumers** at the
   highest achievable throughput reaches for the Disruptor section below.
 
 ```text
 common/concurrency-starling/
 |-- resource_pool/
-|   |-- sync/               ResourcePool<T, MaxSize>, Lease<T>            (blocking wait)
-|   `-- async/               AsyncResourcePool<T, MaxSize>, AsyncLease<T>  (coroutine suspend)
+|   |-- pool/               Pool<T>, Borrowed, ReservedSlot
+|   |-- sync/               ResourcePool<T, MaxSize>, Lease<T>            (legacy blocking pool)
+|   `-- async/               AsyncResourcePool<T, MaxSize>, AsyncLease<T>  (legacy coroutine pool)
 |-- event_count/             EventCount                                   (futex park/notify)
 |-- disruptor/                Disruptor<T, SequencerT, WaitStrategyT>       (lock-free ring buffer)
 |-- synchronized_resource/    SynchronizedResource<T>                     (std::mutex wrapper)
@@ -34,7 +36,7 @@ common/concurrency-starling/
 `-- export/menagerie/starling   umbrella header
 ```
 
-## ResourcePool
+## ResourcePool (legacy standalone pool)
 
 `ResourcePool<T, MaxSize>` is a
 bounded pool of up to `MaxSize` interchangeable `T` resources, held entirely inline (no heap
@@ -71,7 +73,7 @@ wrong parameter and misconstruct the pool (a slot count read as a spin budget, o
 with no compiler error. Using `chrono::nanoseconds` exclusively makes every overload's
 third argument unambiguous at the call site and ill-formed if the caller passes a raw number.
 
-## AsyncResourcePool
+## AsyncResourcePool (legacy standalone pool)
 
 `AsyncResourcePool<T, MaxSize>`
 is the coroutine-friendly sibling: the same inline storage and lock-free bitset
@@ -112,6 +114,94 @@ Because neither a `steady_timer` nor that composition is thread-safe, the class-
 requires running each acquiring coroutine on its own strand whenever the driving `io_context` has
 more than one thread; a single-threaded `io_context` (as used throughout the flagship benchmark's
 `ShardedAsioBackend`, covered under Performance notes below) needs no strand.
+
+## Pool
+
+`Pool<T>` is the current unified pool.
+It is a passive, fixed-capacity arena: the pool allocates contiguous final storage once, but creates
+nothing itself. An external provisioner calls `try_reserve()`, constructs a `T` at the reserved
+address with `ReservedSlot::emplace()` or `construct()`, performs any initialization without the
+pool mutex, and calls `publish()`. This supports non-default-constructible and non-movable `T`;
+neither the pool nor a token ever relocates a live resource. The `Pool` facade itself is also
+non-copyable and non-movable.
+
+```cpp
+menagerie::starling::Pool<Connection> pool{capacity};
+
+if (auto slot = pool.try_reserve()) {
+    Connection& connection = slot->emplace(configuration);
+    initialize(connection);
+    if (!slot->publish()) {
+        // Shutdown won. The still-armed reservation destroys the object on exit.
+    }
+}
+```
+
+Acquisition returns a move-only `Borrowed`. Ordinary return hands the object directly to the
+oldest waiter or makes it idle without inspecting application health or invoking user code.
+A caller explicitly calls `void Borrowed::quarantine() noexcept` to consume a bad borrow:
+`get()` becomes null immediately, its object stays constructed at the same address, and the
+slot leaves usable inventory without being offered to waiters. Repeated quarantine and quarantine
+on a moved-from token are harmless. `try_take_quarantined()` gives a provisioner exclusive
+`ReservedSlot` access to repair the object, or destroy and reconstruct it in place, then
+`publish()` it. Repair, construction and destruction run explicitly outside the pool mutex.
+Ordinary recycling does no resource construction, destruction, repair, retry, factory work, I/O,
+or inline user completion. An async handoff may allocate while `asio::post` queues its completion.
+`PoolStats` exposes capacity, vacant, reserved, quarantined, and waiter counts under the mutex;
+idle and borrowed are bounded snapshot telemetry during concurrent fast-path traffic, and their
+sum remains exact.
+
+Registered blocking and asynchronous waiters share one mixed Boost.Intrusive FIFO, so neither
+execution model bypasses the other within that queue. Racing immediate idle claims have no additional
+FIFO ordering guarantee. Operations return `std::expected<Borrowed, AcquireError>` with
+`exhausted`, `timeout`, `cancelled`, and `shutdown` distinguished where applicable. Timed entry
+points compute a saturating absolute `steady_clock` deadline when the API is called, including when
+an awaitable is started later, and a late timer or handoff cannot turn an expired operation into a
+success.
+
+The pool owns its arena and synchronization state directly. It must outlive every borrow, reservation, concurrent API call,
+and pending acquisition operation, including unstarted awaitables and queued completions.
+`shutdown()` closes acquisition and dispatches terminal outcomes; it does not wait for callers,
+tokens, or executor work to drain. Complete that drain before destroying the pool. Debug builds
+diagnose outstanding tokens and count whole coroutine frames, including unlinked completions;
+release builds add no diagnostic counter atomics or lifetime extension.
+Normal Asio use also requires that context runner threads have stopped before context destruction
+and that operations on a cancellation signal are serialized. The execution-context service tracks
+parked operations, including unbounded waits, so context shutdown can clean up abandoned coroutine
+frames; it is lifecycle bookkeeping, not a second acquisition queue. Preexisting framework
+cancellation can throw before pool initiation unless the caller uses
+`this_coro::throw_if_cancelled(false)`. Scheduling failures before FIFO linking propagate through
+Asio initiation (for example, out of `io_context::run()`), with acquired slots and waiter ownership
+rolled back. If scheduling a completion already selected from a
+`noexcept` return path fails, the process terminates instead of invoking the handler inline or on
+the wrong thread.
+
+There is deliberately no internal factory, minimum/target sizing policy, maintenance callback,
+repair, retry, or creation kick. An external provisioner polls the durable statistics and owns all
+of those decisions. Elephant has not been migrated to this pool.
+
+`resource_pool/pool/pool.hpp` defines the public API together with its private arena,
+bitmap, FIFO handoff, and quarantine bookkeeping. `types.hpp` defines the public
+errors and statistics; `detail/lifetime.hpp` holds the debug-only async operation-frame
+diagnostic. Self-contained token classes live in `detail/borrowed.hpp` and `detail/reserved_slot.hpp`;
+`Pool::Borrowed` and `Pool::ReservedSlot` preserve their public names through aliases. Blocking
+acquisition lives in `detail/sync_acquire.hpp`; coroutine acquisition and its private waiter
+payload live in `detail/async_acquire.hpp`. These ordinary headers define their own components
+and are included at the top of the facade. `detail/waiter.hpp`
+defines queue nodes and execution-context teardown. `detail/deadline.hpp` contains deadline
+saturation.
+
+An unsuccessful idle claim uses acquire ordering for both its initial bitmap load and failed
+compare-exchange observations. If either reads shutdown's release bitmap sweep, it observes the
+preceding closure before the caller rechecks `closed`; no separate acquire fence is needed. The
+strong scan uses sequentially consistent observations for the waiter-registration protocol.
+
+Pool tests compile the production headers without test hooks. Public API tests cover mixed FIFO
+handoff, deadlines, cancellation, context teardown, explicit quarantine, lifetime misuse diagnostics, and concurrent
+publication/return/shutdown. Barrier-coordinated races exercise those outcomes without forcing an
+instruction-level interleaving. Tests no longer inject failures into pool completion posting or
+pause claims/publication internally; the scheduler-boundary test still checks recoverable versus
+terminating submission directly on the real context registry.
 
 ## EventCount
 

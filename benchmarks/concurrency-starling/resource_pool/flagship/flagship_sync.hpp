@@ -16,7 +16,6 @@
 #include <future>
 #include <memory>
 #include <menagerie/starling>
-#include <optional>
 #include <span>
 #include <string>
 #include <thread>
@@ -28,16 +27,14 @@
 
 #include "common/mock_resource.hpp"
 #include "flagship_producer.hpp"
+#include "pool/populated_pool.hpp"
 #include "ws_harness.hpp"
 
 namespace bench::pool {
 
     inline Result run_sync(const std::string& name, const std::size_t n_consumers, const FlagshipConfig& cfg) {
-        using PoolT = menagerie::starling::Pool<menagerie::starling::Wait::sync, MockResource>;
         print_config(cfg, name);
-        PoolT pool{cfg.pool_size, cfg.pool_size, [next = std::size_t{0}]() mutable -> std::optional<MockResource> {
-                       return MockResource{next++};
-                   }};
+        PopulatedPool pool{cfg.pool_size};
 
         std::vector<std::unique_ptr<Disruptor>> disruptors;
         disruptors.reserve(n_consumers);
@@ -79,7 +76,7 @@ namespace bench::pool {
             for (std::size_t j = 0; j < n_consumers; ++j) {
                 ws_ioc_threads.emplace_back([&ws_ioc, n_consumers, j] {
                     menagerie::starling::pin_current_thread_to_core(static_cast<int>(n_consumers) + 2 +
-                                                                       static_cast<int>(j));
+                                                                    static_cast<int>(j));
                     ws_ioc.run();
                 });
             }

@@ -78,10 +78,18 @@ target_link_libraries(${STARLING}.ResourcePool.Async
 ##############################################################################
 
 ##############################################################################
-# Pool - unified runtime-sized resource pool (sync/async wait via NTTP)
+# Pool - passive fixed-arena resource pool
 ##############################################################################
 add_library(${STARLING}.Pool INTERFACE
         resource_pool/pool/pool.hpp
+        resource_pool/pool/types.hpp
+        resource_pool/pool/detail/deadline.hpp
+        resource_pool/pool/detail/lifetime.hpp
+        resource_pool/pool/detail/waiter.hpp
+        resource_pool/pool/detail/borrowed.hpp
+        resource_pool/pool/detail/reserved_slot.hpp
+        resource_pool/pool/detail/sync_acquire.hpp
+        resource_pool/pool/detail/async_acquire.hpp
 )
 target_include_directories(${STARLING}.Pool
         INTERFACE

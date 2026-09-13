@@ -8,8 +8,6 @@
 #include <chrono>
 #include <cstddef>
 #include <memory>
-#include <menagerie/starling>  // Pool
-#include <optional>
 #include <vector>
 
 #include <boost/asio/any_io_executor.hpp>
@@ -23,26 +21,12 @@
 #include "common/mock_resource.hpp"
 #include "flagship_config.hpp"  // FlagshipConfig, Work
 #include "flagship_producer.hpp"
+#include "pool/populated_pool.hpp"
 #include "ws_harness.hpp"
 
 namespace bench::pool {
 
-    using RawAsyncPoolT = menagerie::starling::Pool<menagerie::starling::Wait::async, MockResource>;
-
-    /// Keeps the workers' measured `co_await pool.async_acquire_for(exec, t)` line
-    /// byte-identical while the engine underneath changes. Synchronous fast path first
-    /// (try_acquire) so the common case resumes inline via symmetric transfer instead of
-    /// suspending; the awaited verb is coroutine-native and always posts.
-    struct AsyncPoolT {
-        RawAsyncPoolT pool;
-        boost::asio::awaitable<std::optional<RawAsyncPoolT::Handle>>
-        async_acquire_for(boost::asio::any_io_executor /*exec*/, std::chrono::nanoseconds timeout) {
-            if (auto h = pool.try_acquire()) {
-                co_return std::optional{std::move(*h)};
-            }
-            co_return co_await pool.acquire_for(timeout);
-        }
-    };
+    using AsyncPoolT = PopulatedPool;
 
     /// State every dispatch worker references — a value bundle of references. Cheap to copy
     /// per spawn; the referenced objects all live in run_async's scope and outlive every
