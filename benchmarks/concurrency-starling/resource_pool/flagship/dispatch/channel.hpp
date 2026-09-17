@@ -79,8 +79,7 @@ namespace bench::pool {
                 boost::asio::steady_timer poll{exec};
                 std::int64_t next_seq = 0;
                 for (;;) {
-                    const std::int64_t cursor = d.sequencer().get_cursor();
-                    const std::int64_t avail  = d.sequencer().get_highest_published(next_seq, cursor);
+                    const std::int64_t avail = d.sequencer().get_published_sequence(next_seq);
                     if (avail >= next_seq) {
                         for (std::int64_t seq = next_seq; seq <= avail; ++seq) {
                             const BurstEvent ev = d.ring_buffer()[seq];
@@ -88,8 +87,8 @@ namespace bench::pool {
                             co_await ch.async_send(
                                 boost::system::error_code{}, item, boost::asio::as_tuple(boost::asio::use_awaitable));
                         }
+                        d.sequencer().consume_batch(next_seq, avail);
                         next_seq = avail + 1;
-                        d.sequencer().update_gating_sequence(avail);
                     } else if (producer_done.load(std::memory_order_acquire)) {
                         break;  // no more will be published
                     } else {

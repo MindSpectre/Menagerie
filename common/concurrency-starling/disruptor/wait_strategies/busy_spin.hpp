@@ -4,6 +4,8 @@
 
 #include <pause.hpp>
 
+#include "sequence.hpp"
+
 namespace menagerie::starling {
 
     /**
@@ -41,7 +43,7 @@ namespace menagerie::starling {
     public:
         /// Spins in a tight loop (with a pause hint) until `cursor` reaches `sequence`;
         /// never yields or blocks.
-        [[nodiscard]] std::int64_t wait_for(const std::int64_t sequence, const Sequence& cursor) const {
+        [[nodiscard]] std::int64_t wait_for(const std::int64_t sequence, const AtomicSequence& cursor) const {
             beaver::force_non_static(this);
             std::int64_t available_sequence;
 

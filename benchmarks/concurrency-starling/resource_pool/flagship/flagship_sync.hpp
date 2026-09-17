@@ -92,9 +92,7 @@ namespace bench::pool {
                 Disruptor& d          = *disruptors[i];
                 std::int64_t next_seq = 0;
                 while (true) {
-                    const std::int64_t cursor = d.sequencer().get_cursor();
-                    if (const std::int64_t avail = d.sequencer().get_highest_published(next_seq, cursor);
-                        avail >= next_seq) {
+                    if (const std::int64_t avail = d.sequencer().get_published_sequence(next_seq); avail >= next_seq) {
                         for (std::int64_t seq = next_seq; seq <= avail; ++seq) {
                             const auto [t_produced]        = d.ring_buffer()[seq];
                             const std::uint64_t t_dispatch = TscClock::now();
@@ -118,8 +116,8 @@ namespace bench::pool {
                             }
                             processed.fetch_add(1, std::memory_order_relaxed);
                         }
+                        d.sequencer().consume_batch(next_seq, avail);
                         next_seq = avail + 1;
-                        d.sequencer().update_gating_sequence(avail);
                     } else if (producer_done.load(std::memory_order_acquire) &&
                                processed.load(std::memory_order_acquire) >= produced.load(std::memory_order_acquire)) {
                         break;

@@ -10,304 +10,304 @@
 
 using namespace menagerie::starling;
 
-/*==============================================================================
- * MULTI-PRODUCER -> 1 CONSUMER, one-at-a-time (8 producers, contended CAS-free claim)
- *============================================================================*/
-void mpsc_one_at_a_time_test() {
-    constexpr std::int64_t BUFFER_SIZE          = 8192;
-    constexpr std::int64_t NUM_PRODUCERS        = 8;
-    constexpr std::int64_t ENTRIES_PER_PRODUCER = 1'000'000;
-    constexpr std::int64_t TOTAL_ENTRIES        = NUM_PRODUCERS * ENTRIES_PER_PRODUCER;
+namespace {
+    /*==============================================================================
+     * MULTI-PRODUCER -> 1 CONSUMER, one-at-a-time (8 producers, contended CAS-free claim)
+     *============================================================================*/
+    void mpsc_one_at_a_time_test() {
+        constexpr std::int64_t BUFFER_SIZE          = 8192;
+        constexpr std::int64_t NUM_PRODUCERS        = 8;
+        constexpr std::int64_t ENTRIES_PER_PRODUCER = 1'000'000;
+        constexpr std::int64_t TOTAL_ENTRIES        = NUM_PRODUCERS * ENTRIES_PER_PRODUCER;
 
-    Disruptor<std::int64_t, MultiProducerSequencer, BusySpinWaitStrategy> disruptor{BUFFER_SIZE};
+        Disruptor<std::int64_t, MultiProducerSequencer, BusySpinWaitStrategy> disruptor{BUFFER_SIZE};
 
-    std::barrier sync_point{NUM_PRODUCERS + 1};
-    std::atomic running{true};
+        std::barrier sync_point{NUM_PRODUCERS + 1};
+        std::atomic running{true};
 
-    // Single consumer thread
-    std::thread consumer{[&]() {
-        sync_point.arrive_and_wait();
-
-        std::int64_t next_seq           = 0;
-        std::int64_t processed          = 0;
-        constexpr std::int64_t expected = TOTAL_ENTRIES;
-
-        while (running.load(std::memory_order_acquire) || processed < expected) {
-            const std::int64_t cursor = disruptor.sequencer().get_cursor();
-
-            if (const std::int64_t available = disruptor.sequencer().get_highest_published(next_seq, cursor);
-                available >= next_seq) {
-                // Process batch
-                for (std::int64_t seq = next_seq; seq <= available; ++seq) {
-                    [[maybe_unused]] std::int64_t value = disruptor.ring_buffer()[seq];
-                }
-
-                processed += (available - next_seq + 1);
-                next_seq   = available + 1;
-                disruptor.sequencer().update_gating_sequence(available);
-            }
-        }
-    }};
-
-    // Producers - one at a time
-    std::vector<std::thread> producers;
-    producers.reserve(NUM_PRODUCERS);
-
-    const auto start_time = std::chrono::steady_clock::now();
-
-    for (std::int64_t tid = 0; tid < NUM_PRODUCERS; ++tid) {
-        producers.emplace_back([&, tid]() {
+        // Single consumer thread
+        std::thread consumer{[&]() {
             sync_point.arrive_and_wait();
 
-            for (std::int64_t i = 0; i < ENTRIES_PER_PRODUCER; ++i) {
+            std::int64_t next_seq           = 0;
+            std::int64_t processed          = 0;
+            constexpr std::int64_t expected = TOTAL_ENTRIES;
+
+            while (running.load(std::memory_order_acquire) || processed < expected) {
+                if (const std::int64_t available = disruptor.sequencer().get_published_sequence(next_seq);
+                    available >= next_seq) {
+                    // Process batch
+                    for (std::int64_t seq = next_seq; seq <= available; ++seq) {
+                        [[maybe_unused]] std::int64_t value = disruptor.ring_buffer()[seq];
+                    }
+
+                    processed += (available - next_seq + 1);
+                    disruptor.sequencer().consume_batch(next_seq, available);
+                    next_seq = available + 1;
+                }
+            }
+        }};
+
+        // Producers - one at a time
+        std::vector<std::thread> producers;
+        producers.reserve(NUM_PRODUCERS);
+
+        const auto start_time = std::chrono::steady_clock::now();
+
+        for (std::int64_t tid = 0; tid < NUM_PRODUCERS; ++tid) {
+            producers.emplace_back([&, tid]() {
+                sync_point.arrive_and_wait();
+
+                for (std::int64_t i = 0; i < ENTRIES_PER_PRODUCER; ++i) {
+                    const std::int64_t seq       = disruptor.sequencer().next();
+                    disruptor.ring_buffer()[seq] = static_cast<std::int64_t>(tid * ENTRIES_PER_PRODUCER + i);
+                    disruptor.sequencer().publish(seq);
+                }
+            });
+        }
+
+        for (auto& p : producers) {
+            p.join();
+        }
+
+        running.store(false, std::memory_order_release);
+        consumer.join();
+
+        const auto elapsed       = std::chrono::steady_clock::now() - start_time;
+        const double elapsed_sec = std::chrono::duration<double>(elapsed).count();
+        const double throughput  = TOTAL_ENTRIES / elapsed_sec;
+
+        const std::string body = menagerie::chameleon::section("")
+                                     .row("Producers", NUM_PRODUCERS)
+                                     .row("Consumers", 1)
+                                     .row("Entries/producer", ENTRIES_PER_PRODUCER)
+                                     .row("Total entries", TOTAL_ENTRIES)
+                                     .row("Buffer size", BUFFER_SIZE)
+                                     .row("Elapsed", std::format("{:.3f} s", elapsed_sec))
+                                     .row("Throughput", std::format("{:.0f} ops/s", throughput))
+                                     .row("ns per op", std::format("{:.2f} ns", 1e9 / throughput))
+                                     .indent_size(1)
+                                     .value_align(menagerie::chameleon::Align::Right)
+                                     .render();
+
+        std::cout << '\n'
+                  << menagerie::chameleon::box(body)
+                         .title("Disruptor — 8P→1C (one-at-a-time)")
+                         .border(menagerie::chameleon::border::unicode)
+                         .border_style(menagerie::chameleon::colors::bold_magenta)
+                         .terminate()
+                         .render();
+    }
+}  // namespace
+
+namespace {
+    /*==============================================================================
+     * MULTI-PRODUCER -> 1 CONSUMER, batched claim/publish (4 producers, batch 16)
+     *============================================================================*/
+    void mpsc_batched_test() {
+        constexpr std::int64_t BUFFER_SIZE          = 8192;
+        constexpr std::int64_t NUM_PRODUCERS        = 4;
+        constexpr std::int64_t ENTRIES_PER_PRODUCER = 10'000'000;
+        constexpr std::int64_t TOTAL_ENTRIES        = NUM_PRODUCERS * ENTRIES_PER_PRODUCER;
+        constexpr std::int64_t BATCH_SIZE           = 16;  // Claim 16 sequences at once
+
+        Disruptor<std::int64_t, MultiProducerSequencer, BusySpinWaitStrategy> disruptor{BUFFER_SIZE};
+
+        std::barrier sync_point{NUM_PRODUCERS + 1};
+        std::atomic running{true};
+
+        // Single consumer thread
+        std::thread consumer{[&]() {
+            sync_point.arrive_and_wait();
+
+            std::int64_t next_seq           = 0;
+            std::int64_t processed          = 0;
+            constexpr std::int64_t expected = TOTAL_ENTRIES;
+
+            while (running.load(std::memory_order_acquire) || processed < expected) {
+                if (const std::int64_t available = disruptor.sequencer().get_published_sequence(next_seq);
+                    available >= next_seq) {
+                    // Process batch
+                    for (std::int64_t seq = next_seq; seq <= available; ++seq) {
+                        [[maybe_unused]] std::int64_t value = disruptor.ring_buffer()[seq];
+                    }
+
+                    processed += (available - next_seq + 1);
+                    disruptor.sequencer().consume_batch(next_seq, available);
+                    next_seq = available + 1;
+                }
+            }
+        }};
+
+        // Producers - batched claiming
+        std::vector<std::thread> producers;
+        producers.reserve(NUM_PRODUCERS);
+
+        const auto start_time = std::chrono::steady_clock::now();
+
+        for (std::int64_t tid = 0; tid < NUM_PRODUCERS; ++tid) {
+            producers.emplace_back([&, tid]() {
+                sync_point.arrive_and_wait();
+
+                for (std::int64_t i = 0; i < ENTRIES_PER_PRODUCER; i += BATCH_SIZE) {
+                    // Claim batch of sequences (ONE fetch-add for entire batch!)
+                    const std::int64_t first_seq = disruptor.sequencer().next_batch(BATCH_SIZE);
+
+                    // Fill the batch
+                    for (std::int64_t j = 0; j < BATCH_SIZE && (i + j) < ENTRIES_PER_PRODUCER; ++j) {
+                        const std::int64_t seq       = first_seq + j;
+                        disruptor.ring_buffer()[seq] = tid * ENTRIES_PER_PRODUCER + i + j;
+                    }
+
+                    // Publish entire batch at once
+                    const std::int64_t last_seq = first_seq + static_cast<std::int64_t>(BATCH_SIZE) - 1;
+                    disruptor.sequencer().publish_batch(first_seq, last_seq);
+                }
+            });
+        }
+
+        for (auto& p : producers) {
+            p.join();
+        }
+
+        running.store(false, std::memory_order_release);
+        consumer.join();
+
+        const auto elapsed       = std::chrono::steady_clock::now() - start_time;
+        const double elapsed_sec = std::chrono::duration<double>(elapsed).count();
+        const double throughput  = TOTAL_ENTRIES / elapsed_sec;
+
+        const std::string body = menagerie::chameleon::section("")
+                                     .row("Producers", NUM_PRODUCERS)
+                                     .row("Consumers", 1)
+                                     .row("Batch size", BATCH_SIZE)
+                                     .row("Entries/producer", ENTRIES_PER_PRODUCER)
+                                     .row("Total entries", TOTAL_ENTRIES)
+                                     .row("Buffer size", BUFFER_SIZE)
+                                     .row("Elapsed", std::format("{:.3f} s", elapsed_sec))
+                                     .row("Throughput", std::format("{:.0f} ops/s", throughput))
+                                     .row("ns per op", std::format("{:.2f} ns", 1e9 / throughput))
+                                     .indent_size(1)
+                                     .value_align(menagerie::chameleon::Align::Right)
+                                     .render();
+
+        std::cout << '\n'
+                  << menagerie::chameleon::box(body)
+                         .title("Disruptor — 4P→1C (batched 16)")
+                         .border(menagerie::chameleon::border::unicode)
+                         .border_style(menagerie::chameleon::colors::bold_magenta)
+                         .terminate()
+                         .render();
+    }
+}  // namespace
+
+namespace {
+    /*==============================================================================
+     * SPSC PURE THROUGHPUT (1P1C) — MultiProducerSequencer vs SingleProducerSequencer
+     *
+     * Single producer + single consumer, each pinned to a distinct physical core, both
+     * running flat out. Templated on the sequencer so we run the SAME loop with each:
+     *   - MultiProducerSequencer: every claim is a fetch-add + rotation-flag store; the
+     *     consumer scans availability flags. Correct for N producers, overkill for one.
+     *   - SingleProducerSequencer: no CAS, no availability buffer — the producer owns a
+     *     plain claimed counter and the consumer reads the published cursor directly.
+     * The consumer here tracks the producer near-lockstep (small batches), so this is the
+     * latency-coupled regime; see the batching sweep below for the high-throughput regime.
+     *============================================================================*/
+    template <template <typename> class SequencerT>
+    void spsc_throughput_run(const char* title) {
+        constexpr std::int64_t BUFFER_SIZE   = 1 << 16;  // 65536 — large buffer minimises backpressure stalls
+        constexpr std::int64_t TOTAL_ENTRIES = 100'000'000;
+        // Distinct physical cores, deliberately not adjacent ids to avoid landing on
+        // SMT siblings (which would share an execution core and skew the numbers).
+        constexpr int PRODUCER_CORE          = 2;
+        constexpr int CONSUMER_CORE          = 4;
+
+        Disruptor<std::int64_t, SequencerT, BusySpinWaitStrategy> disruptor{BUFFER_SIZE};
+
+        // All three threads (main + producer + consumer) rendezvous here so the timer
+        // starts the instant both workers begin.
+        std::barrier sync_point{3};
+
+        // Sink for the consumer's checksum — a visible side effect so the optimiser
+        // cannot elide the ring-buffer reads (which would make throughput meaningless).
+        std::atomic<std::int64_t> sink;
+
+        // SPSC with a known count: the consumer drains exactly TOTAL_ENTRIES and exits.
+        std::thread consumer{[&]() {
+            pin_current_thread_to_core(CONSUMER_CORE);
+            sync_point.arrive_and_wait();
+
+            std::int64_t next_seq  = 0;
+            std::int64_t processed = 0;
+            std::int64_t checksum  = 0;
+
+            while (processed < TOTAL_ENTRIES) {
+                if (const std::int64_t available = disruptor.sequencer().get_published_sequence(next_seq);
+                    available >= next_seq) {
+                    for (std::int64_t seq = next_seq; seq <= available; ++seq) {
+                        checksum += disruptor.ring_buffer()[seq];
+                    }
+
+                    processed += (available - next_seq + 1);
+                    disruptor.sequencer().consume_batch(next_seq, available);
+                    next_seq = available + 1;
+                }
+            }
+            sink.store(checksum, std::memory_order_relaxed);
+        }};
+
+        std::thread producer{[&]() {
+            pin_current_thread_to_core(PRODUCER_CORE);
+            sync_point.arrive_and_wait();
+
+            for (std::int64_t i = 0; i < TOTAL_ENTRIES; ++i) {
                 const std::int64_t seq       = disruptor.sequencer().next();
-                disruptor.ring_buffer()[seq] = static_cast<std::int64_t>(tid * ENTRIES_PER_PRODUCER + i);
+                disruptor.ring_buffer()[seq] = i;
                 disruptor.sequencer().publish(seq);
             }
-        });
+        }};
+
+        sync_point.arrive_and_wait();  // release both workers together
+        const auto start_time = std::chrono::steady_clock::now();
+
+        producer.join();
+        consumer.join();
+
+        const auto elapsed       = std::chrono::steady_clock::now() - start_time;
+        const double elapsed_sec = std::chrono::duration<double>(elapsed).count();
+        const double throughput  = TOTAL_ENTRIES / elapsed_sec;
+
+        const std::string body = menagerie::chameleon::section("")
+                                     .row("Producers", 1)
+                                     .row("Consumers", 1)
+                                     .row("Producer core", PRODUCER_CORE)
+                                     .row("Consumer core", CONSUMER_CORE)
+                                     .row("Total entries", TOTAL_ENTRIES)
+                                     .row("Buffer size", BUFFER_SIZE)
+                                     .row("Elapsed", std::format("{:.3f} s", elapsed_sec))
+                                     .row("Throughput", std::format("{:.0f} ops/s", throughput))
+                                     .row("ns per op", std::format("{:.2f} ns", 1e9 / throughput))
+                                     .indent_size(1)
+                                     .value_align(menagerie::chameleon::Align::Right)
+                                     .render();
+
+        std::cout << '\n'
+                  << menagerie::chameleon::box(body)
+                         .title(title)
+                         .border(menagerie::chameleon::border::unicode)
+                         .border_style(menagerie::chameleon::colors::bold_green)
+                         .terminate()
+                         .render();
     }
-
-    for (auto& p : producers) {
-        p.join();
-    }
-
-    running.store(false, std::memory_order_release);
-    consumer.join();
-
-    const auto elapsed       = std::chrono::steady_clock::now() - start_time;
-    const double elapsed_sec = std::chrono::duration<double>(elapsed).count();
-    const double throughput  = TOTAL_ENTRIES / elapsed_sec;
-
-    const std::string body = menagerie::chameleon::section("")
-                                 .row("Producers", NUM_PRODUCERS)
-                                 .row("Consumers", 1)
-                                 .row("Entries/producer", ENTRIES_PER_PRODUCER)
-                                 .row("Total entries", TOTAL_ENTRIES)
-                                 .row("Buffer size", BUFFER_SIZE)
-                                 .row("Elapsed", std::format("{:.3f} s", elapsed_sec))
-                                 .row("Throughput", std::format("{:.0f} ops/s", throughput))
-                                 .row("ns per op", std::format("{:.2f} ns", 1e9 / throughput))
-                                 .indent_size(1)
-                                 .value_align(menagerie::chameleon::Align::Right)
-                                 .render();
-
-    std::cout << '\n'
-              << menagerie::chameleon::box(body)
-                     .title("Disruptor — 8P→1C (one-at-a-time)")
-                     .border(menagerie::chameleon::border::unicode)
-                     .border_style(menagerie::chameleon::colors::bold_magenta)
-                     .terminate()
-                     .render();
-}
-
-/*==============================================================================
- * MULTI-PRODUCER -> 1 CONSUMER, batched claim/publish (4 producers, batch 16)
- *============================================================================*/
-void mpsc_batched_test() {
-    constexpr std::int64_t BUFFER_SIZE          = 8192;
-    constexpr std::int64_t NUM_PRODUCERS        = 4;
-    constexpr std::int64_t ENTRIES_PER_PRODUCER = 10'000'000;
-    constexpr std::int64_t TOTAL_ENTRIES        = NUM_PRODUCERS * ENTRIES_PER_PRODUCER;
-    constexpr std::int64_t BATCH_SIZE           = 16;  // Claim 16 sequences at once
-
-    Disruptor<std::int64_t, MultiProducerSequencer, BusySpinWaitStrategy> disruptor{BUFFER_SIZE};
-
-    std::barrier sync_point{NUM_PRODUCERS + 1};
-    std::atomic running{true};
-
-    // Single consumer thread
-    std::thread consumer{[&]() {
-        sync_point.arrive_and_wait();
-
-        std::int64_t next_seq           = 0;
-        std::int64_t processed          = 0;
-        constexpr std::int64_t expected = TOTAL_ENTRIES;
-
-        while (running.load(std::memory_order_acquire) || processed < expected) {
-            const std::int64_t cursor = disruptor.sequencer().get_cursor();
-
-            if (const std::int64_t available = disruptor.sequencer().get_highest_published(next_seq, cursor);
-                available >= next_seq) {
-                // Process batch
-                for (std::int64_t seq = next_seq; seq <= available; ++seq) {
-                    [[maybe_unused]] std::int64_t value = disruptor.ring_buffer()[seq];
-                }
-
-                processed += (available - next_seq + 1);
-                next_seq   = available + 1;
-                disruptor.sequencer().update_gating_sequence(available);
-            }
-        }
-    }};
-
-    // Producers - batched claiming
-    std::vector<std::thread> producers;
-    producers.reserve(NUM_PRODUCERS);
-
-    const auto start_time = std::chrono::steady_clock::now();
-
-    for (std::int64_t tid = 0; tid < NUM_PRODUCERS; ++tid) {
-        producers.emplace_back([&, tid]() {
-            sync_point.arrive_and_wait();
-
-            for (std::int64_t i = 0; i < ENTRIES_PER_PRODUCER; i += BATCH_SIZE) {
-                // Claim batch of sequences (ONE fetch-add for entire batch!)
-                const std::int64_t first_seq = disruptor.sequencer().next_batch(BATCH_SIZE);
-
-                // Fill the batch
-                for (std::int64_t j = 0; j < BATCH_SIZE && (i + j) < ENTRIES_PER_PRODUCER; ++j) {
-                    const std::int64_t seq       = first_seq + j;
-                    disruptor.ring_buffer()[seq] = tid * ENTRIES_PER_PRODUCER + i + j;
-                }
-
-                // Publish entire batch at once
-                const std::int64_t last_seq = first_seq + static_cast<std::int64_t>(BATCH_SIZE) - 1;
-                disruptor.sequencer().publish_batch(first_seq, last_seq);
-            }
-        });
-    }
-
-    for (auto& p : producers) {
-        p.join();
-    }
-
-    running.store(false, std::memory_order_release);
-    consumer.join();
-
-    const auto elapsed       = std::chrono::steady_clock::now() - start_time;
-    const double elapsed_sec = std::chrono::duration<double>(elapsed).count();
-    const double throughput  = TOTAL_ENTRIES / elapsed_sec;
-
-    const std::string body = menagerie::chameleon::section("")
-                                 .row("Producers", NUM_PRODUCERS)
-                                 .row("Consumers", 1)
-                                 .row("Batch size", BATCH_SIZE)
-                                 .row("Entries/producer", ENTRIES_PER_PRODUCER)
-                                 .row("Total entries", TOTAL_ENTRIES)
-                                 .row("Buffer size", BUFFER_SIZE)
-                                 .row("Elapsed", std::format("{:.3f} s", elapsed_sec))
-                                 .row("Throughput", std::format("{:.0f} ops/s", throughput))
-                                 .row("ns per op", std::format("{:.2f} ns", 1e9 / throughput))
-                                 .indent_size(1)
-                                 .value_align(menagerie::chameleon::Align::Right)
-                                 .render();
-
-    std::cout << '\n'
-              << menagerie::chameleon::box(body)
-                     .title("Disruptor — 4P→1C (batched 16)")
-                     .border(menagerie::chameleon::border::unicode)
-                     .border_style(menagerie::chameleon::colors::bold_magenta)
-                     .terminate()
-                     .render();
-}
-
-/*==============================================================================
- * SPSC PURE THROUGHPUT (1P1C) — MultiProducerSequencer vs SingleProducerSequencer
- *
- * Single producer + single consumer, each pinned to a distinct physical core, both
- * running flat out. Templated on the sequencer so we run the SAME loop with each:
- *   - MultiProducerSequencer: every claim is a fetch-add + rotation-flag store; the
- *     consumer scans availability flags. Correct for N producers, overkill for one.
- *   - SingleProducerSequencer: no CAS, no availability buffer — the producer owns a
- *     plain claimed counter and the consumer reads the published cursor directly.
- * The consumer here tracks the producer near-lockstep (small batches), so this is the
- * latency-coupled regime; see the batching sweep below for the high-throughput regime.
- *============================================================================*/
-template <template <typename> class SequencerT>
-void spsc_throughput_run(const char* title) {
-    constexpr std::int64_t BUFFER_SIZE   = 1 << 16;  // 65536 — large buffer minimises backpressure stalls
-    constexpr std::int64_t TOTAL_ENTRIES = 100'000'000;
-    // Distinct physical cores, deliberately not adjacent ids to avoid landing on
-    // SMT siblings (which would share an execution core and skew the numbers).
-    constexpr int PRODUCER_CORE          = 2;
-    constexpr int CONSUMER_CORE          = 4;
-
-    Disruptor<std::int64_t, SequencerT, BusySpinWaitStrategy> disruptor{BUFFER_SIZE};
-
-    // All three threads (main + producer + consumer) rendezvous here so the timer
-    // starts the instant both workers begin.
-    std::barrier sync_point{3};
-
-    // Sink for the consumer's checksum — a visible side effect so the optimiser
-    // cannot elide the ring-buffer reads (which would make throughput meaningless).
-    std::atomic<std::int64_t> sink;
-
-    // SPSC with a known count: the consumer drains exactly TOTAL_ENTRIES and exits.
-    std::thread consumer{[&]() {
-        pin_current_thread_to_core(CONSUMER_CORE);
-        sync_point.arrive_and_wait();
-
-        std::int64_t next_seq  = 0;
-        std::int64_t processed = 0;
-        std::int64_t checksum  = 0;
-
-        while (processed < TOTAL_ENTRIES) {
-            const std::int64_t cursor = disruptor.sequencer().get_cursor();
-
-            if (const std::int64_t available = disruptor.sequencer().get_highest_published(next_seq, cursor);
-                available >= next_seq) {
-                for (std::int64_t seq = next_seq; seq <= available; ++seq) {
-                    checksum += disruptor.ring_buffer()[seq];
-                }
-
-                processed += (available - next_seq + 1);
-                next_seq   = available + 1;
-                disruptor.sequencer().update_gating_sequence(available);
-            }
-        }
-        sink.store(checksum, std::memory_order_relaxed);
-    }};
-
-    std::thread producer{[&]() {
-        pin_current_thread_to_core(PRODUCER_CORE);
-        sync_point.arrive_and_wait();
-
-        for (std::int64_t i = 0; i < TOTAL_ENTRIES; ++i) {
-            const std::int64_t seq       = disruptor.sequencer().next();
-            disruptor.ring_buffer()[seq] = i;
-            disruptor.sequencer().publish(seq);
-        }
-    }};
-
-    sync_point.arrive_and_wait();  // release both workers together
-    const auto start_time = std::chrono::steady_clock::now();
-
-    producer.join();
-    consumer.join();
-
-    const auto elapsed       = std::chrono::steady_clock::now() - start_time;
-    const double elapsed_sec = std::chrono::duration<double>(elapsed).count();
-    const double throughput  = TOTAL_ENTRIES / elapsed_sec;
-
-    const std::string body = menagerie::chameleon::section("")
-                                 .row("Producers", 1)
-                                 .row("Consumers", 1)
-                                 .row("Producer core", PRODUCER_CORE)
-                                 .row("Consumer core", CONSUMER_CORE)
-                                 .row("Total entries", TOTAL_ENTRIES)
-                                 .row("Buffer size", BUFFER_SIZE)
-                                 .row("Elapsed", std::format("{:.3f} s", elapsed_sec))
-                                 .row("Throughput", std::format("{:.0f} ops/s", throughput))
-                                 .row("ns per op", std::format("{:.2f} ns", 1e9 / throughput))
-                                 .indent_size(1)
-                                 .value_align(menagerie::chameleon::Align::Right)
-                                 .render();
-
-    std::cout << '\n'
-              << menagerie::chameleon::box(body)
-                     .title(title)
-                     .border(menagerie::chameleon::border::unicode)
-                     .border_style(menagerie::chameleon::colors::bold_green)
-                     .terminate()
-                     .render();
-}
+}  // namespace
 
 /*==============================================================================
  * SPSC DIAGNOSTICS — publish rate + consumer batching sweep
  *
  * These explain the SPSC throughput regimes of our SingleProducerSequencer:
  *   - publish rate: producer flat-out into a buffer larger than the publish count
- *     (no wrap, no gating), with a light observer reading the cursor so the atomic
+ *     (no wrap, no consumer backpressure), with a light observer reading the cursor so the atomic
  *     publishes are not dead-code-eliminated. Isolates the sequencer's next()+publish().
  *   - batching sweep: end-to-end 1P1C where the consumer deliberately lets the producer
  *     get ahead (spin-pause without touching the cursor) so it drains large batches,
@@ -333,7 +333,7 @@ namespace {
             pin_current_thread_to_core(SPSC_CONSUMER_CORE);
             std::int64_t last = -1;
             while (!done.load(std::memory_order_relaxed)) {
-                last = disruptor.sequencer().get_cursor();
+                last = disruptor.sequencer().get_published_sequence(0);
             }
             sink.store(last, std::memory_order_relaxed);
         }};
@@ -366,16 +366,15 @@ namespace {
             std::int64_t checksum  = 0;
             std::int64_t batches   = 0;
             while (processed < SPSC_TOTAL_ENTRIES) {
-                const std::int64_t cursor = disruptor.sequencer().get_cursor();
-                if (const std::int64_t available = disruptor.sequencer().get_highest_published(next_seq, cursor);
+                if (const std::int64_t available = disruptor.sequencer().get_published_sequence(next_seq);
                     available >= next_seq) {
                     for (std::int64_t seq = next_seq; seq <= available; ++seq) {
                         checksum += disruptor.ring_buffer()[seq];
                     }
                     processed += available - next_seq + 1;
-                    next_seq   = available + 1;
+                    disruptor.sequencer().consume_batch(next_seq, available);
+                    next_seq = available + 1;
                     ++batches;
-                    disruptor.sequencer().update_gating_sequence(available);
                     // Let the producer build the next batch — no cursor reads here.
                     for (int s = 0; s < spin_between; ++s) {
                         pause_arc_agnostic();
@@ -411,7 +410,7 @@ namespace {
                     1e9 / tput);
     }
 
-    void print_group_header(std::string_view title) {
+    void print_group_header(const std::string_view title) {
         std::cout << '\n'
                   << menagerie::chameleon::colors::colorize(std::string{title},
                                                             menagerie::chameleon::colors::bold_yellow)

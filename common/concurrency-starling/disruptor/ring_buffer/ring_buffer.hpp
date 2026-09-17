@@ -34,9 +34,9 @@ namespace menagerie::starling {
         /// @brief Allocate `size` (power-of-2) value-initialized elements, once.
         constexpr explicit RingBuffer(const std::size_t size) noexcept
             : buffer_size_{size},
-              index_mask_{size - 1} {
+              index_mask_{size - 1},
+              buffer_(size) {
             assert(size != 0 && std::has_single_bit(size) && "RingBuffer size must be a non-zero power of 2");
-            buffer_.assign(size, T{});
         }
 
         /// @brief Access element at sequence position (wraps via power-of-2 mask).

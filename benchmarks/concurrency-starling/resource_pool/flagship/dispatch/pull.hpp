@@ -36,7 +36,7 @@ namespace bench::pool {
                     std::int64_t seq = -1;
                     for (;;) {  // CAS-claim the next published sequence (uncontended in-shard)
                         const std::int64_t c     = claim.load(std::memory_order_acquire);
-                        const std::int64_t avail = d.sequencer().get_highest_published(c, d.sequencer().get_cursor());
+                        const std::int64_t avail = d.sequencer().get_published_sequence(c);
                         if (c > avail) {
                             break;  // nothing published beyond c
                         }
@@ -50,13 +50,13 @@ namespace bench::pool {
                         const std::uint64_t t_run = TscClock::now();  // pull: dispatch == run
                         const BurstEvent ev       = d.ring_buffer()[seq];
                         // Release backpressure on the SingleProducerSequencer: the event is copied
-                        // out above, so the producer may now reuse slot `seq`. Advancing the gate to
+                        // out above, so the producer may now reuse slot `seq`. Advancing the consumed position to
                         // `seq` is monotonic and race-free because every worker on this shard shares
                         // one single-threaded executor — there is no co_await between the CAS-claim
                         // and this copy, so slots are claimed/copied strictly in increasing order.
-                        // Without this the gate stays pinned at -1 and the producer deadlocks once a
+                        // Without this the consumed position stays at -1 and the producer deadlocks once a
                         // shard publishes buffer_size records.
-                        d.sequencer().update_gating_sequence(seq);
+                        d.sequencer().consume(seq);
                         auto lease = co_await ctx.pool.async_acquire_for(exec, ctx.cfg.acquire_timeout);
                         if (lease.has_value()) {
                             const std::uint64_t t_start = TscClock::now();

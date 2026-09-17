@@ -1,9 +1,11 @@
 #pragma once
 
+#include <algorithm>
 #include <bit>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <thread>
 #include <utility>
 
@@ -21,10 +23,10 @@ namespace menagerie::starling {
      *
      * Because exactly one producer claims and publishes **in order**, two costs of the
      * multi-producer path disappear:
-     *   - no CAS / fetch-add on claim - the claimed counter (`next_value_`) is a plain
-     *     producer-private long; only the published `cursor_` is atomic;
+     *   - no CAS / fetch-add on claim: the producer owns claimed_sequence_ and
+     *     advances its atomic value with relaxed load/store;
      *   - no per-slot availability buffer - there can be no gaps, so the cursor *is* the
-     *     published frontier and `get_highest_published()` simply returns its upper bound.
+     *     published frontier and `get_published_sequence()` is a single acquire load.
      *
      * Contract: a single producer thread calls next()/next_batch()/try_next()/publish()
      * and must publish in claim order. Using it from multiple producers is undefined.
@@ -42,7 +44,8 @@ namespace menagerie::starling {
         template <typename... WaitStrategyArgsTp>
         explicit SingleProducerSequencer(const std::size_t buffer_size,
                                          WaitStrategyArgsTp&&... wait_strategy_args) noexcept
-            : buffer_size_{buffer_size},
+            : cached_capacity_limit_{static_cast<std::int64_t>(buffer_size - 1)},
+              capacity_{buffer_size},
               wait_strategy_{std::forward<WaitStrategyArgsTp>(wait_strategy_args)...} {
             assert(buffer_size != 0 && std::has_single_bit(buffer_size) && "Buffer size must be a non-zero power of 2");
         }
@@ -50,65 +53,73 @@ namespace menagerie::starling {
         // ----------------------------------------------------------------- claim
         /// @brief Claim the next sequence (blocks if the buffer is full).
         [[nodiscard]] std::int64_t next() {
-            const std::int64_t next = next_value_ + 1;
+            const std::int64_t next = claimed_sequence_.get_relaxed() + 1;
             wait_for_capacity(next);
-            next_value_ = next;
+            claimed_sequence_.set_relaxed(next);
             return next;
         }
 
         /// @brief Claim n contiguous sequences; returns the first.
-        [[nodiscard]] std::int64_t next_batch(const std::int64_t n) {
-            const std::int64_t next = next_value_ + n;  // highest claimed in the block
-            wait_for_capacity(next);
-            const std::int64_t first = next_value_ + 1;
-            next_value_              = next;
-            return first;
+        [[nodiscard]] std::int64_t next_batch(const std::int64_t count) {
+            const auto previous_claim = claimed_sequence_.get_relaxed();
+            const auto last_claim     = previous_claim + count;
+            wait_for_capacity(last_claim);
+            claimed_sequence_.set_relaxed(last_claim);
+            return previous_claim + 1;
         }
 
         /// @brief Best-effort single claim; returns -1 if the buffer is full (no CAS needed).
         [[nodiscard]] std::int64_t try_next() noexcept {
-            const std::int64_t next = next_value_ + 1;
-            if (next - static_cast<std::int64_t>(buffer_size_) > gating_sequence_.get()) {
+            const std::int64_t next = claimed_sequence_.get_relaxed() + 1;
+            if (next - static_cast<std::int64_t>(capacity_) > consumed_sequence_.get()) {
                 return -1;  // would block
             }
-            next_value_ = next;
+            claimed_sequence_.set_relaxed(next);
             return next;
         }
 
         // --------------------------------------------------------------- publish
         /// @brief Mark a sequence published (release): its data is now visible.
         void publish(const std::int64_t sequence) noexcept {
-            cursor_.set(sequence);  // release store; in-order -> cursor == published frontier
+            published_sequence_.set(sequence);  // release store; in-order -> published frontier
             wait_strategy_.signal();
         }
         /// @brief Mark an inclusive range [lo, hi] published (in-order -> just advance to hi).
         void publish_batch([[maybe_unused]] const std::int64_t lo, const std::int64_t hi) noexcept {
-            cursor_.set(hi);
+            published_sequence_.set(hi);
             wait_strategy_.signal();
         }
 
         // -------------------------------------------------------------- consumer
-        /// @brief Highest published sequence in [lower_bound, available]. No gaps are
-        /// possible with a single in-order producer, so this is just `available`.
-        [[nodiscard]] std::int64_t get_highest_published([[maybe_unused]] const std::int64_t lower_bound,
-                                                         const std::int64_t available_sequence) const noexcept {
-            beaver::force_non_static(this);
-            return available_sequence;
+        /// @brief Highest contiguous published sequence at or after lower_bound.
+        /// A single in-order producer cannot leave publication gaps.
+        [[nodiscard]] std::int64_t
+        get_published_sequence([[maybe_unused]] const std::int64_t lower_bound) const noexcept {
+            return published_sequence_.get();
         }
 
         /// True iff `sequence` has been published (is at or behind the cursor).
         [[nodiscard]] bool is_available(const std::int64_t sequence) const noexcept {
-            return cursor_.get() >= sequence;
+            return published_sequence_.get() >= sequence;
         }
 
-        /// @brief Advance the consumer's gating position (drives producer backpressure).
-        void update_gating_sequence(const std::int64_t sequence) noexcept {
-            gating_sequence_.set(sequence);
+        /// @brief Release completed reads through sequence, allowing slot reuse.
+        /// The single consumer must finish all reads through this position and
+        /// advance it monotonically; this acknowledges reads, it does not perform them.
+        void consume(const std::int64_t sequence) noexcept {
+            consumed_sequence_.set(sequence);
+        }
+
+        /// @brief Release the completed inclusive range [lo, hi] with one release store.
+        /// The single consumer must finish every read in the range and all earlier
+        /// reads first. In-order consumption needs only hi to advance the position.
+        void consume_batch([[maybe_unused]] const std::int64_t lo, const std::int64_t hi) noexcept {
+            consume(hi);
         }
 
         /// @brief Block (per the wait strategy) until `sequence` is published.
         [[nodiscard]] std::int64_t wait_for(const std::int64_t sequence) {
-            return wait_strategy_.wait_for(sequence, cursor_);
+            return wait_strategy_.wait_for(sequence, published_sequence_);
         }
         /// @brief Wake all waiters (e.g. for shutdown).
         void signal_all() noexcept {
@@ -116,28 +127,29 @@ namespace menagerie::starling {
         }
 
         // ------------------------------------------------------------ accessors
-        /// Highest published sequence (== the claimed cursor for a single in-order producer).
-        [[nodiscard]] std::int64_t get_cursor() const noexcept {
-            return cursor_.get();  // = highest published (single in-order producer)
-        }
         /// Highest sequence a consumer has marked consumed (drives backpressure).
-        [[nodiscard]] std::int64_t get_gating_sequence() const noexcept {
-            return gating_sequence_.get();
+        [[nodiscard]] std::int64_t get_consumed_sequence() const noexcept {
+            return consumed_sequence_.get();
         }
-        /// @brief Free slots. Computed from the atomic published cursor (not the
-        /// producer-private claimed counter) so it is race-free from any thread; the
-        /// slight under-estimate vs. claimed is harmless.
+        /// @brief Approximate free slots based on published/consumed positions.
+        /// Unpublished claims are not reflected; use next()/try_next() to reserve.
         [[nodiscard]] std::int64_t remaining_capacity() const noexcept {
-            return static_cast<std::int64_t>(buffer_size_) - (cursor_.get() - gating_sequence_.get());
+            return static_cast<std::int64_t>(capacity_) - (published_sequence_.get() - consumed_sequence_.get());
+        }
+        /// Approximate number of published items waiting to be consumed.
+        [[nodiscard]] std::int64_t approx_size() const noexcept {
+            const auto consumed = consumed_sequence_.get();
+            return published_sequence_.get() - consumed;
         }
 
     private:
         void wait_for_capacity(const std::int64_t sequence) {
-            if (const std::int64_t wrap_point = sequence - static_cast<std::int64_t>(buffer_size_);
-                wrap_point > cached_gating_) {  // fast path: cached gate already clears us
-                std::int64_t gating;
+            if (sequence > cached_capacity_limit_.get_relaxed()) {
+                // Capacity arithmetic is needed only when the cached limit runs out.
+                const std::int64_t wrap_point = sequence - static_cast<std::int64_t>(capacity_);
+                std::int64_t consumed;
                 std::int16_t spin_count = 0;
-                while (wrap_point > (gating = gating_sequence_.get())) {
+                while (wrap_point > (consumed = consumed_sequence_.get())) {
                     if (++spin_count < SPIN_BEFORE_YIELD) {
                         pause_arc_agnostic();
                     } else {
@@ -145,15 +157,27 @@ namespace menagerie::starling {
                         spin_count = 0;
                     }
                 }
-                cached_gating_ = gating;
+                // All valid claims fit int64_t. Saturating a larger unsigned
+                // limit preserves the capacity check and fits the same wrapper.
+                const auto limit = static_cast<std::uint64_t>(consumed) + capacity_;
+                cached_capacity_limit_.set_relaxed(static_cast<std::int64_t>(
+                    std::min(limit, static_cast<std::uint64_t>(std::numeric_limits<std::int64_t>::max()))));
             }
         }
 
-        Sequence cursor_;                 // highest published sequence (-1 = none), atomic
-        Sequence gating_sequence_;        // highest consumed sequence (-1 = none), atomic
-        std::int64_t next_value_{-1};     // highest claimed sequence - producer-private, plain
-        std::int64_t cached_gating_{-1};  // cached gating snapshot - producer-private, plain
-        std::size_t buffer_size_;
+        // Producer release-stores after filling slots; the consumer acquires
+        // this inclusive frontier to know which payloads are ready.
+        WideSequence published_sequence_;
+        // Consumer release-stores after reading slots; the producer acquires
+        // this inclusive frontier before reusing their storage.
+        WideSequence consumed_sequence_;
+        // Highest reservation made by the sole producer. Private to that thread:
+        // relaxed load/store is enough, and no atomic RMW is needed.
+        WideSequence claimed_sequence_;
+        // Producer-private upper bound for claims that fit without re-reading
+        // consumption: min(last observed consumed + capacity, INT64_MAX).
+        Sequence cached_capacity_limit_;
+        std::size_t capacity_;
         WaitStrategyT wait_strategy_;
     };
 

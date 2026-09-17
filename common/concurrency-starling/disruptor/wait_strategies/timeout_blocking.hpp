@@ -4,6 +4,8 @@
 #include <condition_variable>
 #include <mutex>
 
+#include "sequence.hpp"
+
 namespace menagerie::starling {
 
     /**
@@ -22,7 +24,7 @@ namespace menagerie::starling {
 
         /// Blocks on a condition variable, waking every `timeout_` to recheck `cursor`
         /// even without an explicit signal.
-        [[nodiscard]] std::int64_t wait_for(const std::int64_t sequence, const Sequence& cursor) const {
+        [[nodiscard]] std::int64_t wait_for(const std::int64_t sequence, const AtomicSequence& cursor) const {
             std::int64_t available_sequence;
 
             if ((available_sequence = cursor.get()) >= sequence) {
@@ -44,11 +46,13 @@ namespace menagerie::starling {
 
         /// Wakes one waiting thread via the condition variable.
         void signal() const noexcept {
+            std::lock_guard lock{mutex_};
             cv_.notify_one();
         }
 
         /// Wakes every waiting thread (e.g. for shutdown).
         void signal_all() const noexcept {
+            std::lock_guard lock{mutex_};
             cv_.notify_all();
         }
 
