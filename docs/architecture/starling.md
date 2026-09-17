@@ -252,10 +252,10 @@ runtime.
   with a new generation.
 - `SingleProducerSequencer`
   is the SPSC fast path: because exactly one producer claims and publishes in order, the claimed
-  counter is a plain producer-private `std::int64_t` (no atomic, no CAS), there are no gaps to
-  track, and `get_highest_published()` is just the published cursor. It is a strictly narrower
+  counter is a producer-private atomic `WideSequence` using relaxed loads/stores, there are no gaps to
+  track, and `get_published_sequence()` is a single acquire load. It is a strictly narrower
   contract than the multi-producer sequencer - using it from more than one producer thread is
-  undefined - in exchange for removing every atomic operation from the claim path.
+  undefined - in exchange for avoiding atomic read-modify-write operations on the claim path.
 
 **Wait strategies** (`disruptor/wait_strategies/`)
 are the consumer-side complement: `BusySpinWaitStrategy` (tight `pause_arc_agnostic()` loop, lowest
@@ -270,9 +270,14 @@ template-argument change, not a rewrite.
 **Producer/consumer usage.** A producer claims with `sequencer().next()` (or `next_batch(n)` for a
 single fetch-add covering several slots, or `try_next()` for a non-blocking best-effort claim),
 writes `ring_buffer()[seq]`, then calls `sequencer().publish(seq)`. A consumer reads
-`sequencer().get_highest_published(next_seq, sequencer().get_cursor())`, drains
-`[next_seq, available]` in order, and calls `update_gating_sequence(available)` to advance the
-backpressure watermark the producer's claim path waits on.
+`sequencer().get_published_sequence(next_seq)`, drains
+`[next_seq, available]` in order, and calls `sequencer().consume_batch(next_seq, available)`
+to release that inclusive range with one release store. For a single item, call
+`sequencer().consume(seq)` after reading it. Consumption must advance in order on one consumer;
+producers can reuse storage through the position returned by `get_consumed_sequence()`.
+`approx_size()` is a non-synchronizing snapshot of pending work. For the
+multi-producer sequencer it counts claimed reservations, including any that have
+not yet been published.
 
 ## Other primitives
 

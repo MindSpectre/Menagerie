@@ -126,8 +126,7 @@ namespace menagerie::crow {
         std::shared_ptr<const SinkTable> sinks = snapshot();
 
         while (running_.load(std::memory_order_acquire) && !token.stop_requested()) {
-            const std::int64_t available =
-                disruptor_.sequencer().get_highest_published(next_seq, disruptor_.sequencer().get_cursor());
+            const std::int64_t available = disruptor_.sequencer().get_published_sequence(next_seq);
 
             if (available < next_seq) {
                 // Nothing published yet -- back off using the configured wait strategy
@@ -156,8 +155,8 @@ namespace menagerie::crow {
                 last_consumed = seq;
             }
 
-            // Bulk gating update -- producers see all freed slots at once
-            disruptor_.sequencer().update_gating_sequence(last_consumed);
+            // Release the completed batch so producers can reuse its slots.
+            disruptor_.sequencer().consume_batch(next_seq, last_consumed);
             next_seq = last_consumed + 1;
 
             // Post batch to each sink's strand (one post per sink, not per event)

@@ -2,7 +2,7 @@
 #
 # pr-testing.yaml builds the `ci` preset, which turns off DO_BENCHMARKS and
 # BUILD_EXAMPLES and drops the benchmark-only vcpkg features (drogon, abseil,
-# libpqxx, benchmark and their transitive deps - 12 ports, ~400s of port build
+# libpqxx, benchmark, spscqueue and their transitive deps - benchmark-only ports
 # time that nothing under test links against). That keeps PRs fast but means
 # nothing in the PR path compiles the benchmark sources any more.
 #

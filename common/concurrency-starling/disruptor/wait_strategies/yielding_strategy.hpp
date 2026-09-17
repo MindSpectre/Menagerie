@@ -3,6 +3,8 @@
 #include <menagerie/beaver>
 #include <thread>
 
+#include "sequence.hpp"
+
 namespace menagerie::starling {
 
     /**
@@ -47,14 +49,14 @@ namespace menagerie::starling {
     public:
         /// Spins for up to 100 attempts, then calls `std::this_thread::yield()` and
         /// resets the counter, until `cursor` reaches `sequence`.
-        [[nodiscard]] std::int64_t wait_for(const std::int64_t sequence, const Sequence& cursor) const {
+        [[nodiscard]] std::int64_t wait_for(const std::int64_t sequence, const AtomicSequence& cursor) const {
             beaver::force_non_static(this);
             std::int64_t available_sequence;
             int spin_tries = 0;
 
             // Spin for a bit before yielding
             while ((available_sequence = cursor.get()) < sequence) {
-                if (++spin_tries > 100) {
+                if (++spin_tries > SPIN_BEFORE_YIELD) {
                     // Yielding reduces CPU usage but adds latency
                     std::this_thread::yield();
                     spin_tries = 0;  // Reset counter after yield

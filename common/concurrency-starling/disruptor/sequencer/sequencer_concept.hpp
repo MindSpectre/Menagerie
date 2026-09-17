@@ -14,9 +14,14 @@ namespace menagerie::starling {
      * call sites stay identical. The method surface mirrors the existing sequencer API:
      *
      *   producer : next(), next_batch(n), try_next(), publish(seq), publish_batch(lo, hi)
-     *   consumer : get_highest_published(lo, hi), is_available(seq), update_gating_sequence(seq),
-     *              wait_for(seq), signal_all()
-     *   query    : get_cursor(), get_gating_sequence(), remaining_capacity()
+     *   consumer : consume(seq), consume_batch(lo, hi), get_published_sequence(from),
+     *              is_available(seq), wait_for(seq), signal_all()
+     *   query    : get_consumed_sequence(), remaining_capacity(), approx_size()
+     *
+     * get_published_sequence(from) and a successful wait_for(from) return the
+     * highest acquired, contiguous publication beginning at from. wait_for() may
+     * return below from when its strategy times out. Consumers must not read a slot
+     * unless either operation returned its sequence or a later one.
      *
      * Note: there is intentionally no `constructible_from` clause. Construction is checked
      * where it happens - at the `Disruptor` constructor's in-place sequencer init - which
@@ -33,14 +38,15 @@ namespace menagerie::starling {
         { s.try_next() } -> std::convertible_to<std::int64_t>;
         { s.publish(seq) };
         { s.publish_batch(lo, hi) };
-        { s.update_gating_sequence(seq) };
+        { s.consume(seq) };
+        { s.consume_batch(lo, hi) };
         { s.wait_for(seq) } -> std::convertible_to<std::int64_t>;
         { s.signal_all() };
-        { cs.get_highest_published(lo, hi) } -> std::convertible_to<std::int64_t>;
+        { cs.get_published_sequence(lo) } -> std::convertible_to<std::int64_t>;
         { cs.is_available(seq) } -> std::convertible_to<bool>;
-        { cs.get_cursor() } -> std::convertible_to<std::int64_t>;
-        { cs.get_gating_sequence() } -> std::convertible_to<std::int64_t>;
+        { cs.get_consumed_sequence() } -> std::convertible_to<std::int64_t>;
         { cs.remaining_capacity() } -> std::convertible_to<std::int64_t>;
+        { cs.approx_size() } -> std::convertible_to<std::int64_t>;
     };
 
 }  // namespace menagerie::starling

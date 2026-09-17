@@ -70,7 +70,7 @@ Also use `get_` for atomic, volatile, or memory-barrier reads — the access isn
 signals that to the caller:
 
 ```cpp
-[[nodiscard]] int64_t get_cursor() const noexcept;     // atomic load
+[[nodiscard]] int64_t get_sequence() const noexcept;   // atomic load
 [[nodiscard]] int64_t get_volatile() const noexcept;   // volatile read
 ```
 

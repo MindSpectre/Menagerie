@@ -50,7 +50,7 @@
     {
       "name": "ci",
       "displayName": "CI (Release, no benchmarks/examples)",
-      "description": "What PR CI builds: release codegen with the unit and integration suites, but no benchmark or example targets and no benchmark-only vcpkg features. Dropping the default features removes 12 ports (drogon, abseil, libpqxx, benchmark and their transitive deps) that nothing under test links against.",
+      "description": "What PR CI builds: release codegen with the unit and integration suites, but no benchmark or example targets and no benchmark-only vcpkg features. Dropping the default features removes the benchmark-only ports (drogon, abseil, libpqxx, benchmark, spscqueue and their transitive deps) that nothing under test links against.",
       "inherits": "release",
       "cacheVariables": {
         "DO_BENCHMARKS": "OFF",

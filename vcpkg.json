@@ -20,7 +20,8 @@
   "default-features": [
     "abseil-benchmarks",
     "pg-benchmarks",
-    "drogon-benchmarks"
+    "drogon-benchmarks",
+    "concurrency-benchmarks"
   ],
   "features": {
     "abseil-benchmarks": {
@@ -43,6 +44,12 @@
       "dependencies": [
         "benchmark",
         "libpqxx"
+      ]
+    },
+    "starling-benchmarks": {
+      "description": "Concurrency primitives comparison benchmark",
+      "dependencies": [
+        "spscqueue"
       ]
     }
   }

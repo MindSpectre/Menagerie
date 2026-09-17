@@ -3,6 +3,7 @@
 #include <concepts>
 #include <cstdint>
 #include <memory>
+#include <menagerie/beaver>
 #include <type_traits>
 #include <utility>
 
@@ -19,12 +20,15 @@ namespace menagerie::starling {
      * and there is no virtual dispatch on the hot path.
      *
      * A model must provide:
-     *   - wait_for(sequence, cursor) -> highest available sequence (>= sequence)
+     *   - wait_for(sequence, cursor) -> observed cursor; timeout strategies may
+     *     return a value below sequence when their deadline expires
      *   - signal()      noexcept  - wake one waiter after publishing
      *   - signal_all()  noexcept  - wake all waiters (e.g. for shutdown)
+     * The cursor parameter is const AtomicSequence&, allowing either alignment
+     * through a base reference. Custom strategies should use that parameter type.
      */
     template <typename W>
-    concept IsWaitStrategy = requires(W w, const std::int64_t sequence, const Sequence& cursor) {
+    concept IsWaitStrategy = requires(W w, const std::int64_t sequence, const AtomicSequence& cursor) {
         { w.wait_for(sequence, cursor) } -> std::convertible_to<std::int64_t>;
         { w.signal() } noexcept;
         { w.signal_all() } noexcept;
@@ -62,7 +66,7 @@ namespace menagerie::starling {
         }
 
         /// Forwards to the erased strategy's `wait_for` (one virtual call).
-        [[nodiscard]] std::int64_t wait_for(const std::int64_t sequence, const Sequence& cursor) const {
+        [[nodiscard]] std::int64_t wait_for(const std::int64_t sequence, const AtomicSequence& cursor) const {
             return impl_->wait_for(sequence, cursor);
         }
 
@@ -78,11 +82,11 @@ namespace menagerie::starling {
 
     private:
         struct Concept : beaver::NonCopyable {
-            Concept()                                                    = default;
-            virtual ~Concept()                                           = default;
-            virtual std::int64_t wait_for(std::int64_t, const Sequence&) = 0;
-            virtual void signal() noexcept                               = 0;
-            virtual void signal_all() noexcept                           = 0;
+            Concept()                                                          = default;
+            virtual ~Concept()                                                 = default;
+            virtual std::int64_t wait_for(std::int64_t, const AtomicSequence&) = 0;
+            virtual void signal() noexcept                                     = 0;
+            virtual void signal_all() noexcept                                 = 0;
         };
 
         template <IsWaitStrategy WaitStrategyT>
@@ -92,7 +96,7 @@ namespace menagerie::starling {
                 : strategy_{std::forward<WaitStrategyArgsTp>(args)...} {
             }
 
-            std::int64_t wait_for(const std::int64_t sequence, const Sequence& cursor) override {
+            std::int64_t wait_for(const std::int64_t sequence, const AtomicSequence& cursor) override {
                 return strategy_.wait_for(sequence, cursor);
             }
             void signal() noexcept override {
