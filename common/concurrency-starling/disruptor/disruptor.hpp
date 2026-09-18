@@ -129,12 +129,12 @@ namespace menagerie::starling {
 
     private:
         // Reuse the sequencer's trailing metadata padding for ring metadata.
-        // Individual WideSequence objects retain their full spacing.
+        // Individual Sequence objects retain their full cache-line spacing.
         [[no_unique_address]] SequencerT<WaitStrategyT> sequencer_;
         RingBuffer<T> ring_buffer_;
         // Consumer-owned snapshot of acquired contiguous publication. It can lag
         // the producer and avoids reading its shared cursor on every pull.
-        WideSequence cached_published_sequence_;
+        Sequence cached_published_sequence_;
     };
 
 }  // namespace menagerie::starling

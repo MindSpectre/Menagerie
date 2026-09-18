@@ -1,3 +1,5 @@
+find_package(absl CONFIG REQUIRED)
+
 ##############################################################################
 # Benchmark Scroll file logger (8-thread contention + 1-thread baseline)
 ##############################################################################
@@ -60,24 +62,18 @@ endif ()
 
 ##############################################################################
 # Benchmark Abseil file logger (8-thread contention + 1-thread baseline)
-# Only built when the "abseil-benchmarks" vcpkg feature is enabled.
+# Required baseline; supplied by the "abseil-benchmarks" vcpkg feature.
 ##############################################################################
-find_package(absl CONFIG QUIET)
-
-if (absl_FOUND)
-    add_executable(${BENCHMARKS}.Abseil.FileBenchmark
-            benchmark_harness.hpp
-            abseil_file_benchmark.cpp
-    )
-    target_link_libraries(${BENCHMARKS}.Abseil.FileBenchmark
-            PRIVATE
-            absl::log
-            absl::log_sink
-            absl::log_initialize
-            absl::log_globals
-            Menagerie::Common::Beaver
-            Menagerie::Common::Chameleon
-    )
-else ()
-    message(STATUS "Abseil not found — skipping Abseil benchmarks (enable vcpkg feature 'abseil-benchmarks')")
-endif ()
+add_executable(${BENCHMARKS}.Abseil.FileBenchmark
+        benchmark_harness.hpp
+        abseil_file_benchmark.cpp
+)
+target_link_libraries(${BENCHMARKS}.Abseil.FileBenchmark
+        PRIVATE
+        absl::log
+        absl::log_sink
+        absl::log_initialize
+        absl::log_globals
+        Menagerie::Common::Beaver
+        Menagerie::Common::Chameleon
+)

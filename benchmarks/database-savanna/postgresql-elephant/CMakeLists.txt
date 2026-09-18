@@ -3,35 +3,24 @@ set(BENCHMARKS_ELEPHANT ${BENCHMARKS}.Savanna.Elephant)
 # PostgreSQL Client Overhead Benchmarks
 # Requires vcpkg feature 'pg-benchmarks' (Google Benchmark + libpqxx)
 ##############################################################################
-find_package(benchmark CONFIG QUIET)
-find_package(libpqxx CONFIG QUIET)
+find_package(benchmark CONFIG REQUIRED)
+find_package(libpqxx CONFIG REQUIRED)
 
-if (benchmark_FOUND AND libpqxx_FOUND)
+# ─── Shared fixture library ──────────────────────────────────────────
+add_library(${BENCHMARKS_ELEPHANT}.Common STATIC
+        common/bench_fixture.cpp
+)
+target_include_directories(${BENCHMARKS_ELEPHANT}.Common PUBLIC common)
+target_link_libraries(${BENCHMARKS_ELEPHANT}.Common
+        PUBLIC
+        benchmark::benchmark
+        benchmark::benchmark_main
+        PostgreSQL::PostgreSQL
+        Boost::headers
+        Menagerie::Common::Beaver
+)
 
-    # ─── Shared fixture library ──────────────────────────────────────────
-    add_library(${BENCHMARKS_ELEPHANT}.Common STATIC
-            common/bench_fixture.cpp
-    )
-    target_include_directories(${BENCHMARKS_ELEPHANT}.Common PUBLIC common)
-    target_link_libraries(${BENCHMARKS_ELEPHANT}.Common
-            PUBLIC
-            benchmark::benchmark
-            benchmark::benchmark_main
-            PostgreSQL::PostgreSQL
-            Boost::headers
-            Menagerie::Common::Beaver
-    )
-
-    add_subdirectory(concurrency_scenarios)
-
-else ()
-    if (NOT benchmark_FOUND)
-        message(STATUS "Google Benchmark not found — skipping PG overhead benchmarks (enable vcpkg feature 'pg-benchmarks')")
-    endif ()
-    if (NOT libpqxx_FOUND)
-        message(STATUS "libpqxx not found — skipping PG overhead benchmarks (enable vcpkg feature 'pg-benchmarks')")
-    endif ()
-endif ()
+add_subdirectory(concurrency_scenarios)
 
 ##############################################################################
 # Benchmark Raw String vs Compiled Query

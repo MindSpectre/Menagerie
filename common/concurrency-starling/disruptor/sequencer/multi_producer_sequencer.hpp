@@ -206,10 +206,10 @@ namespace menagerie::starling {
 
         // Shared by producers: RMW reserves unique positions. A claim is not
         // publication; slot_generations_ establishes each payload's availability.
-        WideSequence claimed_sequence_;
+        Sequence claimed_sequence_;
         // Consumer release-stores completed reads; producers acquire this before
         // reusing a slot, including after wraparound.
-        WideSequence consumed_sequence_;
+        Sequence consumed_sequence_;
         std::size_t capacity_;
         std::size_t slot_index_mask_;    // capacity_ - 1
         std::int32_t generation_shift_;  // log2(capacity_)

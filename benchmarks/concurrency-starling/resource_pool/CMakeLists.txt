@@ -5,12 +5,7 @@ set(BENCHMARKS_RESOURCEPOOL ${BENCHMARKS_STARLING}.ResourcePool)
 # Run with --pin=0 (floating workers) or --pin=1 (each worker pinned to one
 # core; worker_count fixed to 10).
 ##############################################################################
-find_package(benchmark CONFIG QUIET)
-
-if (NOT benchmark_FOUND)
-    message(STATUS "Google Benchmark not found — skipping Pool benchmarks")
-    return()
-endif ()
+find_package(benchmark CONFIG REQUIRED)
 
 # ─── Shared header-only common (target_sources keeps the headers visible to IDEs)
 add_library(${BENCHMARKS_RESOURCEPOOL}.Common INTERFACE
