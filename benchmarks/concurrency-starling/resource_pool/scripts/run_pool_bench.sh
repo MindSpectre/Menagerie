@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build and run all 7 ResourcePool benchmark binaries (4 sync + 3 async), twice each
+# Build and run all 6 Pool acquisition benchmark binaries (3 sync + 3 async), twice each
 # (floating workers + pinned 1:1), confined to cores 0..9 via taskset.
 # Output: /tmp/pool_bench_results/{floating,pinned}/<subject>.json
 #
@@ -23,13 +23,12 @@ done
 
 PREFIX="Menagerie.Benchmarks.Starling.ResourcePool"
 TARGETS=(
-    "${PREFIX}.Try"
-    "${PREFIX}.AcqFor1us"
-    "${PREFIX}.AcqFor2us"
-    "${PREFIX}.AcqFor10us"
-    "${PREFIX}.ArpAcqFor1us"
-    "${PREFIX}.ArpAcqFor2us"
-    "${PREFIX}.ArpAcqFor10us"
+    "${PREFIX}.PlAcqFor1us"
+    "${PREFIX}.PlAcqFor2us"
+    "${PREFIX}.PlAcqFor10us"
+    "${PREFIX}.PlArpAcqFor1us"
+    "${PREFIX}.PlArpAcqFor2us"
+    "${PREFIX}.PlArpAcqFor10us"
 )
 
 if [[ "$SKIP_BUILD" -eq 0 ]]; then
@@ -42,13 +41,12 @@ mkdir -p "$OUT/floating" "$OUT/pinned"
 
 # subject-slug : cmake-target-name
 declare -a SUBJECTS=(
-    "try:Try"
-    "acqfor_1us:AcqFor1us"
-    "acqfor_2us:AcqFor2us"
-    "acqfor_10us:AcqFor10us"
-    "arp_acqfor_1us:ArpAcqFor1us"
-    "arp_acqfor_2us:ArpAcqFor2us"
-    "arp_acqfor_10us:ArpAcqFor10us"
+    "pl_acqfor_1us:PlAcqFor1us"
+    "pl_acqfor_2us:PlAcqFor2us"
+    "pl_acqfor_10us:PlAcqFor10us"
+    "pl_arp_acqfor_1us:PlArpAcqFor1us"
+    "pl_arp_acqfor_2us:PlArpAcqFor2us"
+    "pl_arp_acqfor_10us:PlArpAcqFor10us"
 )
 
 BIN_DIR="build/release/benchmarks/concurrency-starling/resource_pool"

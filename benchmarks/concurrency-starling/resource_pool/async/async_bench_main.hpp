@@ -12,8 +12,8 @@
 
 namespace bench::pool {
 
-    /// Registration entry point for an AsyncResourcePool subject (ArpAcqFor*). No acquire
-    /// strategy (every async acquire suspends); always the coroutine runner, over the async
+    /// Registration entry point for a Pool coroutine subject (PlArpAcqFor*). Uses
+    /// async_acquire_for with the coroutine runner, over the async
     /// scenario subset (no AsioPost* analog).
     template <typename Pool, typename MakePool>
     int run_async_bench_main(int argc,

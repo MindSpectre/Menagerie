@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """
-Plot ResourcePool benchmark results: per-(scenario, worker-count) histograms AND
+Plot Pool benchmark results: per-(scenario, worker-count) histograms AND
 sync-vs-async scaling line plots, across every metric the benchmarks report.
 
-The sync ResourcePool subjects (RP_*) and the async AsyncResourcePool subjects
-(ARP_AcqFor_*) are plotted together so sync and async sit side by side in every
+The blocking Pool subjects (PL_AcqFor_*) and the coroutine Pool subjects
+(PL_Arp_AcqFor_*) are plotted together so sync and async sit side by side in every
 shared scenario (Steady / Burst / TimeoutPressure).
 
-Input:  /tmp/pool_bench_results/{floating,pinned}/{try,acqfor_1us,acqfor_2us,
-        acqfor_10us,arp_acqfor_1us,arp_acqfor_2us,arp_acqfor_10us}.json
+Input:  /tmp/pool_bench_results/{floating,pinned}/{pl_acqfor_1us,pl_acqfor_2us,
+        pl_acqfor_10us,pl_arp_acqfor_1us,pl_arp_acqfor_2us,pl_arp_acqfor_10us}.json
         (Google Benchmark JSON output, one file per subject binary per variant)
 
 Output: benchmark_results/pool_histograms/{floating,pinned}/<scenario>_w<workers>.png
@@ -32,26 +32,24 @@ RESULTS_DIR = Path("/tmp/pool_bench_results")
 OUT_DIR = REPO_ROOT / "benchmark_results" / "pool_histograms"
 
 JSON_FILES = {
-    "RP_Try": "try.json",
-    "RP_AcqFor_1us": "acqfor_1us.json",
-    "RP_AcqFor_2us": "acqfor_2us.json",
-    "RP_AcqFor_10us": "acqfor_10us.json",
-    "ARP_AcqFor_1us": "arp_acqfor_1us.json",
-    "ARP_AcqFor_2us": "arp_acqfor_2us.json",
-    "ARP_AcqFor_10us": "arp_acqfor_10us.json",
+    "PL_AcqFor_1us": "pl_acqfor_1us.json",
+    "PL_AcqFor_2us": "pl_acqfor_2us.json",
+    "PL_AcqFor_10us": "pl_acqfor_10us.json",
+    "PL_Arp_AcqFor_1us": "pl_arp_acqfor_1us.json",
+    "PL_Arp_AcqFor_2us": "pl_arp_acqfor_2us.json",
+    "PL_Arp_AcqFor_10us": "pl_arp_acqfor_10us.json",
 }
 SUBJECTS = list(JSON_FILES.keys())
 
-# Stable per-subject color map. Sync RP_* in cool hues; async ARP_* in warm hues
+# Stable per-subject color map. Sync PL_AcqFor_* in cool hues; async PL_Arp_AcqFor_* in warm hues
 # so the sync-vs-async pairs are easy to tell apart in shared plots.
 COLORS = {
-    "RP_Try": "#1f77b4",
-    "RP_AcqFor_1us": "#17becf",
-    "RP_AcqFor_2us": "#2ca02c",
-    "RP_AcqFor_10us": "#9467bd",
-    "ARP_AcqFor_1us": "#ff7f0e",
-    "ARP_AcqFor_2us": "#e377c2",
-    "ARP_AcqFor_10us": "#bcbd22",
+    "PL_AcqFor_1us": "#17becf",
+    "PL_AcqFor_2us": "#2ca02c",
+    "PL_AcqFor_10us": "#9467bd",
+    "PL_Arp_AcqFor_1us": "#ff7f0e",
+    "PL_Arp_AcqFor_2us": "#e377c2",
+    "PL_Arp_AcqFor_10us": "#bcbd22",
 }
 
 SCENARIOS = [
@@ -69,13 +67,12 @@ SCENARIOS = [
 _FREE5 = {"Steady", "Burst", "TimeoutPressure", "AsioPostSteady", "AsioPostBurst", "HeavyBurst"}
 _ASYNC3 = {"Steady", "Burst", "TimeoutPressure", "HeavyBurst"}
 SUBJECT_SCENARIOS = {
-    "RP_Try": _FREE5,
-    "RP_AcqFor_1us": _FREE5,
-    "RP_AcqFor_2us": _FREE5,
-    "RP_AcqFor_10us": _FREE5,
-    "ARP_AcqFor_1us": _ASYNC3,
-    "ARP_AcqFor_2us": _ASYNC3,
-    "ARP_AcqFor_10us": _ASYNC3,
+    "PL_AcqFor_1us": _FREE5,
+    "PL_AcqFor_2us": _FREE5,
+    "PL_AcqFor_10us": _FREE5,
+    "PL_Arp_AcqFor_1us": _ASYNC3,
+    "PL_Arp_AcqFor_2us": _ASYNC3,
+    "PL_Arp_AcqFor_10us": _ASYNC3,
 }
 
 VARIANT_WORKERS = {
@@ -88,8 +85,8 @@ SCENARIO_PARAMS = {
     "Steady": "W=500ns  P=128",
     "Burst": "W=500ns  B=8   I=10µs  P=128",
     "TimeoutPressure": "W=1µs    P=128",
-    "AsioPostSteady": "1 producer → asio[N] → RP    W=500ns  P=128",
-    "AsioPostBurst": "1 producer → asio[N] burst=8 idle=10µs → RP    P=128",
+    "AsioPostSteady": "1 producer → asio[N] → Pool    W=500ns  P=128",
+    "AsioPostBurst": "1 producer → asio[N] burst=8 idle=10µs → Pool    P=128",
     "HeavyBurst": "W=10µs  B=256  I=500µs  P=128  (slot held across async I/O → pool saturates/parks)",
 }
 
@@ -103,7 +100,7 @@ METRICS = [
 
 
 def parse_name(name):
-    """'BM_RP_Try_Steady/8/real_time' -> ('RP_Try', 'Steady', 8)."""
+    """'BM_PL_AcqFor_1us_Steady/8/real_time' -> ('PL_AcqFor_1us', 'Steady', 8)."""
     base, workers_str, _ = name.split("/")
     # base is "BM_<Subject>_<Scenario>". The Subject can have underscores
     # and identify the subject by longest-prefix match.
@@ -259,7 +256,7 @@ def plot_scaling(scenario, data, workers_list, out_dir):
     fig.suptitle(f"{scenario} — scaling vs worker count",
                  fontsize=15, fontweight="bold", y=1.04)
     params = SCENARIO_PARAMS.get(scenario, "")
-    fig.text(0.5, 0.965, f"{params}   ·   floating   ·   sync RP_* vs async ARP_*",
+    fig.text(0.5, 0.965, f"{params}   ·   floating   ·   sync PL_AcqFor_* vs async PL_Arp_AcqFor_*",
              ha="center", fontsize=10, color="#555")
 
     for ax, (metric_key, metric_label, use_log) in zip(axes, METRICS):

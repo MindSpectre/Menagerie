@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Collect hotspot profiles for ResourcePool benchmarks:
+# Collect hotspot profiles for Pool benchmarks:
 #   - perf record + flamegraph (sampled CPU hot paths)
 #   - llvm-profdata (instrumented, exact function counts)
 #
 # Runs against a fixed (subject, worker-count, scenarios) slice — by default
-# AcqFor100us at 64 workers across three scenarios — to keep total runtime
+# PlAcqFor10us at 64 workers across three scenarios — to keep total runtime
 # bounded. Adjust the SCENARIOS / WORKERS / SUBJECT lists below if needed.
 
 set -euo pipefail
@@ -14,8 +14,8 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/../../../.." && pwd)"
 cd "$REPO_ROOT"
 
 PREFIX="Menagerie.Benchmarks.Starling.ResourcePool"
-SUBJECT_TARGET="AcqFor10us"
-SUBJECT_BENCH="RP_AcqFor_10us"
+SUBJECT_TARGET="PlAcqFor10us"
+SUBJECT_BENCH="PL_AcqFor_10us"
 SCENARIOS=("TimeoutPressure" "AsioPostSteady" "Steady")
 WORKERS=64
 PROF="benchmark_results/profiles"

@@ -4,8 +4,6 @@
 #include "shared_resource.hpp"
 #include "disruptor.hpp"
 #include "event_count.hpp"
-#include "resource_pool.hpp"
-#include "async_resource_pool.hpp"
 #include "pool.hpp"
 #include "asio_backend.hpp"
 #include "sharded_asio_backend.hpp"

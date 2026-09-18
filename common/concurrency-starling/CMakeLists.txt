@@ -36,64 +36,22 @@ target_link_libraries(${STARLING}.EventCount
 
 
 ##############################################################################
-# ResourcePool - partition-aware bounded resource pool
-##############################################################################
-add_library(${STARLING}.ResourcePool.Sync INTERFACE
-        resource_pool/sync/resource_pool.hpp
-        resource_pool/sync/detail/lease.hpp
-)
-target_include_directories(${STARLING}.ResourcePool.Sync
-        INTERFACE
-        resource_pool/sync
-)
-target_link_libraries(${STARLING}.ResourcePool.Sync
-        INTERFACE
-        Threads::Threads
-        Menagerie::Common::Beaver
-        ${STARLING}.EventCount
-        ${STARLING}.Utils
-)
-##############################################################################
-
-##############################################################################
-# ResourcePool - partition-aware bounded resource pool
-##############################################################################
-add_library(${STARLING}.ResourcePool.Async INTERFACE
-        resource_pool/async/async_resource_pool.hpp
-        resource_pool/async/detail/async_lease.hpp
-)
-target_include_directories(${STARLING}.ResourcePool.Async
-        INTERFACE
-        resource_pool/async
-)
-target_link_libraries(${STARLING}.ResourcePool.Async
-        INTERFACE
-        Threads::Threads
-        Boost::asio
-        Boost::system
-        Menagerie::Common::Beaver
-        ${STARLING}.EventCount
-        ${STARLING}.Utils
-)
-##############################################################################
-
-##############################################################################
 # Pool - passive fixed-arena resource pool
 ##############################################################################
 add_library(${STARLING}.Pool INTERFACE
-        resource_pool/pool/pool.hpp
-        resource_pool/pool/types.hpp
-        resource_pool/pool/detail/deadline.hpp
-        resource_pool/pool/detail/lifetime.hpp
-        resource_pool/pool/detail/waiter.hpp
-        resource_pool/pool/detail/borrowed.hpp
-        resource_pool/pool/detail/reserved_slot.hpp
-        resource_pool/pool/detail/sync_acquire.hpp
-        resource_pool/pool/detail/async_acquire.hpp
+        pool/pool.hpp
+        pool/types.hpp
+        pool/detail/deadline.hpp
+        pool/detail/lifetime.hpp
+        pool/detail/waiter.hpp
+        pool/detail/borrowed.hpp
+        pool/detail/reserved_slot.hpp
+        pool/detail/sync_acquire.hpp
+        pool/detail/async_acquire.hpp
 )
 target_include_directories(${STARLING}.Pool
         INTERFACE
-        resource_pool/pool
+        pool
 )
 target_link_libraries(${STARLING}.Pool
         INTERFACE
@@ -178,8 +136,6 @@ add_combined_library(${STARLING}
         ${STARLING}.SharedResource
         ${STARLING}.Disruptor
         ${STARLING}.EventCount
-        ${STARLING}.ResourcePool.Sync
-        ${STARLING}.ResourcePool.Async
         ${STARLING}.Pool
         ${STARLING}.AsioBackend
 )
