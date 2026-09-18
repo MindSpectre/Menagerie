@@ -1,15 +1,19 @@
 set(BENCHMARKS ${PROJECT_NAME}.Benchmarks)
 
-add_subdirectory(logger-crow)
+if (BENCHMARK_CROW_LOGGER)
+    add_subdirectory(logger-crow)
+endif ()
 
-add_subdirectory(concurrency-starling)
+if (BENCHMARK_RESOURCE_POOL OR BENCHMARK_DISRUPTOR)
+    add_subdirectory(concurrency-starling)
+endif ()
 
-if (BUILD_HTTP)
+if (BUILD_HTTP AND BENCHMARK_HTTP)
     message("Benchmarks for Http will be built")
     add_subdirectory(http-albatross)
 endif ()
 
-if (BUILD_DATABASE)
+if (BUILD_DATABASE AND BENCHMARK_POSTGRESQL)
     message("Benchmarks for Database will be built")
     add_subdirectory(database-savanna)
 endif ()

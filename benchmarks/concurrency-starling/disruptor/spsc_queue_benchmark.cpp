@@ -196,10 +196,12 @@ namespace {
 int main(const int argc, char** argv) {
     try {
         const auto options = parse_options(argc, argv);
-        std::cout << "# rigtorp_provider=" << MENAGERIE_RIGTORP_SPSC_PROVIDER << '\n'
+        std::cout << "# baseline=rigtorp::SPSCQueue\n"
                   << "# compiler=" << __VERSION__ << " payload_bytes=" << sizeof(Value)
                   << " sequence_bytes=" << sizeof(menagerie::starling::Sequence)
-                  << " wide_sequence_bytes=" << sizeof(menagerie::starling::WideSequence)
+                  << " single_queue_bytes=" << sizeof(SingleQueue)
+                  << " single_sequencer_bytes="
+                  << sizeof(menagerie::starling::SingleProducerSequencer<menagerie::starling::BusySpinWaitStrategy>)
                   << " warmup=" << options.warmup << " producer_cpu=" << options.producer_cpu
                   << " consumer_cpu=" << options.consumer_cpu << '\n'
                   << "# One transfer = one emplace + one pull; ns/transfer is inverse throughput, not latency.\n"

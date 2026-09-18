@@ -29,18 +29,14 @@ target_link_libraries(${BENCHMARKS}.Albatross.BenchServer
 # Drogon reference server — the yardstick bench_server is measured against.
 # Requires vcpkg feature 'drogon-benchmarks'.
 ##############################################################################
-find_package(Drogon CONFIG QUIET)
+find_package(Drogon CONFIG REQUIRED)
 
-if (Drogon_FOUND)
-    message(STATUS "Drogon found — building Http reference server")
-    add_executable(${BENCHMARKS}.Albatross.DrogonBenchServer
-            drogon_bench_server.cpp
-    )
-    target_link_libraries(${BENCHMARKS}.Albatross.DrogonBenchServer
-            PRIVATE
-            Drogon::Drogon
-    )
-else ()
-    message(STATUS "Drogon not found — skipping Http reference server (enable vcpkg feature 'drogon-benchmarks')")
-endif ()
+message(STATUS "Drogon found — building Http reference server")
+add_executable(${BENCHMARKS}.Albatross.DrogonBenchServer
+        drogon_bench_server.cpp
+)
+target_link_libraries(${BENCHMARKS}.Albatross.DrogonBenchServer
+        PRIVATE
+        Drogon::Drogon
+)
 ##############################################################################

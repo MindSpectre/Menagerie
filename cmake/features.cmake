@@ -22,3 +22,15 @@ endif ()
 if (BUILD_DATABASE)
     option(BUILD_POSTGRESQL "Build PostgreSQL" ON)
 endif ()
+
+##############################################################################
+# Benchmarks. Each enabled suite requires its external comparison packages.
+##############################################################################
+if (DO_BENCHMARKS)
+    option(BENCHMARK_CROW_LOGGER "Build Crow logger benchmarks (requires Abseil)" ON)
+    option(BENCHMARK_DISRUPTOR "Build Disruptor benchmarks (requires SPSCQueue)" ON)
+    option(BENCHMARK_RESOURCE_POOL "Build resource pool benchmarks (requires Google Benchmark)" ON)
+    option(BENCHMARK_HTTP "Build HTTP benchmarks (requires Drogon)" ON)
+    option(BENCHMARK_POSTGRESQL "Build PostgreSQL benchmarks (requires Google Benchmark and libpqxx)" ON)
+endif ()
+##############################################################################

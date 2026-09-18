@@ -2,6 +2,11 @@ set(BENCHMARKS_STARLING ${BENCHMARKS}.Starling)
 ##############################################################################
 # Multithread benchmarks
 ##############################################################################
-add_subdirectory(resource_pool)
-add_subdirectory(disruptor)
+if (BENCHMARK_RESOURCE_POOL)
+    add_subdirectory(resource_pool)
+endif ()
+
+if (BENCHMARK_DISRUPTOR)
+    add_subdirectory(disruptor)
+endif ()
 ##############################################################################

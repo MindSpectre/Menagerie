@@ -21,7 +21,7 @@
     "abseil-benchmarks",
     "pg-benchmarks",
     "drogon-benchmarks",
-    "concurrency-benchmarks"
+    "starling-benchmarks"
   ],
   "features": {
     "abseil-benchmarks": {
@@ -49,6 +49,7 @@
     "starling-benchmarks": {
       "description": "Concurrency primitives comparison benchmark",
       "dependencies": [
+        "benchmark",
         "spscqueue"
       ]
     }

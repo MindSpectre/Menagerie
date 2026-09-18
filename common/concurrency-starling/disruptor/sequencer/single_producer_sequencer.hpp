@@ -167,13 +167,13 @@ namespace menagerie::starling {
 
         // Producer release-stores after filling slots; the consumer acquires
         // this inclusive frontier to know which payloads are ready.
-        WideSequence published_sequence_;
+        Sequence published_sequence_;
         // Consumer release-stores after reading slots; the producer acquires
         // this inclusive frontier before reusing their storage.
-        WideSequence consumed_sequence_;
+        Sequence consumed_sequence_;
         // Highest reservation made by the sole producer. Private to that thread:
         // relaxed load/store is enough, and no atomic RMW is needed.
-        WideSequence claimed_sequence_;
+        Sequence claimed_sequence_;
         // Producer-private upper bound for claims that fit without re-reading
         // consumption: min(last observed consumed + capacity, INT64_MAX).
         Sequence cached_capacity_limit_;
