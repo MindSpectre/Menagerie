@@ -1,12 +1,11 @@
 # Starling Library
 
 The starling library (`common/concurrency-starling/`) is Menagerie's collection of concurrency primitives:
-a unified passive resource pool for thread-blocking and coroutine callers, two legacy standalone
-bounded pools, a futex-based park/notify
+a unified passive resource pool for thread-blocking and coroutine callers, a futex-based park/notify
 primitive, an LMAX-style lock-free ring buffer, a growable thread pool, and a handful of small
 supporting utilities (mutex-wrapped resource access, `io_context` runners, pause/pin helpers).
 Every primitive here is a standalone, header-mostly (`INTERFACE`) CMake target; consumers either
-name one directly (e.g. `Menagerie.Common.Multithread.ResourcePool.Sync`) or pull in everything
+name one directly (e.g. `Menagerie.Common.Starling.Pool`) or pull in everything
 through the umbrella `#include <menagerie/starling>`, linking the combined
 `Menagerie::Common::Starling` alias target
 (`export/menagerie/starling`).
@@ -16,17 +15,14 @@ and the choice between them is a choice about the calling code's execution model
 
 - **New pooled-resource code** reaches for `Pool`, which serves thread-blocking and coroutine
   callers from one fixed arena and one FIFO.
-- **Existing code using the standalone blocking or coroutine pools** can continue to use the legacy
-  ResourcePool and AsyncResourcePool types below (or EventCount directly, for a bespoke wait).
+- **Bespoke blocking waits** can use `EventCount` directly for park/notify coordination.
 - **A single producer (or a bounded set of producers) publishing to one or more consumers** at the
   highest achievable throughput reaches for the Disruptor section below.
 
 ```text
 common/concurrency-starling/
 |-- resource_pool/
-|   |-- pool/               Pool<T>, Borrowed, ReservedSlot
-|   |-- sync/               ResourcePool<T, MaxSize>, Lease<T>            (legacy blocking pool)
-|   `-- async/               AsyncResourcePool<T, MaxSize>, AsyncLease<T>  (legacy coroutine pool)
+|   `-- pool/                 Pool<T>, Borrowed, ReservedSlot
 |-- event_count/             EventCount                                   (futex park/notify)
 |-- disruptor/                Disruptor<T, SequencerT, WaitStrategyT>       (lock-free ring buffer)
 |-- synchronized_resource/    SynchronizedResource<T>                     (std::mutex wrapper)
@@ -35,85 +31,6 @@ common/concurrency-starling/
 |-- utils/                    pause_arc_agnostic, pin_current_thread_to_core
 `-- export/menagerie/starling   umbrella header
 ```
-
-## ResourcePool (legacy standalone pool)
-
-`ResourcePool<T, MaxSize>` is a
-bounded pool of up to `MaxSize` interchangeable `T` resources, held entirely inline (no heap
-allocation for the pool's own storage). Any thread can acquire any slot. Freedom is tracked by a
-bitset, one bit per slot, packed into cache-line-isolated 64-bit words
-(`struct alignas(64) PaddedWord`). `try_acquire()` scans the words starting from a
-`thread_local` hint (seeded from `hash(thread_id)`, so concurrent callers spread their CAS
-traffic across different words) and claims the lowest set bit with one
-`compare_exchange_weak(cur, cur & ~bit, acquire, relaxed)`. A `Lease<T>`
-(`detail/lease.hpp`) is a
-move-only RAII handle over the claimed slot; its destructor (or move-assignment over a live
-lease) does `word->fetch_or(bit, release)` then `waiters_->notify_one()` - the release publishes
-the holder's writes to `T` before the bit shows free again, and the notify is a cheap
-`fetch_add` with no syscall unless a thread is actually parked.
-
-**Constructor set.** `ResourcePool` exposes three constructor overloads, all funneling into one
-canonical form: `ResourcePool(n, spin_budget, factory)`. The shorter overloads default the spin
-budget to a built-in constant and/or `n` to `MaxSize` (a full pool). The factory is a callable
-invoked once per slot, either `(std::size_t index) -> T` or `() -> T`
-(the `ResourceFactory` concept, `resource_pool.hpp-30`),
-so `T` need not be default-constructible - real resources (sockets, file descriptors, connections)
-get real per-slot construction arguments. If the factory throws while building slot `k`, the
-constructor destroys the `[0, k)` slots already built and rethrows: no partially-built pool, no
-leak.
-
-**Why `spin_budget` is `std::chrono::nanoseconds` only.** `acquire_for(timeout)` computes its
-deadline once (`t0 + timeout`), then spins with `pause_arc_agnostic()` until
-`min(t0 + spin_budget, deadline)`, then parks on the `EventCount` until the deadline
-(`resource_pool.hpp-235`). Both
-`spin_budget` and `timeout` are typed as `std::chrono::nanoseconds`, never a bare integer: a
-constructor overload set that accepted `(n, std::size_t, factory)` for one shape and
-`(n, nanoseconds, factory)` for another would let an integer literal silently bind to the
-wrong parameter and misconstruct the pool (a slot count read as a spin budget, or vice versa)
-with no compiler error. Using `chrono::nanoseconds` exclusively makes every overload's
-third argument unambiguous at the call site and ill-formed if the caller passes a raw number.
-
-## AsyncResourcePool (legacy standalone pool)
-
-`AsyncResourcePool<T, MaxSize>`
-is the coroutine-friendly sibling: the same inline storage and lock-free bitset
-`try_acquire()` fast path as `ResourcePool` (the file is self-contained rather than sharing a base
-with the sync pool - the storage/bitset/repair mechanics are duplicated on purpose so the sync pool
-is never put at risk by async-only changes), but a caller that finds no free slot **suspends a
-coroutine** instead of parking a thread. `try_acquire()` never suspends and is callable from
-anywhere; `async_acquire_for(exec, timeout)` and `async_acquire(exec)` (unbounded) return
-`boost::asio::awaitable<std::optional<AsyncLease<T>>>`, with `std::nullopt` meaning timed out,
-cancelled, or the pool was shut down.
-
-**Waiting.** Where the sync pool parks on an `EventCount`, the async pool registers a
-`detail::WaiterNode` - a
-plain struct living in the suspended coroutine's own frame, never heap-allocated by the pool - into
-a mutex-guarded, doubly-linked, FIFO `detail::WaiterList`. The mutex is touched only on the slow
-path (parking, waking, cancelling, draining); the bitset fast path stays lock-free throughout. Each
-node carries a single `std::atomic<WaitState>` that arbitrates a three-way race: a release calling
-`wake_one()`, a `steady_timer` firing on a bounded wait, or an asio cancellation slot firing.
-Whichever of the three wins the `state` CAS (`parked -> {notified, timed_out, cancelled}`) unlinks
-the node under the list mutex and posts the coroutine's resume - so the node is detached from the
-list *before* its coroutine can run and potentially destroy the frame that holds it. An
-`AsyncLease<T>`'s release path is `word->fetch_or(bit, release)` then `waiters_->wake_one()`
-(structurally identical to `Lease<T>`, but waking a coroutine rather than a thread); resuming always
-hops back onto the coroutine's own executor via `asio::post`, never runs on the releasing thread.
-
-**Cancellation and shutdown.** A parked wait honors asio's per-operation cancellation slot (subject
-to the cancellation type the coroutine's cancellation state actually delivers - see the class-level
-warning in the header about `terminal` vs `total`). `shutdown()` drains every parked waiter to
-`nullopt` and makes subsequent `async_acquire*` calls resolve to `nullopt` immediately rather than
-parking; it does **not** touch the bitset, so `try_acquire()` still works against any bits still
-free. The destructor asserts the waiter list is empty - `shutdown()` (and letting it drain) is a
-caller responsibility, not something the destructor does for you.
-
-**Timers.** `AsyncResourcePool` composes the park with a `boost::asio::steady_timer` via
-`awaitable_operators::operator||` for the bounded variant
-(`async_resource_pool.hpp-267`).
-Because neither a `steady_timer` nor that composition is thread-safe, the class-level documentation
-requires running each acquiring coroutine on its own strand whenever the driving `io_context` has
-more than one thread; a single-threaded `io_context` (as used throughout the flagship benchmark's
-`ShardedAsioBackend`, covered under Performance notes below) needs no strand.
 
 ## Pool
 
@@ -205,8 +122,7 @@ terminating submission directly on the real context registry.
 
 ## EventCount
 
-`EventCount` is the wait primitive behind
-`ResourcePool`'s free-region park phase: a lost-wakeup-safe park/notify built on a single
+`EventCount` is a standalone lost-wakeup-safe park/notify primitive built on a single
 `alignas(64) std::atomic<std::uint64_t>` that packs an `epoch` in the high 32 bits and a
 `waiter_count` in the low 32 bits. On Linux it drives a raw `FUTEX_WAIT_PRIVATE` /
 `FUTEX_WAKE_PRIVATE` on the epoch half of that word directly via `syscall(SYS_futex, ...)`; every
@@ -220,7 +136,7 @@ its real condition (e.g. `try_acquire()`) before calling `wait_until(key, deadli
 only while the epoch still matches `key`. A releaser calls `notify_one()`/`notify_all()`, which
 bumps the epoch with a single `fetch_add` and only issues the futex wake syscall if the
 pre-increment waiter count was non-zero - so a notify landing on an empty waiter set costs one
-atomic op and zero syscalls. Reach for `EventCount` directly (rather than through `ResourcePool`)
+atomic op and zero syscalls. Reach for `EventCount` directly
 when a bespoke blocking wait needs the same "cheap when uncontended, correct under a race" park/wake
 shape without a full resource pool wrapped around it.
 
@@ -342,15 +258,15 @@ size. The shape to look for, not a number to memorize: `SingleProducerSequencer`
 per-slot availability buffer), and both sequencers' throughput should climb as the consumer-batching
 sweep lets more entries drain per cache-line-crossing.
 
-**ResourcePool / AsyncResourcePool** (`benchmarks/concurrency-starling/resource_pool/`)
+**Pool** (`benchmarks/concurrency-starling/resource_pool/`)
 is a Google Benchmark suite plus one standalone flagship binary:
 
-- Per-subject binaries (`Try`, `AcqFor1us`/`2us`/`10us` for the sync pool;
-  `ArpAcqFor1us`/`2us`/`10us` for the async pool) sweep a fixed set of scenarios - steady load,
+- Per-subject binaries (`PlAcqFor1us`/`2us`/`10us` for blocking acquisition;
+  `PlArpAcqFor1us`/`2us`/`10us` for coroutine acquisition) sweep a fixed set of scenarios - steady load,
   bursty load, timeout pressure, an asio-`post()`-driven producer, and a heavy SPMC-drain burst -
   across a range of worker counts
   (`common/bench_scenarios.hpp`),
-  each timing only the acquire call itself (`try_acquire` / `acquire_for` / `async_acquire_for`)
+  each timing only the acquire call itself (`acquire_for` / `async_acquire_for`)
   around a synthetic `MockResource::work_for(duration)` busy-wait timed via TSC.
 - The **flagship** binary (`flagship/flagship_bench.cpp`)
   measures something the per-subject benches deliberately do not: **end-to-end** latency from when

@@ -1,6 +1,6 @@
 set(BENCHMARKS_RESOURCEPOOL ${BENCHMARKS_STARLING}.ResourcePool)
 ##############################################################################
-# ResourcePool concurrency benchmarks
+# Pool concurrency benchmarks
 # One binary per subject; each defines its own main() (no benchmark_main link).
 # Run with --pin=0 (floating workers) or --pin=1 (each worker pinned to one
 # core; worker_count fixed to 10).
@@ -8,7 +8,7 @@ set(BENCHMARKS_RESOURCEPOOL ${BENCHMARKS_STARLING}.ResourcePool)
 find_package(benchmark CONFIG QUIET)
 
 if (NOT benchmark_FOUND)
-    message(STATUS "Google Benchmark not found — skipping ResourcePool benchmarks")
+    message(STATUS "Google Benchmark not found — skipping Pool benchmarks")
     return()
 endif ()
 
@@ -62,20 +62,10 @@ function(add_pool_bench name source)
     )
 endfunction()
 
-add_pool_bench(Try sync/bench_rp_try.cpp)
-add_pool_bench(AcqFor1us sync/bench_rp_acqfor_1us.cpp)
-add_pool_bench(AcqFor2us sync/bench_rp_acqfor_2us.cpp)
-add_pool_bench(AcqFor10us sync/bench_rp_acqfor_10us.cpp)
-
-# AsyncResourcePool — coroutine acquire_for, comparable to the sync AcqFor* subjects.
-add_pool_bench(ArpAcqFor1us async/bench_arp_acqfor_1us.cpp)
-add_pool_bench(ArpAcqFor2us async/bench_arp_acqfor_2us.cpp)
-add_pool_bench(ArpAcqFor10us async/bench_arp_acqfor_10us.cpp)
-
 # Flagship: end-to-end burst latency, sync vs async, disruptor-fed.
 add_pool_bench(FlagshipBurst flagship/flagship_bench.cpp)
 
-# Unified Pool engine — A/B subjects against the legacy pools.
+# Unified Pool engine — blocking and coroutine acquisition subjects.
 add_pool_bench(PlAcqFor1us pool/bench_pl_acqfor_1us.cpp)
 add_pool_bench(PlAcqFor2us pool/bench_pl_acqfor_2us.cpp)
 add_pool_bench(PlAcqFor10us pool/bench_pl_acqfor_10us.cpp)

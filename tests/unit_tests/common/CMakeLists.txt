@@ -146,32 +146,6 @@ target_link_libraries(${UNIT_TESTING_TARGET}.EventCount.Fallback
 ##############################################################################
 
 ##############################################################################
-# Test ResourcePool
-##############################################################################
-add_unit_test(${UNIT_TESTING_TARGET}.ResourcePool
-        concurrency-starling/resource_pool/test_resource_pool.cpp
-)
-target_link_libraries(${UNIT_TESTING_TARGET}.ResourcePool
-        PRIVATE
-        Menagerie::Common::Starling
-        ${TEST_LIBS}
-)
-##############################################################################
-
-##############################################################################
-# Test AsyncResourcePool
-##############################################################################
-add_unit_test(${UNIT_TESTING_TARGET}.AsyncResourcePool
-        concurrency-starling/resource_pool/test_async_resource_pool.cpp
-)
-target_link_libraries(${UNIT_TESTING_TARGET}.AsyncResourcePool
-        PRIVATE
-        Menagerie::Common::Starling
-        ${TEST_LIBS}
-)
-##############################################################################
-
-##############################################################################
 # Test Pool (unified engine)
 ##############################################################################
 add_unit_test(${UNIT_TESTING_TARGET}.Pool

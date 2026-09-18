@@ -26,7 +26,7 @@ namespace bench::pool {
 
     /// Free-region scenarios that map to a continuous coroutine workload. The two
     /// AsioPost* scenarios from the sync suite are sync-on-asio specific and have no
-    /// async-pool analog (every async acquire already suspends), so they are omitted.
+    /// coroutine-workload analog, so they are omitted.
     inline constexpr std::array ASYNC_FREE_REGION_SCENARIOS = {
         ScenarioKind::Steady,
         ScenarioKind::Burst,
@@ -34,7 +34,7 @@ namespace bench::pool {
         ScenarioKind::HeavyBurst,
     };
 
-    /// Async analog of run_workload, for AsyncResourcePool.
+    /// Async analog of run_workload, for Pool coroutine acquisition.
     ///
     /// `state.range(0)` = number of concurrent coroutine acquirers (W). They are
     /// co_spawn'd onto a FIXED pool of CORE_COUNT io_context threads (so at high W the

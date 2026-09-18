@@ -276,7 +276,7 @@ Next levers, in expected-value order, if the remaining 1.24x matters:
 1. Parse from a raw buffer loop (beast `basic_parser::put` on buffered bytes; composed async op only at the actual
    syscall boundary) — removes the per-message op ceremony that dominates the depth-16 gap.
 2. `awaitable<T, io_context::executor_type>` through the driver/router path.
-3. Per-thread io_context (drogon's topology) — eliminates strands entirely; measured 2–3x for AsyncResourcePool, but
+3. Per-thread io_context (drogon's topology) — eliminates strands entirely; measured 2–3x for the retired coroutine pool, but
    conflicts with the injected- executor design, so it is an architecture decision, not a patch.
 
 ## Finding 8 — the read loop, shipped (2026-07-11)
