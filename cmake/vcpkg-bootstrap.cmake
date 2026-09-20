@@ -6,8 +6,8 @@
 # bootstraps one if there is none, then chains to the real vcpkg toolchain.
 #
 # Resolution order:
-#   1. <repo>/vcpkg          - a checkout already in the source tree wins
-#   2. -DVCPKG_ROOT=<path>   - explicit override on the configure line
+#   1. -DVCPKG_ROOT=<path>   - an existing checkout explicitly selected
+#   2. <repo>/vcpkg          - an existing checkout in the source tree
 #   3. $ENV{VCPKG_ROOT}      - shared/system checkout (the toolchain image sets this)
 #   4. otherwise             - clone + bootstrap into <repo>/vcpkg
 #
@@ -19,8 +19,8 @@
 #                         forces a full clone, since an arbitrary sha needs history.
 #
 # CMake re-reads the toolchain file for every try_compile, so everything below must
-# stay cheap and idempotent: after the first pass resolution short-circuits on the
-# step 1 existence check and nothing is cloned twice.
+# stay cheap and idempotent. Explicit roots are forwarded to compiler checks so
+# they reuse the same checkout instead of provisioning one in the source tree.
 
 # Derived from this file's own location rather than CMAKE_SOURCE_DIR, which is not
 # the repository root inside try_compile sub-projects.
@@ -31,18 +31,35 @@ set(VCPKG_BOOTSTRAP_URL "https://github.com/microsoft/vcpkg" CACHE STRING
 set(VCPKG_BOOTSTRAP_REF "" CACHE STRING
         "vcpkg commit/tag/branch to check out; empty tracks the default branch")
 
+list(APPEND CMAKE_TRY_COMPILE_PLATFORM_VARIABLES VCPKG_ROOT)
+list(REMOVE_DUPLICATES CMAKE_TRY_COMPILE_PLATFORM_VARIABLES)
+
+# Relative overrides must have the same meaning inside try_compile sub-projects.
+if (DEFINED VCPKG_ROOT AND NOT VCPKG_ROOT STREQUAL "")
+    get_filename_component(VCPKG_ROOT "${VCPKG_ROOT}" ABSOLUTE BASE_DIR "${MENAGERIE_SOURCE_ROOT}")
+endif ()
+
 set(_mv_root "")
 set(_mv_origin "")
 
-if (EXISTS "${MENAGERIE_SOURCE_ROOT}/vcpkg/scripts/buildsystems/vcpkg.cmake")
-    set(_mv_root "${MENAGERIE_SOURCE_ROOT}/vcpkg")
-    set(_mv_origin "source tree")
-elseif (DEFINED VCPKG_ROOT AND EXISTS "${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake")
+if (DEFINED VCPKG_ROOT AND EXISTS "${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake")
     set(_mv_root "${VCPKG_ROOT}")
     set(_mv_origin "-DVCPKG_ROOT")
+elseif (EXISTS "${MENAGERIE_SOURCE_ROOT}/vcpkg/scripts/buildsystems/vcpkg.cmake")
+    set(_mv_root "${MENAGERIE_SOURCE_ROOT}/vcpkg")
+    set(_mv_origin "source tree")
 elseif (DEFINED ENV{VCPKG_ROOT} AND EXISTS "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake")
     set(_mv_root "$ENV{VCPKG_ROOT}")
     set(_mv_origin "VCPKG_ROOT environment variable")
+endif ()
+
+# vcpkg caches its own root; do not silently mix it with a changed override.
+if (_mv_root AND DEFINED Z_VCPKG_ROOT_DIR)
+    get_filename_component(_mv_cached_root "${Z_VCPKG_ROOT_DIR}" REALPATH)
+    get_filename_component(_mv_selected_root "${_mv_root}" REALPATH)
+    if (NOT _mv_cached_root STREQUAL _mv_selected_root)
+        message(FATAL_ERROR "vcpkg root changed. Reconfigure with --fresh or use a new build directory.")
+    endif ()
 endif ()
 
 # ── Provision ────────────────────────────────────────────────────────────────
@@ -120,7 +137,7 @@ endif ()
 # ── Chain to the real toolchain ──────────────────────────────────────────────
 
 # Cached so the top-level CMakeLists can report which checkout the build used;
-# try_compile sub-projects re-resolve instead, which now lands on step 1.
+# try_compile sub-projects receive the explicit VCPKG_ROOT override as well.
 set(MENAGERIE_VCPKG_ROOT "${_mv_root}" CACHE INTERNAL "Resolved vcpkg root")
 set(MENAGERIE_VCPKG_ORIGIN "${_mv_origin}" CACHE INTERNAL "How the vcpkg root was resolved")
 

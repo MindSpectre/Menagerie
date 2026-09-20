@@ -53,10 +53,14 @@ one if there is none, and then chains to vcpkg's real toolchain file. `cmake --p
 on a fresh clone therefore just works; nothing has to be set up by hand. The shim resolves
 in this order:
 
-1. `vcpkg/` in the repository root - a checkout already in the source tree always wins
-2. `-DVCPKG_ROOT=<path>` passed on the configure line
+1. An existing checkout selected by `-DVCPKG_ROOT=<path>` on the configure line
+2. `vcpkg/` in the repository root
 3. the `VCPKG_ROOT` environment variable (the toolchain image sets this to `/opt/vcpkg`)
 4. otherwise: `git clone --depth 1` upstream vcpkg into `vcpkg/` and bootstrap it
+
+The explicit override is preserved through CMake compiler checks. When changing the
+checkout in an existing build directory, reconfigure with `--fresh` to clear vcpkg's
+cached root.
 
 Which checkout a build resolved to, and how, is printed in the `VCPKG` banner at configure
 time. Two cache variables tune the clone: `VCPKG_BOOTSTRAP_URL` (clone source) and
@@ -67,7 +71,7 @@ No specific vcpkg commit is pinned by default and the manifest carries no
 `vcpkg-configuration.json` baseline; the CI toolchain image
 (`infrastructure/toolchain/Dockerfile`) clones vcpkg the same way, so tracking upstream's
 default branch matches what the tree is built against there. Provisioning by hand still
-works if you prefer it - clone into `vcpkg/` yourself and the shim will find it at step 1:
+works if you prefer it - clone into `vcpkg/` yourself and the shim will find it at step 2:
 
 ```bash
 git clone https://github.com/microsoft/vcpkg vcpkg
